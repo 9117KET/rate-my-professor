@@ -1,0 +1,124 @@
+{
+  "reviews": [
+    {
+      "professor": "Dr. Emily Johnson",
+      "subject": "Computer Science",
+      "stars": 5,
+      "review": "Dr. Johnson is always well-prepared, provides comprehensive lectures, and encourages critical thinking."
+    },
+    {
+      "professor": "Dr. Michael Gray",
+      "subject": "Mathematics",
+      "stars": 4,
+      "review": "Professor Gray's explanations are clear, and he often stays after class to address students' questions."
+    },
+    {
+      "professor": "Dr. Samantha Nguyen",
+      "subject": "Physics",
+      "stars": 3,
+      "review": "Dr. Nguyen's lectures are rich in content, but they can be dense and fast-paced at times."
+    },
+    {
+      "professor": "Dr. Rahul Chopra",
+      "subject": "Data Science",
+      "stars": 5,
+      "review": "His real-world examples make complex data modeling topics easier to understand."
+    },
+    {
+      "professor": "Dr. Beatrice Kim",
+      "subject": "Literature",
+      "stars": 2,
+      "review": "She has interesting insights, but her lecture structure can be a bit disorganized."
+    },
+    {
+      "professor": "Dr. Javier Morales",
+      "subject": "Chemistry",
+      "stars": 4,
+      "review": "His lab sessions are detailed and hands-on, which helps reinforce lecture content."
+    },
+    {
+      "professor": "Dr. Victoria O'Neill",
+      "subject": "Philosophy",
+      "stars": 5,
+      "review": "She inspires deep discussions and encourages students to view problems from multiple angles."
+    },
+    {
+      "professor": "Dr. Markus Schmidt",
+      "subject": "Engineering Design",
+      "stars": 3,
+      "review": "Great knowledge and practical experience, but not always easy to approach during office hours."
+    },
+    {
+      "professor": "Dr. Lisa Carter",
+      "subject": "Biology",
+      "stars": 5,
+      "review": "Her passion for the subject is contagious. She uses visuals that make even complex topics digestible."
+    },
+    {
+      "professor": "Dr. Omar Hassan",
+      "subject": "Statistics",
+      "stars": 4,
+      "review": "He provides thorough explanations, but the pace is brisk. Stay engaged to keep up."
+    },
+    {
+      "professor": "Dr. Nora Bennett",
+      "subject": "Economics",
+      "stars": 3,
+      "review": "Her lectures cover the basics well, but real-life examples could be more frequent."
+    },
+    {
+      "professor": "Dr. Alan Park",
+      "subject": "Marketing",
+      "stars": 4,
+      "review": "He connects textbook theory with case studies, making the material feel immediately relevant."
+    },
+    {
+      "professor": "Dr. Janine Wu",
+      "subject": "Art History",
+      "stars": 2,
+      "review": "Her slides are informative, but the class can feel repetitive. Extra engagement outside lectures might help."
+    },
+    {
+      "professor": "Dr. Clive Roberts",
+      "subject": "Geology",
+      "stars": 5,
+      "review": "His enthusiasm for rocks and minerals is infectious, and field trips are well organized."
+    },
+    {
+      "professor": "Dr. Stella Onyekachi",
+      "subject": "Business Administration",
+      "stars": 4,
+      "review": "She brings in her industry experience, which makes class discussions engaging and practical."
+    },
+    {
+      "professor": "Dr. Jonathan Weiss",
+      "subject": "Sociology",
+      "stars": 3,
+      "review": "Professor Weiss encourages group discussions but the grading criteria can be a bit vague."
+    },
+    {
+      "professor": "Dr. Amanda Rossi",
+      "subject": "Political Science",
+      "stars": 5,
+      "review": "She fosters debates and open dialogues, creating a dynamic learning atmosphere."
+    },
+    {
+      "professor": "Dr. Thomas Frank",
+      "subject": "History",
+      "stars": 1,
+      "review": "Lectures often run over time, and he rarely addresses student questions thoroughly."
+    },
+    {
+      "professor": "Dr. Laeticia Bouvier",
+      "subject": "Linguistics",
+      "stars": 4,
+      "review": "Her comparative approach makes analyzing different languages fascinating, though the readings are extensive."
+    },
+    {
+      "professor": "Dr. Irene Fischer",
+      "subject": "Music Theory",
+      "stars": 5,
+      "review": "She breaks down complex concepts into simple steps and provides plenty of practice exercises."
+    }
+  ]
+}
