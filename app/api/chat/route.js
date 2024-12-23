@@ -42,7 +42,7 @@ export async function POST(req) {
       .join("\n\n");
 
     // Create chat completion
-    const stream = await openai.chat.completions.create({
+    const response = await openai.chat.completions.create({
       model: "gpt-4-turbo-preview",
       messages: [
         {
@@ -54,7 +54,18 @@ export async function POST(req) {
       stream: true,
     });
 
-    return new Response(stream.toReadableStream());
+    // Create and return the stream
+    const stream = new ReadableStream({
+      async start(controller) {
+        for await (const chunk of response) {
+          const text = chunk.choices[0]?.delta?.content || "";
+          controller.enqueue(text);
+        }
+        controller.close();
+      },
+    });
+
+    return new Response(stream);
   } catch (error) {
     console.error("Error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
