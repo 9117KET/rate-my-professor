@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { Pinecone } from "@pinecone-database/pinecone";
 import OpenAI from "openai";
 import { encode } from "punycode";
+import NodeCache from "node-cache";
 
 // Define the system prompt for the Rate My Professor Assistant
 const systemPrompt = `
-#System Prompt for “Rate My Professor” Agent
+#System Prompt for "Rate My Professor" Agent
 
 You are the Rate My Professor Assistant. You have access to a knowledge base containing professor data (e.g., reviews, subjects taught, ratings, and other relevant information). The user will ask questions about professors, courses, or related academic interests, and you will respond by retrieving and presenting the most suitable professor matches from the knowledge base using Retrieval-Augmented Generation (RAG).
 
@@ -16,7 +17,7 @@ Understand the User Query
 Identify the key subject(s), rating requirements, or any other constraints from the user.
 Perform RAG-based Retrieval
 
-Query your knowledge base to find professors who best match the user’s request.
+Query your knowledge base to find professors who best match the user's request.
 Sort and prioritize according to relevance (e.g., subject match, highest rating, or other relevant criteria).
 Provide Top 3 Matches
 
@@ -27,7 +28,7 @@ Summarize and Explain
 For each recommendation, give a concise summary, such as:
 Professor name
 Relevant subject(s)
-Average rating or “stars”
+Average rating or "stars"
 A short snippet from any available review(s) to illustrate why they are recommended
 Maintain Clarity and Accuracy
 
@@ -44,92 +45,93 @@ Use appropriate disclaimers if information is partial, uncertain, or if no profe
 Do not reveal your internal reasoning (chain-of-thought). Only provide the final answers and concise explanations.
 `;
 
+// Initialize cache with 1 hour TTL
+const embedCache = new NodeCache({ stdTTL: 3600 });
+
 // Define the POST request handler
 export async function POST(req) {
-  // Parse the incoming request data
-  const data = await req.json();
+  try {
+    const messages = await req.json();
+    const userMessage = messages[messages.length - 1].content;
 
-  // Initialize Pinecone client with API key
-  const pc = new Pinecone({
-    apiKey: process.env.PINECONE_API_KEY,
-  });
+    // Initialize clients
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
-  // Access the specific index and namespace in Pinecone
-  const index = pc.index("rag").namespace("ns1");
+    const pc = new Pinecone({
+      apiKey: process.env.PINECONE_API_KEY,
+    });
 
-  // Initialize OpenAI client
-  const openai = new OpenAI();
+    const index = pc.Index("rag");
 
-  // Extract the last message content from the request data
-  const text = data[data.length - 1].content;
+    // Check cache for existing embedding
+    const cacheKey = `embed_${userMessage}`;
+    let embedding = embedCache.get(cacheKey);
 
-  // Create an embedding for the text using OpenAI's embedding model
-  const embedding = await openai.embeddings.create({
-    model: "text-embedding-3-small",
-    input: text,
-    encoding_format: "float",
-  });
+    if (!embedding) {
+      // Get embedding if not in cache
+      const embeddingResponse = await openai.embeddings.create({
+        input: userMessage,
+        model: "text-embedding-3-small",
+      });
+      embedding = embeddingResponse.data[0].embedding;
+      embedCache.set(cacheKey, embedding);
+    }
 
-  // Query the Pinecone index with the embedding to find top 3 matches
-  const results = await index.query({
-    topK: 3,
-    includeMetadata: true,
-    vector: embedding.data[0].embedding,
-  });
+    // Parallel query to Pinecone
+    const queryPromise = index.query({
+      vector: embedding,
+      topK: 2,
+      includeMetadata: true,
+    });
 
-  // Construct a result string from the query matches
-  let resultString = "Return Results from vector db (done automatically):";
-  results.matches.forEach((match) => {
-    resultString += `\n
-    Professor: ${match.id}
-    Review: ${match.metadata.stars}
-    Subject: ${match.metadata.subject}
-    Stars ${match.metadata.stars}
-    \n\n
-    `;
-  });
+    // Start preparing the chat completion context
+    const systemPrompt = `You are a helpful assistant for Rate My Professor. Be concise and direct in your responses.`;
 
-  // Prepare the last message content with the result string
-  const lastMessage = data[data.length - 1];
-  const lastMessageContent = lastMessage.content + resultString;
+    // Wait for Pinecone results
+    const queryResponse = await queryPromise;
 
-  // Exclude the last message from the data for the chat completion
-  const lastDataWithoutLastMessage = data.slice(0, data.length - 1);
+    // Format context efficiently
+    const context = queryResponse.matches
+      .map(
+        (match) =>
+          `${match.id}|${match.metadata.subject}|${match.metadata.stars}|${match.metadata.review}`
+      )
+      .join("\n");
 
-  // Create a chat completion using OpenAI's API
-  const completion = await openai.chat.completions.create({
-    messages: [
-      { role: "system", content: systemPrompt },
-      ...lastDataWithoutLastMessage,
-      { role: "user", content: lastMessageContent },
-    ],
-    model: "gpt-4o-mini",
-    stream: true,
-  });
+    // Create chat completion with streaming
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-turbo-preview",
+      messages: [
+        {
+          role: "system",
+          content: `${systemPrompt}\nContext:\n${context}`,
+        },
+        ...messages,
+      ],
+      stream: true,
+      max_tokens: 150, // Limit response length
+      temperature: 0.7,
+    });
 
-  // Create a readable stream to handle the completion response
-  const stream = new ReadableStream({
-    async start(controller) {
-      const encoder = new TextEncoder();
-      try {
-        // Iterate over the completion chunks and enqueue them to the stream
-        for await (const chunk of completion) {
-          const content = chunk.choices[0]?.delta?.content;
-          if (content) {
-            const text = encode(content);
-            controller.enqueue(text);
-          }
+    // Return stream
+    const stream = new ReadableStream({
+      async start(controller) {
+        for await (const chunk of response) {
+          const text = chunk.choices[0]?.delta?.content || "";
+          controller.enqueue(text);
         }
-      } catch (err) {
-        // Handle any errors during streaming
-        controller.error(err);
-      } finally {
-        // Close the stream when done
         controller.close();
-      }
-    },
-  });
+      },
+    });
 
-  // Return the response as a Next.js response object
-  return new NextResponse(stream);
+    return new Response(stream);
+  } catch (error) {
+    console.error("Error:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 }
