@@ -5,29 +5,30 @@ import { ThemeProvider, createTheme } from "@mui/material";
 const theme = createTheme({
   palette: {
     primary: {
-      main: "#2196f3",
-      light: "#e3f2fd",
-      dark: "#1976d2",
-      contrastText: "#000000",
+      main: "#001B3F",
+      light: "#1A324D",
+      dark: "#00142E",
+      contrastText: "#FFFFFF",
     },
     secondary: {
-      main: "#ff4081",
-      light: "#fce4ec",
-      dark: "#c51162",
-      contrastText: "#000000",
+      main: "#E31E24",
+      light: "#FF2F35",
+      dark: "#C31419",
+      contrastText: "#FFFFFF",
     },
     background: {
-      default: "#f5f5f5",
-      paper: "#ffffff",
+      default: "#F5F5F5",
+      paper: "#FFFFFF",
     },
   },
   typography: {
     fontFamily: "'Inter', sans-serif",
     h4: {
       fontWeight: 600,
+      color: "#001B3F",
     },
     subtitle1: {
-      opacity: 0.8,
+      opacity: 0.9,
     },
   },
   components: {
@@ -38,7 +39,21 @@ const theme = createTheme({
           boxShadow: "none",
           "&:hover": {
             boxShadow: "none",
+            backgroundColor: "#E31E24",
           },
+        },
+        contained: {
+          backgroundColor: "#E31E24",
+          "&:hover": {
+            backgroundColor: "#C31419",
+          },
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: "#001B3F",
         },
       },
     },
@@ -47,7 +62,7 @@ const theme = createTheme({
         root: {
           "& .MuiOutlinedInput-root": {
             "&:hover fieldset": {
-              borderColor: "#2196f3",
+              borderColor: "#001B3F",
             },
           },
         },
@@ -57,7 +72,7 @@ const theme = createTheme({
 });
 
 const ClientLayout = ({ children }) => {
-  // Client-side logic here
+  console.log("ClientLayout rendering");
   return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
 };
 

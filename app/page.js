@@ -11,6 +11,24 @@ import {
   Typography,
 } from "@mui/material";
 import ReactMarkdown from "react-markdown";
+import { SubmitReviewModal } from "./components/SubmitReviewModal";
+import { ViewReviewsModal } from "./components/ViewReviewsModal";
+import { ActionButtons } from "./components/ActionButtons";
+import reviews from "../reviews.json";
+import { TipsModal } from "./components/TipsModal";
+
+const messageStyles = {
+  assistant: {
+    bgcolor: "#001B3F",
+    color: "#FFFFFF",
+    borderRadius: "20px 20px 20px 5px",
+  },
+  user: {
+    bgcolor: "#E31E24",
+    color: "#FFFFFF",
+    borderRadius: "20px 20px 5px 20px",
+  },
+};
 
 export default function Home() {
   const [messages, setMessages] = useState([
@@ -21,6 +39,9 @@ export default function Home() {
     },
   ]);
   const [message, setMessage] = useState("");
+  const [openRateModal, setOpenRateModal] = useState(false);
+  const [openViewModal, setOpenViewModal] = useState(false);
+  const [openTipsModal, setOpenTipsModal] = useState(false);
   const sendMessage = async () => {
     setMessages((messages) => [
       ...messages,
@@ -71,28 +92,31 @@ export default function Home() {
   return (
     <Box
       sx={{
-        minHeight: "100vh",
+        height: "100dvh",
         display: "flex",
         flexDirection: "column",
         bgcolor: "#f5f5f5",
+        overflow: "hidden",
       }}
     >
       <Box
         component="header"
         sx={{
           p: 3,
-          bgcolor: "primary.main",
+          bgcolor: "#001B3F",
           color: "white",
           textAlign: "center",
           boxShadow: 2,
         }}
       >
-        <Typography variant="h4" component="h1">
+        <Typography variant="h4" component="h1" sx={{ color: "white" }}>
           Rate My Professor Assistant
         </Typography>
-        <Typography variant="subtitle1">
-          Ask questions about professors and courses
-        </Typography>
+        <ActionButtons
+          onRateClick={() => setOpenRateModal(true)}
+          onViewClick={() => setOpenViewModal(true)}
+          onTipsClick={() => setOpenTipsModal(true)}
+        />
       </Box>
 
       <Box
@@ -101,7 +125,8 @@ export default function Home() {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          p: 3,
+          p: { xs: 1, sm: 2, md: 3 },
+          overflow: "hidden",
         }}
       >
         <Paper
@@ -109,7 +134,7 @@ export default function Home() {
           sx={{
             width: "100%",
             maxWidth: "800px",
-            height: "700px",
+            height: "100%",
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
@@ -120,8 +145,11 @@ export default function Home() {
             sx={{
               flex: 1,
               overflow: "auto",
-              p: 2,
+              p: { xs: 1, sm: 2 },
               bgcolor: "#ffffff",
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
             }}
           >
             {messages.map((message, index) => (
@@ -139,26 +167,15 @@ export default function Home() {
                   sx={{
                     p: 2,
                     maxWidth: "80%",
-                    bgcolor:
-                      message.role === "assistant"
-                        ? "primary.light"
-                        : "secondary.light",
-                    color:
-                      message.role === "assistant"
-                        ? "primary.contrastText"
-                        : "secondary.contrastText",
-                    borderRadius:
-                      message.role === "assistant"
-                        ? "20px 20px 20px 5px"
-                        : "20px 20px 5px 20px",
+                    ...messageStyles[message.role],
                     "& code": {
-                      backgroundColor: "rgba(0, 0, 0, 0.04)",
+                      backgroundColor: "rgba(255, 255, 255, 0.1)",
                       borderRadius: 1,
                       padding: "2px 4px",
                       fontFamily: "monospace",
                     },
                     "& pre": {
-                      backgroundColor: "rgba(0, 0, 0, 0.04)",
+                      backgroundColor: "rgba(255, 255, 255, 0.1)",
                       borderRadius: 1,
                       padding: 1,
                       overflowX: "auto",
@@ -235,49 +252,62 @@ export default function Home() {
           {/* Input area */}
           <Box
             sx={{
-              p: 2,
+              p: { xs: 1, sm: 2 },
               bgcolor: "#f8f9fa",
               borderTop: 1,
               borderColor: "divider",
             }}
           >
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                sendMessage();
-              }}
-            >
-              <Stack direction="row" spacing={2}>
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  placeholder="Ask about professors, courses, or ratings..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  size="medium"
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 3,
-                    },
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  onClick={sendMessage}
-                  disabled={!message.trim()}
-                  sx={{
+            <Stack direction="row" spacing={1}>
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Ask about professors..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                size="small"
+                sx={{
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 3,
-                    px: 4,
-                    textTransform: "none",
-                  }}
-                >
-                  Send
-                </Button>
-              </Stack>
-            </form>
+                    "&:hover fieldset": {
+                      borderColor: "#001B3F",
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: "#001B3F",
+                    },
+                  },
+                }}
+              />
+              <Button
+                variant="contained"
+                onClick={sendMessage}
+                disabled={!message.trim()}
+                sx={{
+                  borderRadius: 3,
+                  px: { xs: 2, sm: 4 },
+                  minWidth: { xs: "60px", sm: "80px" },
+                  textTransform: "none",
+                  bgcolor: "#E31E24",
+                  "&:hover": {
+                    bgcolor: "#C31419",
+                  },
+                }}
+              >
+                Send
+              </Button>
+            </Stack>
           </Box>
         </Paper>
       </Box>
+      <SubmitReviewModal
+        open={openRateModal}
+        onClose={() => setOpenRateModal(false)}
+      />
+      <ViewReviewsModal
+        open={openViewModal}
+        onClose={() => setOpenViewModal(false)}
+      />
+      <TipsModal open={openTipsModal} onClose={() => setOpenTipsModal(false)} />
     </Box>
   );
 }

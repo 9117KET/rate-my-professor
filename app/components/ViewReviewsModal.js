@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -22,11 +22,30 @@ import {
   Grid,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import { db } from "../lib/firebase";
+import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 
-export const ViewReviewsModal = ({ open, onClose, reviews }) => {
+export const ViewReviewsModal = ({ open, onClose }) => {
+  const [reviews, setReviews] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSubject, setFilterSubject] = useState("all");
   const [filterRating, setFilterRating] = useState("all");
+
+  useEffect(() => {
+    const reviewsRef = collection(db, "reviews");
+    const q = query(reviewsRef, orderBy("createdAt", "desc"));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const reviewsData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate().toString(),
+      }));
+      setReviews(reviewsData);
+    });
+
+    return () => unsubscribe(); // Cleanup subscription on unmount
+  }, []);
 
   // Get unique subjects for filter dropdown
   const subjects = useMemo(() => {
