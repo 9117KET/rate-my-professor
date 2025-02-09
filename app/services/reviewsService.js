@@ -7,6 +7,7 @@ import {
   orderBy,
   serverTimestamp,
 } from "firebase/firestore";
+import { embeddingService } from "./embeddingService";
 
 const COLLECTION_NAME = "reviews";
 
@@ -45,6 +46,10 @@ export const reviewsService = {
       };
 
       const docRef = await addDoc(reviewsRef, enrichedReview);
+
+      // Sync with Pinecone after adding new review
+      await embeddingService.syncFirestoreWithPinecone();
+
       return { id: docRef.id, ...enrichedReview };
     } catch (error) {
       console.error("Error adding review:", error);
