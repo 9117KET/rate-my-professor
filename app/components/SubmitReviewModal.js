@@ -12,6 +12,7 @@ import {
   Box,
   Typography,
 } from "@mui/material";
+import { reviewsService } from "../services/reviewsService";
 
 export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
   const [formData, setFormData] = useState({
@@ -27,14 +28,19 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
       alert("Please provide a rating");
       return;
     }
-    await onSubmit(formData);
-    onClose();
-    setFormData({
-      professor: "",
-      subject: "",
-      stars: 0,
-      review: "",
-    });
+    try {
+      await reviewsService.addReview(formData);
+      onClose();
+      setFormData({
+        professor: "",
+        subject: "",
+        stars: 0,
+        review: "",
+      });
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      alert("Failed to submit review. Please try again.");
+    }
   };
 
   return (
