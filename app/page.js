@@ -16,6 +16,7 @@ import { ViewReviewsModal } from "./components/ViewReviewsModal";
 import { ActionButtons } from "./components/ActionButtons";
 import reviews from "../reviews.json";
 import { TipsModal } from "./components/TipsModal";
+import { ImprintModal } from "./components/ImprintModal";
 
 const messageStyles = {
   assistant: {
@@ -42,6 +43,7 @@ export default function Home() {
   const [openRateModal, setOpenRateModal] = useState(false);
   const [openViewModal, setOpenViewModal] = useState(false);
   const [openTipsModal, setOpenTipsModal] = useState(false);
+  const [openImprintModal, setOpenImprintModal] = useState(false);
   const sendMessage = async () => {
     setMessages((messages) => [
       ...messages,
@@ -308,6 +310,53 @@ export default function Home() {
         onClose={() => setOpenViewModal(false)}
       />
       <TipsModal open={openTipsModal} onClose={() => setOpenTipsModal(false)} />
+      <ImprintModal
+        open={openImprintModal}
+        onClose={() => setOpenImprintModal(false)}
+      />
+      <Box
+        component="footer"
+        sx={{
+          p: 2,
+          bgcolor: "#001B3F",
+          color: "white",
+          textAlign: "center",
+          display: "flex",
+          justifyContent: "center",
+          gap: 2,
+        }}
+      >
+        <Button
+          variant="text"
+          href="https://www.instagram.com/constructor.university/"
+          target="_blank"
+          rel="noopener noreferrer"
+          sx={{
+            color: "white",
+            textDecoration: "underline",
+            "&:hover": {
+              bgcolor: "transparent",
+              textDecoration: "none",
+            },
+          }}
+        >
+          Follow our Instagram
+        </Button>
+        <Button
+          variant="text"
+          onClick={() => setOpenImprintModal(true)}
+          sx={{
+            color: "white",
+            textDecoration: "underline",
+            "&:hover": {
+              bgcolor: "transparent",
+              textDecoration: "none",
+            },
+          }}
+        >
+          Imprint & Legal Notice
+        </Button>
+      </Box>
     </Box>
   );
 }
