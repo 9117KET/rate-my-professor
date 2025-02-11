@@ -328,7 +328,7 @@ export default function Home() {
       >
         <Button
           variant="text"
-          href="https://www.instagram.com/constructor.university/"
+          href="https://www.instagram.com/rate_my_professor/"
           target="_blank"
           rel="noopener noreferrer"
           sx={{
