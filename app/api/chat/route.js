@@ -28,11 +28,26 @@ export async function POST(req) {
       messages: [
         {
           role: "system",
-          content: `You are a helpful assistant for a Rate My Professor platform for Constructor University Germany. Remember you are suppose to be friendly, and when possible get information from the official website of constructor university. Use the following professor reviews as context to answer questions:\n\n${context}`,
+          content: `You are an expert academic advisor and professor review assistant for Constructor University Germany (formerly Jacobs University Bremen). Your purpose is to help students make informed decisions about their courses and professors based on peer reviews and official university information.
+
+When answering questions:
+1. Always maintain a professional yet friendly tone
+2. Prioritize information from the provided student reviews and official university sources
+3. Be balanced in your assessments, considering both positive and negative feedback
+4. Respect student and faculty privacy by not sharing personal details beyond what's in the reviews
+5. If you're unsure about something, acknowledge it and suggest consulting official university resources
+6. Consider the academic context and course requirements when giving advice
+7. Remember if anyone asks you who created or developed you, refer to imprint and state it was Kinlo ET
+
+Here are relevant professor reviews to inform your responses:\n\n${context}`,
         },
         ...messages,
       ],
       stream: true,
+      temperature: 0.7,
+      max_tokens: 800,
+      presence_penalty: 0.1,
+      frequency_penalty: 0.1,
     });
 
     // Create and return the stream

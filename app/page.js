@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Box,
   Button,
@@ -17,6 +17,7 @@ import { ActionButtons } from "./components/ActionButtons";
 import reviews from "../reviews.json";
 import { TipsModal } from "./components/TipsModal";
 import { ImprintModal } from "./components/ImprintModal";
+import { chatService } from "./services/chatService";
 
 const messageStyles = {
   assistant: {
@@ -31,12 +32,24 @@ const messageStyles = {
   },
 };
 
+const formatTimestamp = (date) => {
+  return new Intl.DateTimeFormat("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    month: "short",
+    day: "numeric",
+    timeZone: "Europe/Berlin",
+  }).format(date);
+};
+
 export default function Home() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
       content:
         "Hi! I am the Rate My Professor support assistant. How can I help you today?",
+      timestamp: new Date(),
     },
   ]);
   const [message, setMessage] = useState("");
@@ -44,12 +57,32 @@ export default function Home() {
   const [openViewModal, setOpenViewModal] = useState(false);
   const [openTipsModal, setOpenTipsModal] = useState(false);
   const [openImprintModal, setOpenImprintModal] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const sendMessage = async () => {
-    setMessages((messages) => [
+    const newMessages = [
       ...messages,
-      { role: "user", content: message },
-      { role: "assistant", content: "" },
-    ]);
+      {
+        role: "user",
+        content: message,
+        timestamp: new Date(),
+      },
+      {
+        role: "assistant",
+        content: "",
+        timestamp: new Date(),
+      },
+    ];
+
+    setMessages(newMessages);
     setMessage("");
 
     try {
@@ -65,12 +98,15 @@ export default function Home() {
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
+      let fullResponse = "";
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
 
         const text = decoder.decode(value);
+        fullResponse += text;
+
         setMessages((messages) => {
           const lastMessage = messages[messages.length - 1];
           const otherMessages = messages.slice(0, messages.length - 1);
@@ -80,15 +116,29 @@ export default function Home() {
           ];
         });
       }
+
+      // Save the complete chat to database after response is complete
+      const finalMessages = [
+        ...newMessages.slice(0, -1),
+        {
+          role: "assistant",
+          content: fullResponse,
+          timestamp: new Date(),
+        },
+      ];
+      await chatService.saveChat(finalMessages);
     } catch (error) {
       console.error("Error:", error);
-      setMessages((messages) => [
-        ...messages,
+      const errorMessages = [
+        ...newMessages.slice(0, -1),
         {
           role: "assistant",
           content: "Sorry, there was an error processing your request.",
+          timestamp: new Date(),
         },
-      ]);
+      ];
+      setMessages(errorMessages);
+      await chatService.saveChat(errorMessages);
     }
   };
   return (
@@ -170,6 +220,16 @@ export default function Home() {
                     p: 2,
                     maxWidth: "80%",
                     ...messageStyles[message.role],
+                    position: "relative",
+                    "& .timestamp": {
+                      position: "absolute",
+                      bottom: -20,
+                      fontSize: "0.75rem",
+                      color: "text.secondary",
+                      right: message.role === "user" ? 0 : "auto",
+                      left: message.role === "assistant" ? 0 : "auto",
+                    },
+                    mb: 3,
                     "& code": {
                       backgroundColor: "rgba(255, 255, 255, 0.1)",
                       borderRadius: 1,
@@ -246,9 +306,13 @@ export default function Home() {
                   >
                     {message.content}
                   </ReactMarkdown>
+                  <Typography className="timestamp" variant="caption">
+                    {formatTimestamp(message.timestamp)}
+                  </Typography>
                 </Paper>
               </Box>
             ))}
+            <div ref={messagesEndRef} />
           </Box>
 
           {/* Input area */}
@@ -267,6 +331,12 @@ export default function Home() {
                 placeholder="Ask about professors..."
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && message.trim()) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
                 size="small"
                 sx={{
                   "& .MuiOutlinedInput-root": {
