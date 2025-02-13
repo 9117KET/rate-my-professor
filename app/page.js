@@ -149,6 +149,7 @@ export default function Home() {
         flexDirection: "column",
         bgcolor: "#f5f5f5",
         overflow: "hidden",
+        maxWidth: "100vw",
       }}
     >
       <Box
@@ -182,23 +183,18 @@ export default function Home() {
       <Box
         sx={{
           flex: 1,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          p: { xs: 0.5, sm: 1, md: 2 },
-          overflow: "hidden",
+          overflowY: "auto",
+          overflowX: "hidden",
+          p: { xs: 1, sm: 2 },
         }}
       >
         <Paper
-          elevation={3}
+          elevation={0}
           sx={{
-            width: "100%",
-            maxWidth: { xs: "100%", sm: "600px", md: "800px" },
             height: "100%",
             display: "flex",
             flexDirection: "column",
-            overflow: "hidden",
-            borderRadius: { xs: 0, sm: 2 },
+            bgcolor: "transparent",
           }}
         >
           {/* Chat messages container */}
@@ -295,15 +291,14 @@ export default function Home() {
               position: "sticky",
               bottom: 0,
               zIndex: 1,
-              pb: { xs: 4, sm: 2 },
-              pt: { xs: 1, sm: 1.5 },
+              pb: { xs: 2, sm: 1.5 },
             }}
           >
             <Stack
               direction="row"
               spacing={1}
               sx={{
-                alignItems: "center",
+                alignItems: "flex-end",
                 maxHeight: { xs: "80px", sm: "none" },
               }}
             >
@@ -333,6 +328,10 @@ export default function Home() {
                       borderColor: "#001B3F",
                     },
                   },
+                  "& .MuiInputBase-root": {
+                    maxHeight: { xs: "80px", sm: "none" },
+                    overflowY: "auto",
+                  },
                 }}
               />
               <Button
@@ -349,7 +348,7 @@ export default function Home() {
                   "&:hover": {
                     bgcolor: "#C31419",
                   },
-                  alignSelf: "flex-start",
+                  flexShrink: 0,
                 }}
               >
                 Send
