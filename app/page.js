@@ -295,15 +295,16 @@ export default function Home() {
               position: "sticky",
               bottom: 0,
               zIndex: 1,
-              pb: { xs: 2, sm: 1.5 },
+              pb: { xs: 4, sm: 2 },
+              pt: { xs: 1, sm: 1.5 },
             }}
           >
             <Stack
               direction="row"
               spacing={1}
               sx={{
-                alignItems: "flex-start",
-                maxHeight: { xs: "100px", sm: "none" },
+                alignItems: "center",
+                maxHeight: { xs: "80px", sm: "none" },
               }}
             >
               <TextField
@@ -320,7 +321,7 @@ export default function Home() {
                 }}
                 size="small"
                 multiline
-                maxRows={4}
+                maxRows={3}
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     borderRadius: { xs: 2, sm: 3 },
@@ -341,13 +342,14 @@ export default function Home() {
                 sx={{
                   borderRadius: { xs: 2, sm: 3 },
                   minWidth: { xs: "40px", sm: "60px" },
-                  height: { xs: "32px", sm: "40px" },
+                  height: { xs: "36px", sm: "40px" },
                   px: { xs: 1, sm: 2 },
                   textTransform: "none",
                   bgcolor: "#E31E24",
                   "&:hover": {
                     bgcolor: "#C31419",
                   },
+                  alignSelf: "flex-start",
                 }}
               >
                 Send
