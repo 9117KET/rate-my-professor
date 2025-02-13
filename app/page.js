@@ -18,6 +18,7 @@ import reviews from "../reviews.json";
 import { TipsModal } from "./components/TipsModal";
 import { ImprintModal } from "./components/ImprintModal";
 import { chatService } from "./services/chatService";
+import { HowToUseModal } from "./components/HowToUseModal";
 
 const messageStyles = {
   assistant: {
@@ -37,8 +38,6 @@ const formatTimestamp = (date) => {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-    month: "short",
-    day: "numeric",
     timeZone: "Europe/Berlin",
   }).format(date);
 };
@@ -48,7 +47,7 @@ export default function Home() {
     {
       role: "assistant",
       content:
-        "Hi! I am the Rate My Professor support assistant. How can I help you today?",
+        "Hi! I am the Rate My Professor ai support assistant. How can I help you today?",
       timestamp: new Date(),
     },
   ]);
@@ -57,6 +56,7 @@ export default function Home() {
   const [openViewModal, setOpenViewModal] = useState(false);
   const [openTipsModal, setOpenTipsModal] = useState(false);
   const [openImprintModal, setOpenImprintModal] = useState(false);
+  const [openHowToUseModal, setOpenHowToUseModal] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -154,15 +154,23 @@ export default function Home() {
       <Box
         component="header"
         sx={{
-          p: 3,
+          p: { xs: 2, sm: 3 },
           bgcolor: "#001B3F",
           color: "white",
           textAlign: "center",
           boxShadow: 2,
         }}
       >
-        <Typography variant="h4" component="h1" sx={{ color: "white" }}>
-          Rate My Professor Assistant
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{
+            color: "white",
+            fontSize: { xs: "1.5rem", sm: "2rem", md: "2.5rem" },
+            mb: { xs: 1, sm: 2 },
+          }}
+        >
+          Rate My Professor AI Assistant
         </Typography>
         <ActionButtons
           onRateClick={() => setOpenRateModal(true)}
@@ -177,7 +185,7 @@ export default function Home() {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          p: { xs: 1, sm: 2, md: 3 },
+          p: { xs: 0.5, sm: 1, md: 2 },
           overflow: "hidden",
         }}
       >
@@ -185,11 +193,12 @@ export default function Home() {
           elevation={3}
           sx={{
             width: "100%",
-            maxWidth: "800px",
+            maxWidth: { xs: "100%", sm: "600px", md: "800px" },
             height: "100%",
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
+            borderRadius: { xs: 0, sm: 2 },
           }}
         >
           {/* Chat messages container */}
@@ -217,59 +226,20 @@ export default function Home() {
                 <Paper
                   elevation={1}
                   sx={{
-                    p: 2,
-                    maxWidth: "80%",
+                    p: { xs: 1.5, sm: 2 },
+                    maxWidth: { xs: "85%", sm: "80%" },
                     ...messageStyles[message.role],
                     position: "relative",
                     "& .timestamp": {
                       position: "absolute",
-                      bottom: -20,
-                      fontSize: "0.75rem",
+                      bottom: -18,
+                      fontSize: { xs: "0.7rem", sm: "0.75rem" },
                       color: "text.secondary",
                       right: message.role === "user" ? 0 : "auto",
                       left: message.role === "assistant" ? 0 : "auto",
                     },
                     mb: 3,
-                    "& code": {
-                      backgroundColor: "rgba(255, 255, 255, 0.1)",
-                      borderRadius: 1,
-                      padding: "2px 4px",
-                      fontFamily: "monospace",
-                    },
-                    "& pre": {
-                      backgroundColor: "rgba(255, 255, 255, 0.1)",
-                      borderRadius: 1,
-                      padding: 1,
-                      overflowX: "auto",
-                    },
-                    "& blockquote": {
-                      borderLeft: "4px solid",
-                      borderColor: "rgba(0, 0, 0, 0.1)",
-                      margin: 0,
-                      paddingLeft: 2,
-                      fontStyle: "italic",
-                    },
-                    "& ul, & ol": {
-                      marginLeft: 2,
-                      marginTop: 1,
-                      marginBottom: 1,
-                    },
-                    "& h1, & h2, & h3, & h4, & h5, & h6": {
-                      marginTop: 2,
-                      marginBottom: 1,
-                    },
-                    "& table": {
-                      borderCollapse: "collapse",
-                      width: "100%",
-                      "& th, & td": {
-                        border: "1px solid rgba(0, 0, 0, 0.1)",
-                        padding: "8px",
-                        textAlign: "left",
-                      },
-                      "& th": {
-                        backgroundColor: "rgba(0, 0, 0, 0.04)",
-                      },
-                    },
+                    wordBreak: "break-word",
                   }}
                 >
                   <ReactMarkdown
@@ -318,13 +288,20 @@ export default function Home() {
           {/* Input area */}
           <Box
             sx={{
-              p: { xs: 1, sm: 2 },
+              p: { xs: 1, sm: 1.5, md: 2 },
               bgcolor: "#f8f9fa",
               borderTop: 1,
               borderColor: "divider",
+              position: "sticky",
+              bottom: 0,
+              zIndex: 1,
             }}
           >
-            <Stack direction="row" spacing={1}>
+            <Stack
+              direction="row"
+              spacing={{ xs: 0.5, sm: 1 }}
+              sx={{ alignItems: "center" }}
+            >
               <TextField
                 fullWidth
                 variant="outlined"
@@ -338,9 +315,12 @@ export default function Home() {
                   }
                 }}
                 size="small"
+                multiline
+                maxRows={4}
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    borderRadius: 3,
+                    borderRadius: { xs: 2, sm: 3 },
+                    fontSize: { xs: "0.875rem", sm: "1rem" },
                     "&:hover fieldset": {
                       borderColor: "#001B3F",
                     },
@@ -355,9 +335,10 @@ export default function Home() {
                 onClick={sendMessage}
                 disabled={!message.trim()}
                 sx={{
-                  borderRadius: 3,
-                  px: { xs: 2, sm: 4 },
-                  minWidth: { xs: "60px", sm: "80px" },
+                  borderRadius: { xs: 2, sm: 3 },
+                  minWidth: { xs: "40px", sm: "60px" },
+                  height: { xs: "36px", sm: "40px" },
+                  px: { xs: 1.5, sm: 2 },
                   textTransform: "none",
                   bgcolor: "#E31E24",
                   "&:hover": {
@@ -384,18 +365,37 @@ export default function Home() {
         open={openImprintModal}
         onClose={() => setOpenImprintModal(false)}
       />
+      <HowToUseModal
+        open={openHowToUseModal}
+        onClose={() => setOpenHowToUseModal(false)}
+      />
       <Box
         component="footer"
         sx={{
-          p: 2,
+          p: { xs: 1, sm: 2 },
           bgcolor: "#001B3F",
           color: "white",
           textAlign: "center",
           display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
           justifyContent: "center",
-          gap: 2,
+          gap: { xs: 1, sm: 2 },
         }}
       >
+        <Button
+          variant="text"
+          onClick={() => setOpenHowToUseModal(true)}
+          sx={{
+            color: "white",
+            textDecoration: "underline",
+            "&:hover": {
+              bgcolor: "transparent",
+              textDecoration: "none",
+            },
+          }}
+        >
+          How to Use
+        </Button>
         <Button
           variant="text"
           href="https://www.instagram.com/rate_my_professor/"

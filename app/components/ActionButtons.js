@@ -54,7 +54,7 @@ export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
           },
         }}
       >
-        Tips for Success
+        TIPS
       </Button>
     </Stack>
   );

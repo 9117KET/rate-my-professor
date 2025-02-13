@@ -24,6 +24,7 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import { db } from "../lib/firebase";
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { formatTimestamp } from "../utils/formatters";
 
 export const ViewReviewsModal = ({ open, onClose }) => {
   const [reviews, setReviews] = useState([]);
@@ -186,12 +187,26 @@ export const ViewReviewsModal = ({ open, onClose }) => {
                     <Box key={index} sx={{ ml: 2, mt: 1 }}>
                       <ListItem>
                         <Box sx={{ width: "100%" }}>
-                          <Typography
-                            variant="subtitle1"
-                            color="text.secondary"
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
                           >
-                            {review.subject}
-                          </Typography>
+                            <Typography
+                              variant="subtitle1"
+                              color="text.secondary"
+                            >
+                              {review.subject}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {formatTimestamp(new Date(review.createdAt))}
+                            </Typography>
+                          </Box>
                           <Rating value={review.stars} readOnly />
                           <Typography variant="body1" sx={{ mt: 1 }}>
                             {review.review}

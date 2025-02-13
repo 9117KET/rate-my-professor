@@ -9,8 +9,10 @@ import {
   Box,
   Typography,
   CircularProgress,
+  Divider,
 } from "@mui/material";
 import { tipsService } from "../services/tipsService";
+import { formatTimestamp } from "../utils/formatters";
 
 export const TipsModal = ({ open, onClose }) => {
   const [tips, setTips] = useState([]);
@@ -62,7 +64,7 @@ export const TipsModal = ({ open, onClose }) => {
         },
       }}
     >
-      <DialogTitle>Submit and View Tips for Success</DialogTitle>
+      <DialogTitle>Submit and View TIPS</DialogTitle>
       <DialogContent>
         <TextField
           fullWidth
@@ -75,16 +77,28 @@ export const TipsModal = ({ open, onClose }) => {
           Submit Tip
         </Button>
         <Box sx={{ mt: 4 }}>
-          <Typography variant="h6">Tips from Students:</Typography>
+          <Typography variant="h6">TIPS from Students:</Typography>
           {loading ? (
             <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
               <CircularProgress />
             </Box>
           ) : (
             tips.map((tip) => (
-              <Typography key={tip.id} sx={{ mt: 2 }}>
-                {tip.content}
-              </Typography>
+              <Box key={tip.id} sx={{ mt: 2 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography>{tip.content}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatTimestamp(new Date(tip.createdAt))}
+                  </Typography>
+                </Box>
+                <Divider sx={{ mt: 1 }} />
+              </Box>
             ))
           )}
         </Box>
