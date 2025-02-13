@@ -6,17 +6,27 @@ import TipsAndUpdatesOutlinedIcon from "@mui/icons-material/TipsAndUpdatesOutlin
 export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
   return (
     <Stack
-      direction={{ xs: "column", sm: "row" }}
-      spacing={2}
+      direction="row"
+      spacing={1}
       sx={{
-        mt: 2,
+        mt: 1,
         justifyContent: "center",
-        px: { xs: 2, sm: 0 },
+        px: { xs: 1, sm: 2 },
+        "& .MuiButton-root": {
+          minWidth: { xs: "90px", sm: "auto" },
+          fontSize: { xs: "0.75rem", sm: "0.875rem" },
+          py: { xs: 0.5, sm: 1 },
+          px: { xs: 1, sm: 2 },
+        },
       }}
     >
       <Button
         variant="contained"
-        startIcon={<RateReviewOutlinedIcon />}
+        startIcon={
+          <RateReviewOutlinedIcon
+            sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
+          />
+        }
         onClick={onRateClick}
         sx={{
           bgcolor: "rgba(255, 255, 255, 0.9)",
@@ -26,11 +36,15 @@ export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
           },
         }}
       >
-        Rate a Professor
+        Rate
       </Button>
       <Button
         variant="contained"
-        startIcon={<VisibilityOutlinedIcon />}
+        startIcon={
+          <VisibilityOutlinedIcon
+            sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
+          />
+        }
         onClick={onViewClick}
         sx={{
           bgcolor: "rgba(255, 255, 255, 0.9)",
@@ -40,12 +54,16 @@ export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
           },
         }}
       >
-        See Reviews
+        Reviews
       </Button>
       <Button
         variant="contained"
-        startIcon={<TipsAndUpdatesOutlinedIcon />}
-        onClick={() => onTipsClick()}
+        startIcon={
+          <TipsAndUpdatesOutlinedIcon
+            sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
+          />
+        }
+        onClick={onTipsClick}
         sx={{
           bgcolor: "rgba(255, 255, 255, 0.9)",
           color: "#001B3F",

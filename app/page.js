@@ -295,12 +295,16 @@ export default function Home() {
               position: "sticky",
               bottom: 0,
               zIndex: 1,
+              pb: { xs: 2, sm: 1.5 },
             }}
           >
             <Stack
               direction="row"
-              spacing={{ xs: 0.5, sm: 1 }}
-              sx={{ alignItems: "center" }}
+              spacing={1}
+              sx={{
+                alignItems: "flex-start",
+                maxHeight: { xs: "100px", sm: "none" },
+              }}
             >
               <TextField
                 fullWidth
@@ -337,8 +341,8 @@ export default function Home() {
                 sx={{
                   borderRadius: { xs: 2, sm: 3 },
                   minWidth: { xs: "40px", sm: "60px" },
-                  height: { xs: "36px", sm: "40px" },
-                  px: { xs: 1.5, sm: 2 },
+                  height: { xs: "32px", sm: "40px" },
+                  px: { xs: 1, sm: 2 },
                   textTransform: "none",
                   bgcolor: "#E31E24",
                   "&:hover": {
@@ -372,14 +376,19 @@ export default function Home() {
       <Box
         component="footer"
         sx={{
-          p: { xs: 1, sm: 2 },
+          p: { xs: 0.5, sm: 2 },
           bgcolor: "#001B3F",
           color: "white",
           textAlign: "center",
           display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
+          flexDirection: "row",
           justifyContent: "center",
-          gap: { xs: 1, sm: 2 },
+          gap: { xs: 0.5, sm: 2 },
+          "& .MuiButton-root": {
+            fontSize: { xs: "0.7rem", sm: "0.875rem" },
+            minWidth: { xs: "auto", sm: "auto" },
+            px: { xs: 1, sm: 2 },
+          },
         }}
       >
         <Button
@@ -410,7 +419,7 @@ export default function Home() {
             },
           }}
         >
-          Follow our Instagram
+          Instagram
         </Button>
         <Button
           variant="text"
@@ -424,7 +433,7 @@ export default function Home() {
             },
           }}
         >
-          Imprint & Legal Notice
+          Imprint
         </Button>
       </Box>
     </Box>
