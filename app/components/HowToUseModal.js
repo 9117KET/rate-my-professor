@@ -42,8 +42,8 @@ export const HowToUseModal = ({ open, onClose }) => {
           <Typography paragraph>
             This is a student-driven platform created to help Constructor
             University students make informed decisions about their courses and
-            professors. It's a space where you can share and learn from others'
-            experiences anonymously.
+            professors. It&apos;s a space where you can share and learn from
+            others&apos; experiences anonymously.
           </Typography>
         </Box>
 
