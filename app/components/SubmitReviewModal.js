@@ -87,7 +87,7 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
           <TextField
             fullWidth
             size="small"
-            label="Professor Name (Optional)"
+            label="Describe the professor (optional) - pls do not state a professor's name"
             value={formData.professor}
             onChange={(e) =>
               setFormData({ ...formData, professor: e.target.value })

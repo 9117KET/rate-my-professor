@@ -29,7 +29,7 @@ export const ImprintModal = ({ open, onClose }) => {
           <Typography variant="h6" sx={{ mb: 2 }}>
             Service Provider
           </Typography>
-          <Typography>KET Personal fun Project</Typography>
+          <Typography>Kinlo&apos;s fun Project</Typography>
           <Typography>Campus Ring 1</Typography>
           <Typography>28759 Bremen</Typography>
           <Typography>Germany</Typography>
@@ -61,6 +61,14 @@ export const ImprintModal = ({ open, onClose }) => {
             views or the views of Constructor University.
           </Typography>
           <Typography paragraph>
+            To protect privacy and maintain anonymity, users should not directly
+            state professor names. Instead, describe the professor in a way that
+            students familiar with the course would recognize (e.g., &quot;The
+            Statistics professor who uses many real-world examples&quot; or
+            &quot;The Physics professor who always wears colorful
+            bowties&quot;).
+          </Typography>
+          <Typography paragraph>
             I will try to maintain the accuracy of information but make no
             guarantees regarding the completeness, reliability, or accuracy of
             the content.
@@ -78,9 +86,9 @@ export const ImprintModal = ({ open, onClose }) => {
           <Typography paragraph>
             Data generated on this platform is anonymous data and we have no way
             to track the user data for the purpose of giving honest review of
-            their experiences with professors at Constructor University. I strive
-            to make sure the data is in accordance with the EU General Data
-            Protection Regulation (GDPR).
+            their experiences with professors at Constructor University. I
+            strive to make sure the data is in accordance with the EU General
+            Data Protection Regulation (GDPR).
           </Typography>
         </Box>
       </DialogContent>
