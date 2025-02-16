@@ -29,7 +29,7 @@ export const ImprintModal = ({ open, onClose }) => {
           <Typography variant="h6" sx={{ mb: 2 }}>
             Service Provider
           </Typography>
-          <Typography>Personal fun Project</Typography>
+          <Typography>KET Personal fun Project</Typography>
           <Typography>Campus Ring 1</Typography>
           <Typography>28759 Bremen</Typography>
           <Typography>Germany</Typography>
@@ -61,7 +61,7 @@ export const ImprintModal = ({ open, onClose }) => {
             views or the views of Constructor University.
           </Typography>
           <Typography paragraph>
-            We strive to maintain the accuracy of information but make no
+            I will try to maintain the accuracy of information but make no
             guarantees regarding the completeness, reliability, or accuracy of
             the content.
           </Typography>
@@ -77,8 +77,8 @@ export const ImprintModal = ({ open, onClose }) => {
           </Typography>
           <Typography paragraph>
             Data generated on this platform is anonymous data and we have no way
-            to track the user data for the purpose of giving genuent review of
-            their experiences with professor at Constructor University. I strive
+            to track the user data for the purpose of giving honest review of
+            their experiences with professors at Constructor University. I strive
             to make sure the data is in accordance with the EU General Data
             Protection Regulation (GDPR).
           </Typography>
