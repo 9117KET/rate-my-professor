@@ -29,13 +29,13 @@ export const ImprintModal = ({ open, onClose }) => {
           <Typography variant="h6" sx={{ mb: 2 }}>
             Service Provider
           </Typography>
-          <Typography>Kinlo ET | Personal Fun Project</Typography>
+          <Typography>Personal fun Project</Typography>
           <Typography>Campus Ring 1</Typography>
           <Typography>28759 Bremen</Typography>
           <Typography>Germany</Typography>
         </Box>
 
-        <Box sx={{ mb: 4 }}>
+        {/* <Box sx={{ mb: 4 }}>
           <Typography variant="h6" sx={{ mb: 2 }}>
             Contact
           </Typography>
@@ -49,7 +49,7 @@ export const ImprintModal = ({ open, onClose }) => {
               LinkedIn
             </a>
           </Typography>
-        </Box>
+        </Box> */}
 
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" sx={{ mb: 2 }}>

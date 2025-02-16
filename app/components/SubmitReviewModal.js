@@ -28,8 +28,19 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
       alert("Please provide a rating");
       return;
     }
+    if (!formData.subject) {
+      alert("Please provide a subject");
+      return;
+    }
+    if (!formData.review) {
+      alert("Please provide a review");
+      return;
+    }
     try {
-      await reviewsService.addReview(formData);
+      await reviewsService.addReview({
+        ...formData,
+        professor: formData.professor || "Anonymous Professor",
+      });
       onClose();
       setFormData({
         professor: "",
@@ -76,12 +87,11 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
           <TextField
             fullWidth
             size="small"
-            label="Professor Name"
+            label="Professor Name (Optional)"
             value={formData.professor}
             onChange={(e) =>
               setFormData({ ...formData, professor: e.target.value })
             }
-            required
             sx={{ mb: 2 }}
           />
           <TextField
