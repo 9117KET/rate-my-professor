@@ -58,16 +58,21 @@ export const ViewReviewsModal = ({ open, onClose }) => {
 
   // Filtered and searched reviews
   const filteredReviews = useMemo(() => {
-    return (reviews || []).filter((review) => {
+    return reviews.filter((review) => {
       const matchesSearch =
-        review.professor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        review.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        review.review.toLowerCase().includes(searchTerm.toLowerCase());
+        (review.professor?.toLowerCase() || "").includes(
+          searchTerm.toLowerCase()
+        ) ||
+        (review.subject?.toLowerCase() || "").includes(
+          searchTerm.toLowerCase()
+        ) ||
+        (review.review?.toLowerCase() || "").includes(searchTerm.toLowerCase());
 
       const matchesSubject =
         filterSubject === "all" || review.subject === filterSubject;
+
       const matchesRating =
-        filterRating === "all" || review.stars === parseInt(filterRating);
+        filterRating === "all" || review.stars === Number(filterRating);
 
       return matchesSearch && matchesSubject && matchesRating;
     });

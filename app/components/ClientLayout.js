@@ -1,6 +1,7 @@
 "use client";
 
 import { ThemeProvider, createTheme } from "@mui/material";
+import { memo } from "react";
 
 const theme = createTheme({
   palette: {
@@ -71,9 +72,11 @@ const theme = createTheme({
   },
 });
 
-const ClientLayout = ({ children }) => {
+const ClientLayout = memo(({ children }) => {
   console.log("ClientLayout rendering");
   return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
-};
+});
+
+ClientLayout.displayName = "ClientLayout";
 
 export default ClientLayout;

@@ -89,3 +89,36 @@ export const tipsService = {
     }
   },
 };
+
+export const formatTimestamp = (date) => {
+  if (!date) return "";
+
+  const dateObj = date instanceof Date ? date : new Date(date);
+
+  if (isNaN(dateObj.getTime())) return "";
+
+  // Use ISO string format initially
+  const options = {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour12: false,
+  };
+
+  // Use a consistent locale and timezone for both server and client
+  return new Intl.DateTimeFormat("en-US", options).format(dateObj);
+};
+
+// Create a separate utility for client-side operations
+export const clientStorage = {
+  setItem: (key, value) => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(key, value);
+  },
+  getItem: (key) => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(key);
+  },
+};
