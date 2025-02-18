@@ -20,17 +20,29 @@ import {
   FormControl,
   InputLabel,
   Grid,
+  IconButton,
+  Badge,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { db } from "../lib/firebase";
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { formatTimestamp } from "../utils/formatters";
+import ThumbUpIcon from "@mui/icons-material/ThumbUp";
+import ThumbDownIcon from "@mui/icons-material/ThumbDown";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import { reviewsService } from "../services/reviewsService";
 
 export const ViewReviewsModal = ({ open, onClose }) => {
   const [reviews, setReviews] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSubject, setFilterSubject] = useState("all");
   const [filterRating, setFilterRating] = useState("all");
+  const [userReactions, setUserReactions] = useState(() => {
+    if (typeof window !== "undefined") {
+      return JSON.parse(localStorage.getItem("userReactions") || "{}");
+    }
+    return {};
+  });
 
   useEffect(() => {
     const reviewsRef = collection(db, "reviews");
@@ -89,6 +101,72 @@ export const ViewReviewsModal = ({ open, onClose }) => {
     });
     return groups;
   }, [filteredReviews]);
+
+  const hasUserReacted = (reviewId, reactionType) => {
+    return userReactions[`${reviewId}_${reactionType}`];
+  };
+
+  const handleReaction = async (reviewId, reactionType) => {
+    const reactionKey = `${reviewId}_${reactionType}`;
+    try {
+      if (!userReactions[reactionKey]) {
+        // Add reaction
+        await reviewsService.addReaction(reviewId, reactionType);
+        setUserReactions((prev) => {
+          const newReactions = { ...prev, [reactionKey]: true };
+          localStorage.setItem("userReactions", JSON.stringify(newReactions));
+          return newReactions;
+        });
+
+        // Update the UI for adding reaction
+        setReviews((prev) =>
+          prev.map((review) => {
+            if (review.id === reviewId) {
+              return {
+                ...review,
+                reactions: {
+                  ...review.reactions,
+                  [reactionType]: (review.reactions?.[reactionType] || 0) + 1,
+                },
+              };
+            }
+            return review;
+          })
+        );
+      } else {
+        // Remove reaction
+        await reviewsService.removeReaction(reviewId, reactionType);
+        setUserReactions((prev) => {
+          const newReactions = { ...prev };
+          delete newReactions[reactionKey];
+          localStorage.setItem("userReactions", JSON.stringify(newReactions));
+          return newReactions;
+        });
+
+        // Update the UI for removing reaction
+        setReviews((prev) =>
+          prev.map((review) => {
+            if (review.id === reviewId) {
+              return {
+                ...review,
+                reactions: {
+                  ...review.reactions,
+                  [reactionType]: Math.max(
+                    (review.reactions?.[reactionType] || 0) - 1,
+                    0
+                  ),
+                },
+              };
+            }
+            return review;
+          })
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling reaction:", error);
+      alert("Failed to toggle reaction");
+    }
+  };
 
   return (
     <Dialog
@@ -216,6 +294,60 @@ export const ViewReviewsModal = ({ open, onClose }) => {
                           <Typography variant="body1" sx={{ mt: 1 }}>
                             {review.review}
                           </Typography>
+                          <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                handleReaction(review.id, "thumbsUp")
+                              }
+                              color={
+                                hasUserReacted(review.id, "thumbsUp")
+                                  ? "primary"
+                                  : "default"
+                              }
+                            >
+                              <Badge
+                                badgeContent={review.reactions?.thumbsUp || 0}
+                                color="primary"
+                              >
+                                <ThumbUpIcon fontSize="small" />
+                              </Badge>
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                handleReaction(review.id, "thumbsDown")
+                              }
+                              color={
+                                hasUserReacted(review.id, "thumbsDown")
+                                  ? "primary"
+                                  : "default"
+                              }
+                            >
+                              <Badge
+                                badgeContent={review.reactions?.thumbsDown || 0}
+                                color="primary"
+                              >
+                                <ThumbDownIcon fontSize="small" />
+                              </Badge>
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleReaction(review.id, "love")}
+                              color={
+                                hasUserReacted(review.id, "love")
+                                  ? "secondary"
+                                  : "default"
+                              }
+                            >
+                              <Badge
+                                badgeContent={review.reactions?.love || 0}
+                                color="secondary"
+                              >
+                                <FavoriteIcon fontSize="small" />
+                              </Badge>
+                            </IconButton>
+                          </Box>
                         </Box>
                       </ListItem>
                       {index < professorReviews.length - 1 && <Divider />}
