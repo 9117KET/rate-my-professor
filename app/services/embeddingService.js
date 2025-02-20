@@ -4,12 +4,18 @@ import { Pinecone } from "@pinecone-database/pinecone";
 
 export const embeddingService = {
   async getClients() {
+    console.log(
+      "OPENAI_API_KEY:",
+      process.env.OPENAI_API_KEY ? "Present" : "Missing"
+    );
+
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: process.env.OPENAI_API_KEY || "",
+      dangerouslyAllowBrowser: true,
     });
 
     const pc = new Pinecone({
-      apiKey: process.env.PINECONE_API_KEY,
+      apiKey: process.env.PINECONE_API_KEY || "",
     });
 
     return { openai, pc };
