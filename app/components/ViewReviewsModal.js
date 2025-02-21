@@ -22,6 +22,7 @@ import {
   Grid,
   IconButton,
   Badge,
+  Menu,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { db } from "../lib/firebase";
@@ -30,6 +31,7 @@ import { formatTimestamp } from "../utils/formatters";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
 import FavoriteIcon from "@mui/icons-material/Favorite";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { reviewsService } from "../services/reviewsService";
 
 export const ViewReviewsModal = ({ open, onClose }) => {
@@ -43,6 +45,10 @@ export const ViewReviewsModal = ({ open, onClose }) => {
     }
     return {};
   });
+  const [userIp, setUserIp] = useState(null);
+  const [editingReview, setEditingReview] = useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedReview, setSelectedReview] = useState(null);
 
   useEffect(() => {
     const reviewsRef = collection(db, "reviews");
@@ -58,6 +64,13 @@ export const ViewReviewsModal = ({ open, onClose }) => {
     });
 
     return () => unsubscribe(); // Cleanup subscription on unmount
+  }, []);
+
+  useEffect(() => {
+    // Fetch user's IP address
+    fetch("/api/getIp")
+      .then((res) => res.json())
+      .then((data) => setUserIp(data.ip));
   }, []);
 
   // Get unique subjects for filter dropdown
@@ -165,6 +178,37 @@ export const ViewReviewsModal = ({ open, onClose }) => {
     } catch (error) {
       console.error("Error toggling reaction:", error);
       alert("Failed to toggle reaction");
+    }
+  };
+
+  const canModifyReview = (review) => {
+    if (!review.ipAddress || !userIp) return false;
+
+    const createdAt = new Date(review.createdAt);
+    const now = new Date();
+    const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
+
+    return hoursDiff <= 24 && review.ipAddress === userIp;
+  };
+
+  const handleEditReview = async (reviewId, newContent) => {
+    try {
+      await reviewsService.editReview(reviewId, newContent, userIp);
+      // The reviews will update automatically through the onSnapshot listener
+      setEditingReview(null);
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    if (window.confirm("Are you sure you want to delete this review?")) {
+      try {
+        await reviewsService.deleteReview(reviewId, userIp);
+        // The reviews will update automatically through the onSnapshot listener
+      } catch (error) {
+        alert(error.message);
+      }
     }
   };
 
@@ -348,6 +392,17 @@ export const ViewReviewsModal = ({ open, onClose }) => {
                               </Badge>
                             </IconButton>
                           </Box>
+                          {canModifyReview(review) && (
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                setAnchorEl(e.currentTarget);
+                                setSelectedReview(review);
+                              }}
+                            >
+                              <MoreVertIcon />
+                            </IconButton>
+                          )}
                         </Box>
                       </ListItem>
                       {index < professorReviews.length - 1 && <Divider />}
@@ -362,6 +417,28 @@ export const ViewReviewsModal = ({ open, onClose }) => {
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
       </DialogActions>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={() => setAnchorEl(null)}
+      >
+        <MenuItem
+          onClick={() => {
+            setEditingReview(selectedReview);
+            setAnchorEl(null);
+          }}
+        >
+          Edit
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleDeleteReview(selectedReview.id);
+            setAnchorEl(null);
+          }}
+        >
+          Delete
+        </MenuItem>
+      </Menu>
     </Dialog>
   );
 };

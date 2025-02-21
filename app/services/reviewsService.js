@@ -9,6 +9,8 @@ import {
   updateDoc,
   doc,
   increment,
+  deleteDoc,
+  getDoc,
 } from "firebase/firestore";
 import { embeddingService } from "./embeddingService";
 
@@ -37,12 +39,13 @@ export const reviewsService = {
     }
   },
 
-  async addReview(reviewData) {
+  async addReview(reviewData, ipAddress) {
     try {
       const reviewsRef = collection(db, COLLECTION_NAME);
       const enrichedReview = {
         ...reviewData,
         createdAt: serverTimestamp(),
+        ipAddress: ipAddress,
         reactions: {
           thumbsUp: 0,
           thumbsDown: 0,
@@ -58,6 +61,85 @@ export const reviewsService = {
       return { id: docRef.id, ...enrichedReview };
     } catch (error) {
       console.error("Error adding review:", error);
+      throw error;
+    }
+  },
+
+  async editReview(reviewId, newContent, ipAddress) {
+    try {
+      const reviewRef = doc(db, COLLECTION_NAME, reviewId);
+      const reviewSnap = await getDoc(reviewRef);
+      const reviewData = reviewSnap.data();
+
+      // Check if review exists and IP matches
+      if (!reviewSnap.exists()) {
+        throw new Error("Review not found");
+      }
+
+      if (reviewData.ipAddress !== ipAddress) {
+        throw new Error("Unauthorized to edit this review");
+      }
+
+      // Check if within 24 hours
+      const createdAt = reviewData.createdAt.toDate();
+      const now = new Date();
+      const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
+
+      if (hoursDiff > 24) {
+        throw new Error(
+          "Review can only be edited within 24 hours of creation"
+        );
+      }
+
+      await updateDoc(reviewRef, {
+        ...newContent,
+        lastEdited: serverTimestamp(),
+      });
+
+      // Sync with Pinecone after editing
+      await embeddingService.syncFirestoreWithPinecone();
+
+      return true;
+    } catch (error) {
+      console.error("Error editing review:", error);
+      throw error;
+    }
+  },
+
+  async deleteReview(reviewId, ipAddress) {
+    try {
+      const reviewRef = doc(db, COLLECTION_NAME, reviewId);
+      const reviewSnap = await getDoc(reviewRef);
+      const reviewData = reviewSnap.data();
+
+      // Check if review exists and IP matches
+      if (!reviewSnap.exists()) {
+        throw new Error("Review not found");
+      }
+
+      if (reviewData.ipAddress !== ipAddress) {
+        throw new Error("Unauthorized to delete this review");
+      }
+
+      // Check if within 24 hours
+      const createdAt = reviewData.createdAt.toDate();
+      const now = new Date();
+      const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
+
+      if (hoursDiff > 24) {
+        throw new Error(
+          "Review can only be deleted within 24 hours of creation"
+        );
+      }
+
+      await deleteDoc(reviewRef);
+
+      // Sync with Pinecone after deletion
+      await embeddingService.syncFirestoreWithPinecone();
+
+      return true;
+    } catch (error) {
+      console.error("Error deleting review:", error);
       throw error;
     }
   },

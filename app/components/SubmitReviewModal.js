@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -21,9 +21,20 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
     stars: 0,
     review: "",
   });
+  const [userIp, setUserIp] = useState(null);
+
+  useEffect(() => {
+    fetch("/api/getIp")
+      .then((res) => res.json())
+      .then((data) => setUserIp(data.ip));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!userIp) {
+      alert("Unable to submit review at this time. Please try again later.");
+      return;
+    }
     if (formData.stars === 0) {
       alert("Please provide a rating");
       return;
@@ -37,10 +48,13 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
       return;
     }
     try {
-      await reviewsService.addReview({
-        ...formData,
-        professor: formData.professor || "Anonymous Professor",
-      });
+      await reviewsService.addReview(
+        {
+          ...formData,
+          professor: formData.professor || "Anonymous Professor",
+        },
+        userIp
+      );
       onClose();
       setFormData({
         professor: "",
