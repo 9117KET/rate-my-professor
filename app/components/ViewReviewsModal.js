@@ -46,7 +46,6 @@ export const ViewReviewsModal = ({ open, onClose }) => {
     return {};
   });
   const [userIp, setUserIp] = useState(null);
-  const [editingReview, setEditingReview] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedReview, setSelectedReview] = useState(null);
 
@@ -189,16 +188,6 @@ export const ViewReviewsModal = ({ open, onClose }) => {
     const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
 
     return hoursDiff <= 24 && review.ipAddress === userIp;
-  };
-
-  const handleEditReview = async (reviewId, newContent) => {
-    try {
-      await reviewsService.editReview(reviewId, newContent, userIp);
-      // The reviews will update automatically through the onSnapshot listener
-      setEditingReview(null);
-    } catch (error) {
-      alert(error.message);
-    }
   };
 
   const handleDeleteReview = async (reviewId) => {
@@ -422,14 +411,6 @@ export const ViewReviewsModal = ({ open, onClose }) => {
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
       >
-        <MenuItem
-          onClick={() => {
-            setEditingReview(selectedReview);
-            setAnchorEl(null);
-          }}
-        >
-          Edit
-        </MenuItem>
         <MenuItem
           onClick={() => {
             handleDeleteReview(selectedReview.id);
