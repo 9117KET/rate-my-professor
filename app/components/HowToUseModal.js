@@ -17,6 +17,9 @@ import HelpIcon from "@mui/icons-material/Help";
 import StarIcon from "@mui/icons-material/Star";
 import InstagramIcon from "@mui/icons-material/Instagram";
 import SecurityIcon from "@mui/icons-material/Security";
+import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import TipsAndUpdatesOutlinedIcon from "@mui/icons-material/TipsAndUpdatesOutlined";
 
 export const HowToUseModal = ({ open, onClose }) => {
   return (
@@ -45,6 +48,53 @@ export const HowToUseModal = ({ open, onClose }) => {
             professors. It&apos;s a space where you can share and learn from
             others&apos; experiences anonymously.
           </Typography>
+        </Box>
+
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" sx={{ mb: 2, color: "primary.main" }}>
+            How to Use Each Feature
+          </Typography>
+          <List>
+            <ListItem>
+              <ListItemIcon>
+                <HelpIcon color="primary" />
+              </ListItemIcon>
+              <ListItemText
+                primary="Chat Section"
+                secondary="Interact with our AI assistant that's trained on student reviews. Ask questions about professors, courses, or get personalized recommendations based on submitted reviews."
+              />
+            </ListItem>
+
+            <ListItem>
+              <ListItemIcon>
+                <RateReviewOutlinedIcon color="primary" />
+              </ListItemIcon>
+              <ListItemText
+                primary="Rate Button"
+                secondary="Submit anonymous professor reviews. Describe their teaching style, share your experience, and add a rating. You can describe professors creatively without using names."
+              />
+            </ListItem>
+
+            <ListItem>
+              <ListItemIcon>
+                <VisibilityOutlinedIcon color="primary" />
+              </ListItemIcon>
+              <ListItemText
+                primary="Reviews Section"
+                secondary="Browse reviews from other students, react with likes or loves, and engage in discussions by replying to reviews. Filter by subject or rating to find relevant feedback."
+              />
+            </ListItem>
+
+            <ListItem>
+              <ListItemIcon>
+                <TipsAndUpdatesOutlinedIcon color="primary" />
+              </ListItemIcon>
+              <ListItemText
+                primary="Tips Section"
+                secondary="Share and discover study techniques, course validation strategies, and helpful advice from fellow students. Add your own tips to help others succeed."
+              />
+            </ListItem>
+          </List>
         </Box>
 
         <Box sx={{ mb: 4 }}>
