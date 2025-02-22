@@ -29,7 +29,7 @@ export const ImprintModal = ({ open, onClose }) => {
           <Typography variant="h6" sx={{ mb: 2 }}>
             Service Provider
           </Typography>
-          <Typography>Kinlo&apos;s fun Project</Typography>
+          <Typography>Kinlo ET</Typography>
           <Typography>Campus Ring 1</Typography>
           <Typography>28759 Bremen</Typography>
           <Typography>Germany</Typography>

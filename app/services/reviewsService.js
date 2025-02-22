@@ -11,6 +11,7 @@ import {
   increment,
   deleteDoc,
   getDoc,
+  arrayUnion,
 } from "firebase/firestore";
 import { embeddingService } from "./embeddingService";
 
@@ -164,6 +165,110 @@ export const reviewsService = {
       await updateDoc(reviewRef, updateData);
     } catch (error) {
       console.error("Error removing reaction:", error);
+      throw error;
+    }
+  },
+
+  async addReply(reviewId, replyData, ipAddress) {
+    try {
+      const reviewRef = doc(db, COLLECTION_NAME, reviewId);
+      const now = new Date();
+
+      const reply = {
+        content: replyData.content,
+        createdAt: now,
+        ipAddress: ipAddress,
+        lastEdited: null,
+        reactions: {
+          thumbsUp: 0,
+          thumbsDown: 0,
+          love: 0,
+        },
+      };
+
+      await updateDoc(reviewRef, {
+        replies: arrayUnion(reply),
+      });
+
+      return reply;
+    } catch (error) {
+      console.error("Error adding reply:", error);
+      throw error;
+    }
+  },
+
+  async deleteReply(reviewId, replyIndex, ipAddress) {
+    try {
+      const reviewRef = doc(db, COLLECTION_NAME, reviewId);
+      const reviewSnap = await getDoc(reviewRef);
+      const reviewData = reviewSnap.data();
+
+      if (!reviewSnap.exists()) {
+        throw new Error("Review not found");
+      }
+
+      const replies = reviewData.replies || [];
+      const reply = replies[replyIndex];
+
+      if (!reply || reply.ipAddress !== ipAddress) {
+        throw new Error("Unauthorized to delete this reply");
+      }
+
+      const createdAt = reply.createdAt.toDate();
+      const now = new Date();
+      const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
+
+      if (hoursDiff > 24) {
+        throw new Error(
+          "Reply can only be deleted within 24 hours of creation"
+        );
+      }
+
+      replies.splice(replyIndex, 1);
+      await updateDoc(reviewRef, { replies });
+
+      return true;
+    } catch (error) {
+      console.error("Error deleting reply:", error);
+      throw error;
+    }
+  },
+
+  async editReply(reviewId, replyIndex, newContent, ipAddress) {
+    try {
+      const reviewRef = doc(db, COLLECTION_NAME, reviewId);
+      const reviewSnap = await getDoc(reviewRef);
+      const reviewData = reviewSnap.data();
+
+      if (!reviewSnap.exists()) {
+        throw new Error("Review not found");
+      }
+
+      const replies = reviewData.replies || [];
+      const reply = replies[replyIndex];
+
+      if (!reply || reply.ipAddress !== ipAddress) {
+        throw new Error("Unauthorized to edit this reply");
+      }
+
+      const createdAt = new Date(reply.createdAt);
+      const now = new Date();
+      const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
+
+      if (hoursDiff > 24) {
+        throw new Error("Reply can only be edited within 24 hours of creation");
+      }
+
+      replies[replyIndex] = {
+        ...reply,
+        content: newContent,
+        lastEdited: now,
+      };
+
+      await updateDoc(reviewRef, { replies });
+      return replies[replyIndex];
+    } catch (error) {
+      console.error("Error editing reply:", error);
       throw error;
     }
   },

@@ -168,10 +168,21 @@ export default function Home() {
           sx={{
             color: "white",
             fontSize: { xs: "1.5rem", sm: "2rem", md: "2.5rem" },
-            mb: { xs: 1, sm: 2 },
+            mb: { xs: 0.5, sm: 1 },
           }}
         >
           Rate My Professor AI Assistant
+        </Typography>
+        <Typography
+          variant="subtitle1"
+          sx={{
+            color: "white",
+            fontSize: { xs: "0.9rem", sm: "1rem" },
+            mb: { xs: 1, sm: 2 },
+            opacity: 0.9,
+          }}
+        >
+          Rate your best and worst professors
         </Typography>
         <ActionButtons
           onRateClick={() => setOpenRateModal(true)}

@@ -33,6 +33,7 @@ import ThumbDownIcon from "@mui/icons-material/ThumbDown";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { reviewsService } from "../services/reviewsService";
+import { ReviewReply } from "./ReviewReply";
 
 export const ViewReviewsModal = ({ open, onClose }) => {
   const [reviews, setReviews] = useState([]);
@@ -48,6 +49,7 @@ export const ViewReviewsModal = ({ open, onClose }) => {
   const [userIp, setUserIp] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedReview, setSelectedReview] = useState(null);
+  const [replyContent, setReplyContent] = useState({});
 
   useEffect(() => {
     const reviewsRef = collection(db, "reviews");
@@ -201,6 +203,48 @@ export const ViewReviewsModal = ({ open, onClose }) => {
     }
   };
 
+  const handleDeleteReply = async (reviewId, replyIndex) => {
+    if (window.confirm("Are you sure you want to delete this reply?")) {
+      try {
+        await reviewsService.deleteReply(reviewId, replyIndex, userIp);
+        // The replies will update automatically through the onSnapshot listener
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+  };
+
+  const handleAddReply = async (reviewId) => {
+    if (!replyContent[reviewId]?.trim()) return;
+
+    try {
+      await reviewsService.addReply(
+        reviewId,
+        {
+          content: replyContent[reviewId],
+        },
+        userIp
+      );
+
+      setReplyContent((prev) => ({
+        ...prev,
+        [reviewId]: "",
+      }));
+    } catch (error) {
+      console.error("Error adding reply:", error);
+      alert("Failed to add reply");
+    }
+  };
+
+  const handleEditReply = async (reviewId, replyIndex, newContent) => {
+    try {
+      await reviewsService.editReply(reviewId, replyIndex, newContent, userIp);
+    } catch (error) {
+      console.error("Error editing reply:", error);
+      alert(error.message);
+    }
+  };
+
   return (
     <Dialog
       open={open}
@@ -327,6 +371,40 @@ export const ViewReviewsModal = ({ open, onClose }) => {
                           <Typography variant="body1" sx={{ mt: 1 }}>
                             {review.review}
                           </Typography>
+                          <Box sx={{ mt: 2 }}>
+                            {review.replies?.map((reply, replyIndex) => (
+                              <ReviewReply
+                                key={replyIndex}
+                                review={review}
+                                reply={reply}
+                                index={replyIndex}
+                                userIp={userIp}
+                                onDelete={handleDeleteReply}
+                                onEdit={handleEditReply}
+                              />
+                            ))}
+                          </Box>
+                          <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                            <TextField
+                              size="small"
+                              placeholder="Add a reply..."
+                              value={replyContent[review.id] || ""}
+                              onChange={(e) =>
+                                setReplyContent((prev) => ({
+                                  ...prev,
+                                  [review.id]: e.target.value,
+                                }))
+                              }
+                              sx={{ flex: 1 }}
+                            />
+                            <Button
+                              variant="contained"
+                              size="small"
+                              onClick={() => handleAddReply(review.id)}
+                            >
+                              Reply
+                            </Button>
+                          </Box>
                           <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
                             <IconButton
                               size="small"

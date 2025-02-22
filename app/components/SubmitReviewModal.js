@@ -35,6 +35,10 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
       alert("Unable to submit review at this time. Please try again later.");
       return;
     }
+    if (!formData.professor.trim()) {
+      alert("Please provide either a professor name or description");
+      return;
+    }
     if (formData.stars === 0) {
       alert("Please provide a rating");
       return;
@@ -48,13 +52,7 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
       return;
     }
     try {
-      await reviewsService.addReview(
-        {
-          ...formData,
-          professor: formData.professor || "Anonymous Professor",
-        },
-        userIp
-      );
+      await reviewsService.addReview(formData, userIp);
       onClose();
       setFormData({
         professor: "",
@@ -101,7 +99,8 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
           <TextField
             fullWidth
             size="small"
-            label="Describe the professor (optional) - pls do not state a professor's name"
+            label="Professor Name or Description"
+            placeholder="e.g., 'Dr. Smith' or 'The Statistics prof with colorful bowties'"
             value={formData.professor}
             onChange={(e) =>
               setFormData({ ...formData, professor: e.target.value })
