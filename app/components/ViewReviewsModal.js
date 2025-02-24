@@ -71,7 +71,8 @@ export const ViewReviewsModal = ({ open, onClose }) => {
     // Fetch user's IP address
     fetch("/api/getIp")
       .then((res) => res.json())
-      .then((data) => setUserIp(data.ip));
+      .then((data) => setUserIp(data.ip))
+      .catch((error) => console.error("Error fetching IP:", error));
   }, []);
 
   // Get unique subjects for filter dropdown
