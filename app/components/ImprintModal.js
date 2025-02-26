@@ -20,20 +20,26 @@ export const ImprintModal = ({ open, onClose }) => {
           margin: { xs: 1, sm: 2 },
           width: { xs: "95%", sm: "90%" },
           maxHeight: { xs: "95vh", sm: "90vh" },
+          overflowY: "auto",
         },
       }}
     >
-      <DialogTitle>Imprint & Legal Notice</DialogTitle>
+      <DialogTitle sx={{ fontSize: { xs: "1.2rem", sm: "1.5rem" } }}>
+        Imprint & Legal Notice
+      </DialogTitle>
       <DialogContent>
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
+        {/* <Box sx={{ mb: 4 }}>
+          <Typography
+            variant="h6"
+            sx={{ mb: 2, fontSize: { xs: "1rem", sm: "1.25rem" } }}
+          >
             Service Provider
           </Typography>
           <Typography>Kinlo ET</Typography>
           <Typography>Campus Ring 1</Typography>
           <Typography>28759 Bremen</Typography>
           <Typography>Germany</Typography>
-        </Box>
+        </Box> */}
 
         {/* <Box sx={{ mb: 4 }}>
           <Typography variant="h6" sx={{ mb: 2 }}>
@@ -52,7 +58,10 @@ export const ImprintModal = ({ open, onClose }) => {
         </Box> */}
 
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
+          <Typography
+            variant="h6"
+            sx={{ mb: 2, fontSize: { xs: "1rem", sm: "1.25rem" } }}
+          >
             Legal Disclaimers
           </Typography>
           <Typography paragraph>
@@ -80,7 +89,10 @@ export const ImprintModal = ({ open, onClose }) => {
         </Box>
 
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
+          <Typography
+            variant="h6"
+            sx={{ mb: 2, fontSize: { xs: "1rem", sm: "1.25rem" } }}
+          >
             Data Protection
           </Typography>
           <Typography paragraph>

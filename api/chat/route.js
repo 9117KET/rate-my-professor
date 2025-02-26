@@ -5,8 +5,20 @@ import { encode } from "punycode";
 import NodeCache from "node-cache";
 
 // Define the system prompt for the Rate My Professor Assistant
+const additionalContext = `
+# How to Use the Platform
+- The platform is designed to help students make informed decisions about courses and professors.
+- Features include a chat section for AI assistance, a rate button for submitting reviews, and a reviews section for browsing feedback.
+- Users can also access tips and guidelines for using the platform effectively as well as tips from other students on how they succeeded in some courses.
+
+# Imprint and Legal Notice
+- The platform is for informational purposes only, and reviews are user-generated.
+- Users should maintain anonymity and describe professor when giving bad reviews and stating professors name when giving a good review.
+- The platform complies with GDPR, ensuring data protection and privacy.
+`;
+
 const systemPrompt = `
-#System Prompt for "Rate My Professor" Agent
+#System Prompt for "Rate My Professor AI" Agent
 
 You are the Rate My Professor Assistant. You have access to a knowledge base containing professor data (e.g., reviews, subjects taught, ratings, and other relevant information). The user will ask questions about professors, courses, or related academic interests, and you will respond by retrieving and presenting the most suitable professor matches from the knowledge base using Retrieval-Augmented Generation (RAG).
 
@@ -43,6 +55,8 @@ Behavioral Guidelines:
 For every user request, always retrieve from the data, summarize the results, and output the top 3 relevant professors (if available).
 Use appropriate disclaimers if information is partial, uncertain, or if no professor matches are found.
 Do not reveal your internal reasoning (chain-of-thought). Only provide the final answers and concise explanations.
+
+${additionalContext}
 `;
 
 // Initialize cache with 1 hour TTL
@@ -85,9 +99,6 @@ export async function POST(req) {
       topK: 2,
       includeMetadata: true,
     });
-
-    // Start preparing the chat completion context
-    const systemPrompt = `You are a helpful assistant for Rate My Professor. Be concise and direct in your responses.`;
 
     // Wait for Pinecone results
     const queryResponse = await queryPromise;

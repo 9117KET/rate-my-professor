@@ -15,6 +15,8 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  List,
+  ListItem,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { tipsService } from "../services/tipsService";
@@ -140,72 +142,41 @@ export const TipsModal = ({ open, onClose }) => {
           </>
         )}
         <Box sx={{ mt: 4 }}>
-          <Typography variant="h6">TIPS from Students:</Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            TIPS from Students:
+          </Typography>
           {loading ? (
             <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
               <CircularProgress />
             </Box>
           ) : (
-            tips.map((tip) => (
-              <Box key={tip.id} sx={{ mt: 2 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                  }}
-                >
-                  {editingTip === tip.id ? (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        flex: 1,
+            <List>
+              {tips.map((tip) => (
+                <ListItem key={tip.id} sx={{ mt: 2 }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      {formatTextWithLinks(tip.content)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {formatTimestamp(tip.createdAt)}
+                      {tip.lastEdited &&
+                        ` (edited ${formatTimestamp(tip.lastEdited)})`}
+                    </Typography>
+                  </Box>
+                  {mounted && canModifyTip(tip) && (
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        setAnchorEl(e.currentTarget);
+                        setSelectedTip(tip);
                       }}
                     >
-                      <TextField
-                        fullWidth
-                        value={tipFormData}
-                        onChange={(e) => setTipFormData(e.target.value)}
-                        multiline
-                        sx={{ mr: 2 }}
-                      />
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={() => handleEditTip(tip.id, tipFormData)}
-                        sx={{ minWidth: "auto", ml: 1 }}
-                      >
-                        Save
-                      </Button>
-                    </Box>
-                  ) : (
-                    <>
-                      <Typography sx={{ flex: 1 }}>
-                        {formatTextWithLinks(tip.content)}
-                      </Typography>
-                      {mounted && canModifyTip(tip) && (
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            setAnchorEl(e.currentTarget);
-                            setSelectedTip(tip);
-                          }}
-                        >
-                          <MoreVertIcon />
-                        </IconButton>
-                      )}
-                    </>
+                      <MoreVertIcon />
+                    </IconButton>
                   )}
-                </Box>
-                <Typography variant="caption" color="text.secondary">
-                  {formatTimestamp(tip.createdAt)}
-                  {tip.lastEdited &&
-                    ` (edited ${formatTimestamp(tip.lastEdited)})`}
-                </Typography>
-                <Divider sx={{ mt: 1 }} />
-              </Box>
-            ))
+                </ListItem>
+              ))}
+            </List>
           )}
         </Box>
       </DialogContent>

@@ -33,13 +33,23 @@ export const HowToUseModal = ({ open, onClose }) => {
           margin: { xs: 1, sm: 2 },
           width: { xs: "95%", sm: "90%" },
           maxHeight: { xs: "95vh", sm: "90vh" },
+          overflowY: "auto",
         },
       }}
     >
-      <DialogTitle>How & Why Use This Platform</DialogTitle>
+      <DialogTitle sx={{ fontSize: { xs: "1.2rem", sm: "1.5rem" } }}>
+        How & Why Use This Platform
+      </DialogTitle>
       <DialogContent>
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ mb: 2, color: "primary.main" }}>
+          <Typography
+            variant="h6"
+            sx={{
+              mb: 2,
+              color: "primary.main",
+              fontSize: { xs: "1rem", sm: "1.25rem" },
+            }}
+          >
             Why This Platform?
           </Typography>
           <Typography paragraph>
@@ -51,7 +61,14 @@ export const HowToUseModal = ({ open, onClose }) => {
         </Box>
 
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ mb: 2, color: "primary.main" }}>
+          <Typography
+            variant="h6"
+            sx={{
+              mb: 2,
+              color: "primary.main",
+              fontSize: { xs: "1rem", sm: "1.25rem" },
+            }}
+          >
             How to Use Each Feature
           </Typography>
           <List>
@@ -98,7 +115,14 @@ export const HowToUseModal = ({ open, onClose }) => {
         </Box>
 
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ mb: 2, color: "primary.main" }}>
+          <Typography
+            variant="h6"
+            sx={{
+              mb: 2,
+              color: "primary.main",
+              fontSize: { xs: "1rem", sm: "1.25rem" },
+            }}
+          >
             Key Features
           </Typography>
           <List>
@@ -175,7 +199,14 @@ export const HowToUseModal = ({ open, onClose }) => {
         </Box>
 
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ mb: 2, color: "primary.main" }}>
+          <Typography
+            variant="h6"
+            sx={{
+              mb: 2,
+              color: "primary.main",
+              fontSize: { xs: "1rem", sm: "1.25rem" },
+            }}
+          >
             Guidelines
           </Typography>
           <Typography paragraph>
