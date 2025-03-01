@@ -55,9 +55,21 @@ export const reviewsService = {
       };
 
       const docRef = await addDoc(reviewsRef, enrichedReview);
+      console.log(`Added new review with ID: ${docRef.id}`);
 
       // Sync with Pinecone after adding new review
-      await embeddingService.syncFirestoreWithPinecone();
+      try {
+        await embeddingService.syncFirestoreWithPinecone();
+        console.log(
+          `Successfully synced Pinecone after adding review: ${docRef.id}`
+        );
+      } catch (syncError) {
+        console.error(
+          `Error syncing with Pinecone after adding review: ${docRef.id}`,
+          syncError
+        );
+        // We don't throw here to not disrupt the user flow, but we log the error
+      }
 
       return { id: docRef.id, ...enrichedReview };
     } catch (error) {
@@ -97,8 +109,21 @@ export const reviewsService = {
         lastEdited: serverTimestamp(),
       });
 
+      console.log(`Edited review with ID: ${reviewId}`);
+
       // Sync with Pinecone after editing
-      await embeddingService.syncFirestoreWithPinecone();
+      try {
+        await embeddingService.syncFirestoreWithPinecone();
+        console.log(
+          `Successfully synced Pinecone after editing review: ${reviewId}`
+        );
+      } catch (syncError) {
+        console.error(
+          `Error syncing with Pinecone after editing review: ${reviewId}`,
+          syncError
+        );
+        // We don't throw here to not disrupt the user flow, but we log the error
+      }
 
       return true;
     } catch (error) {
@@ -134,9 +159,21 @@ export const reviewsService = {
       }
 
       await deleteDoc(reviewRef);
+      console.log(`Deleted review with ID: ${reviewId}`);
 
       // Sync with Pinecone after deletion
-      await embeddingService.syncFirestoreWithPinecone();
+      try {
+        await embeddingService.syncFirestoreWithPinecone();
+        console.log(
+          `Successfully synced Pinecone after deleting review: ${reviewId}`
+        );
+      } catch (syncError) {
+        console.error(
+          `Error syncing with Pinecone after deleting review: ${reviewId}`,
+          syncError
+        );
+        // We don't throw here to not disrupt the user flow, but we log the error
+      }
 
       return true;
     } catch (error) {
