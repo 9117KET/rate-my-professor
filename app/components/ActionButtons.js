@@ -9,7 +9,7 @@ export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
 
   return (
     <Stack
-      direction={{ xs: "column", sm: "row" }}
+      direction="row"
       spacing={{ xs: 1, sm: 2 }}
       sx={{
         mt: { xs: 2, sm: 3 },
@@ -20,10 +20,10 @@ export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
         mx: "auto",
         px: { xs: 2, sm: 2 },
         "& .MuiButton-root": {
-          minWidth: { xs: "200px", sm: "130px", md: "150px" },
-          fontSize: { xs: "0.8rem", sm: "0.875rem", md: "0.95rem" },
-          py: { xs: 1, sm: 1, md: 1.2 },
-          px: { xs: 2, sm: 2, md: 3 },
+          minWidth: { xs: "auto", sm: "130px", md: "150px" },
+          fontSize: { xs: "0.7rem", sm: "0.875rem", md: "0.95rem" },
+          py: { xs: 0.75, sm: 1, md: 1.2 },
+          px: { xs: 1, sm: 2, md: 3 },
           borderRadius: 2,
           transition: "all 0.2s ease-in-out",
           boxShadow: 2,
@@ -42,7 +42,6 @@ export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
           />
         }
         onClick={onRateClick}
-        fullWidth={isMobile}
         sx={{
           bgcolor: "rgba(255, 255, 255, 0.9)",
           color: "#001B3F",
@@ -61,7 +60,6 @@ export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
           />
         }
         onClick={onViewClick}
-        fullWidth={isMobile}
         sx={{
           bgcolor: "rgba(255, 255, 255, 0.9)",
           color: "#001B3F",
@@ -80,7 +78,6 @@ export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
           />
         }
         onClick={onTipsClick}
-        fullWidth={isMobile}
         sx={{
           bgcolor: "rgba(255, 255, 255, 0.9)",
           color: "#001B3F",
