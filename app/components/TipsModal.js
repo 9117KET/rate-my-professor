@@ -17,6 +17,8 @@ import {
   MenuItem,
   List,
   ListItem,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { tipsService } from "../services/tipsService";
@@ -24,6 +26,8 @@ import { formatTimestamp } from "../utils/formatters";
 import { formatTextWithLinks } from "../utils/linkFormatter";
 
 export const TipsModal = ({ open, onClose }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [tips, setTips] = useState([]);
   const [tipFormData, setTipFormData] = useState("");
   const [loading, setLoading] = useState(true);
@@ -122,66 +126,168 @@ export const TipsModal = ({ open, onClose }) => {
           margin: { xs: 1, sm: 2 },
           width: { xs: "95%", sm: "90%" },
           maxHeight: { xs: "95vh", sm: "90vh" },
+          borderRadius: { xs: 1, sm: 2 },
         },
       }}
     >
-      <DialogTitle>Submit and View TIPS</DialogTitle>
-      <DialogContent>
+      <DialogTitle
+        sx={{
+          pb: { xs: 1, sm: 2 },
+          pt: { xs: 2, sm: 3 },
+          fontSize: { xs: "1.2rem", sm: "1.4rem" },
+          fontWeight: 600,
+          textAlign: { xs: "center", sm: "left" },
+        }}
+      >
+        Submit and View TIPS
+      </DialogTitle>
+      <DialogContent sx={{ px: { xs: 2, sm: 3 } }}>
         {mounted && (
-          <>
+          <Box sx={{ mb: { xs: 3, sm: 4 } }}>
             <TextField
               fullWidth
               label="Share a tip"
               value={tipFormData}
               onChange={(e) => setTipFormData(e.target.value)}
               margin="normal"
+              multiline
+              rows={isMobile ? 2 : 3}
+              sx={{
+                mt: { xs: 1, sm: 2 },
+                "& .MuiInputBase-root": {
+                  fontSize: { xs: "0.9rem", sm: "1rem" },
+                  lineHeight: 1.6,
+                },
+                "& .MuiInputLabel-root": {
+                  fontSize: { xs: "0.9rem", sm: "1rem" },
+                },
+              }}
             />
-            <Button onClick={handleAddTip} variant="contained" sx={{ mt: 2 }}>
+            <Button
+              onClick={handleAddTip}
+              variant="contained"
+              sx={{
+                mt: 2,
+                height: { xs: 40, sm: 44 },
+                minWidth: { xs: "100%", sm: 150 },
+                fontSize: { xs: "0.85rem", sm: "0.9rem" },
+              }}
+            >
               Submit Tip
             </Button>
-          </>
+          </Box>
         )}
-        <Box sx={{ mt: 4 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
+        <Divider sx={{ my: { xs: 2, sm: 3 } }} />
+        <Box sx={{ mt: { xs: 2, sm: 3 } }}>
+          <Typography
+            variant="h6"
+            sx={{
+              mb: { xs: 1.5, sm: 2 },
+              fontSize: { xs: "1.1rem", sm: "1.2rem" },
+              fontWeight: 600,
+            }}
+          >
             TIPS from Students:
           </Typography>
           {loading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
-              <CircularProgress />
+            <Box
+              sx={{ display: "flex", justifyContent: "center", mt: 2, mb: 2 }}
+            >
+              <CircularProgress size={isMobile ? 30 : 40} />
             </Box>
           ) : (
-            <List>
+            <List sx={{ p: 0 }}>
               {tips.map((tip) => (
-                <ListItem key={tip.id} sx={{ mt: 2 }}>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body1" sx={{ mb: 1 }}>
-                      {formatTextWithLinks(tip.content)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {formatTimestamp(tip.createdAt)}
-                      {tip.lastEdited &&
-                        ` (edited ${formatTimestamp(tip.lastEdited)})`}
-                    </Typography>
-                  </Box>
-                  {mounted && canModifyTip(tip) && (
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        setAnchorEl(e.currentTarget);
-                        setSelectedTip(tip);
+                <ListItem
+                  key={tip.id}
+                  sx={{
+                    mt: { xs: 1, sm: 2 },
+                    p: { xs: 1, sm: 2 },
+                    borderRadius: 1,
+                    bgcolor: "background.paper",
+                    boxShadow: 1,
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: "100%",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        mb: 1,
+                        fontSize: { xs: "0.9rem", sm: "1rem" },
+                        lineHeight: 1.6,
+                        flex: 1,
+                        wordBreak: "break-word",
                       }}
                     >
-                      <MoreVertIcon />
-                    </IconButton>
-                  )}
+                      {formatTextWithLinks(tip.content)}
+                    </Typography>
+                    {mounted && canModifyTip(tip) && (
+                      <IconButton
+                        size={isMobile ? "small" : "medium"}
+                        onClick={(e) => {
+                          setAnchorEl(e.currentTarget);
+                          setSelectedTip(tip);
+                        }}
+                        sx={{ ml: 1, p: { xs: 0.5, sm: 1 } }}
+                      >
+                        <MoreVertIcon
+                          fontSize={isMobile ? "small" : "medium"}
+                        />
+                      </IconButton>
+                    )}
+                  </Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{
+                      fontSize: { xs: "0.7rem", sm: "0.75rem" },
+                      alignSelf: "flex-end",
+                    }}
+                  >
+                    {formatTimestamp(tip.createdAt)}
+                    {tip.lastEdited &&
+                      ` (edited ${formatTimestamp(tip.lastEdited)})`}
+                  </Typography>
                 </ListItem>
               ))}
+              {tips.length === 0 && !loading && (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    textAlign: "center",
+                    my: 3,
+                    color: "text.secondary",
+                    fontSize: { xs: "0.85rem", sm: "0.9rem" },
+                  }}
+                >
+                  No tips yet. Be the first to share one!
+                </Typography>
+              )}
             </List>
           )}
         </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Close</Button>
+      <DialogActions sx={{ px: { xs: 2, sm: 3 }, py: { xs: 1.5, sm: 2 } }}>
+        <Button
+          onClick={onClose}
+          variant="outlined"
+          sx={{
+            minWidth: { xs: 80, sm: 100 },
+            height: { xs: 36, sm: 40 },
+            fontSize: { xs: "0.85rem", sm: "0.9rem" },
+          }}
+        >
+          Close
+        </Button>
       </DialogActions>
 
       {mounted && (
@@ -190,12 +296,23 @@ export const TipsModal = ({ open, onClose }) => {
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
             onClose={() => setAnchorEl(null)}
+            PaperProps={{
+              sx: {
+                minWidth: 120,
+                boxShadow: 2,
+                mt: 0.5,
+              },
+            }}
           >
             <MenuItem
               onClick={() => {
                 setEditingTip(selectedTip.id);
                 setTipFormData(selectedTip.content);
                 setAnchorEl(null);
+              }}
+              sx={{
+                py: { xs: 0.75, sm: 1 },
+                fontSize: { xs: "0.85rem", sm: "0.9rem" },
               }}
             >
               Edit
@@ -206,6 +323,10 @@ export const TipsModal = ({ open, onClose }) => {
                 setDeleteConfirmOpen(true);
                 setAnchorEl(null);
               }}
+              sx={{
+                py: { xs: 0.75, sm: 1 },
+                fontSize: { xs: "0.85rem", sm: "0.9rem" },
+              }}
             >
               Delete
             </MenuItem>
@@ -214,13 +335,36 @@ export const TipsModal = ({ open, onClose }) => {
           <Dialog
             open={deleteConfirmOpen}
             onClose={() => setDeleteConfirmOpen(false)}
+            PaperProps={{
+              sx: {
+                width: { xs: "85%", sm: "auto" },
+                minWidth: { sm: 300 },
+                p: { xs: 1, sm: 1 },
+                borderRadius: { xs: 1, sm: 2 },
+              },
+            }}
           >
-            <DialogTitle>Delete Tip</DialogTitle>
+            <DialogTitle
+              sx={{
+                fontSize: { xs: "1.1rem", sm: "1.2rem" },
+                pt: { xs: 2, sm: 2 },
+                pb: { xs: 1, sm: 1 },
+              }}
+            >
+              Delete Tip
+            </DialogTitle>
             <DialogContent>
-              <Typography>Are you sure you want to delete this tip?</Typography>
+              <Typography sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
+                Are you sure you want to delete this tip?
+              </Typography>
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setDeleteConfirmOpen(false)}>
+            <DialogActions
+              sx={{ px: { xs: 2, sm: 2 }, py: { xs: 1, sm: 1.5 } }}
+            >
+              <Button
+                onClick={() => setDeleteConfirmOpen(false)}
+                sx={{ fontSize: { xs: "0.85rem", sm: "0.9rem" } }}
+              >
                 Cancel
               </Button>
               <Button
@@ -230,6 +374,8 @@ export const TipsModal = ({ open, onClose }) => {
                   setTipToDelete(null);
                 }}
                 color="error"
+                variant="contained"
+                sx={{ fontSize: { xs: "0.85rem", sm: "0.9rem" } }}
               >
                 Delete
               </Button>

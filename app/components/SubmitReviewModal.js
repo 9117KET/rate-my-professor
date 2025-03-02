@@ -77,15 +77,22 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
           margin: { xs: 1, sm: 2 },
           width: { xs: "95%", sm: "90%" },
           maxHeight: { xs: "95vh", sm: "90vh" },
+          borderRadius: { xs: 1, sm: 2 },
         },
       }}
     >
       <DialogTitle
-        sx={{ pb: { xs: 1, sm: 2 }, fontSize: { xs: "1.1rem", sm: "1.25rem" } }}
+        sx={{
+          pb: { xs: 1, sm: 2 },
+          pt: { xs: 2, sm: 3 },
+          fontSize: { xs: "1.2rem", sm: "1.4rem" },
+          fontWeight: 600,
+          textAlign: { xs: "center", sm: "left" },
+        }}
       >
         Submit Anonymous Review
       </DialogTitle>
-      <DialogContent>
+      <DialogContent sx={{ px: { xs: 2, sm: 3 } }}>
         <Box
           component="form"
           onSubmit={handleSubmit}
@@ -105,43 +112,111 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
             onChange={(e) =>
               setFormData({ ...formData, professor: e.target.value })
             }
-            sx={{ mb: 2 }}
+            sx={{
+              mb: 2,
+              "& .MuiInputBase-root": {
+                height: { xs: "auto", sm: "auto" },
+                fontSize: { xs: "0.9rem", sm: "1rem" },
+              },
+              "& .MuiInputLabel-root": {
+                fontSize: { xs: "0.9rem", sm: "1rem" },
+              },
+            }}
           />
           <TextField
             fullWidth
             label="Subject"
+            size="small"
             value={formData.subject}
             onChange={(e) =>
               setFormData({ ...formData, subject: e.target.value })
             }
             required
-            sx={{ mb: 2 }}
+            sx={{
+              mb: 2,
+              "& .MuiInputBase-root": {
+                height: { xs: "40px", sm: "44px" },
+                fontSize: { xs: "0.9rem", sm: "1rem" },
+              },
+              "& .MuiInputLabel-root": {
+                fontSize: { xs: "0.9rem", sm: "1rem" },
+              },
+            }}
           />
-          <Box sx={{ mb: 2 }}>
-            <Typography component="legend">Rating</Typography>
+          <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+            <Typography
+              component="legend"
+              sx={{
+                mb: 0.5,
+                fontSize: { xs: "0.9rem", sm: "1rem" },
+                fontWeight: 500,
+              }}
+            >
+              Rating
+            </Typography>
             <Rating
               value={formData.stars}
               onChange={(_, value) =>
                 setFormData({ ...formData, stars: value })
               }
+              size={window.innerWidth < 600 ? "medium" : "large"}
             />
           </Box>
           <TextField
             fullWidth
             label="Review"
             multiline
-            rows={4}
+            rows={window.innerWidth < 600 ? 3 : 4}
             value={formData.review}
             onChange={(e) =>
               setFormData({ ...formData, review: e.target.value })
             }
             required
+            sx={{
+              "& .MuiInputBase-root": {
+                fontSize: { xs: "0.9rem", sm: "1rem" },
+                lineHeight: 1.6,
+              },
+              "& .MuiInputLabel-root": {
+                fontSize: { xs: "0.9rem", sm: "1rem" },
+              },
+            }}
           />
         </Box>
       </DialogContent>
-      <DialogActions sx={{ p: { xs: 1.5, sm: 2 } }}>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading}>
+      <DialogActions
+        sx={{
+          p: { xs: 2, sm: 3 },
+          pt: { xs: 1, sm: 2 },
+          display: "flex",
+          justifyContent: "space-between",
+          flexDirection: { xs: "column", sm: "row" },
+          gap: { xs: 1, sm: 0 },
+        }}
+      >
+        <Button
+          onClick={onClose}
+          variant="outlined"
+          sx={{
+            height: { xs: 40, sm: 44 },
+            minWidth: { xs: "100%", sm: 100 },
+            fontSize: { xs: "0.85rem", sm: "0.9rem" },
+            order: { xs: 2, sm: 1 },
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={loading}
+          sx={{
+            height: { xs: 40, sm: 44 },
+            minWidth: { xs: "100%", sm: 120 },
+            fontSize: { xs: "0.85rem", sm: "0.9rem" },
+            order: { xs: 1, sm: 2 },
+          }}
+        >
           Submit
         </Button>
       </DialogActions>

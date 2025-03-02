@@ -39,10 +39,32 @@ export const ReviewReply = ({
   };
 
   return (
-    <Box sx={{ pl: 4, pt: 1, ...sx }}>
-      <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+    <Box
+      sx={{
+        pl: { xs: 1, sm: 2, md: 4 },
+        pt: 1,
+        mb: 1.5,
+        ...sx,
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: { xs: 0.5, sm: 1 },
+          flexDirection: isEditing ? { xs: "column", sm: "row" } : "row",
+        }}
+      >
         {isEditing ? (
-          <Box sx={{ flex: 1, display: "flex", gap: 1 }}>
+          <Box
+            sx={{
+              flex: 1,
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              gap: 1,
+              width: "100%",
+            }}
+          >
             <TextField
               size="small"
               value={editContent}
@@ -50,31 +72,78 @@ export const ReviewReply = ({
               fullWidth
               multiline
               maxRows={4}
+              sx={{
+                "& .MuiInputBase-root": {
+                  fontSize: { xs: "0.85rem", sm: "0.9rem" },
+                },
+              }}
             />
-            <Button size="small" onClick={handleEditSubmit}>
-              Save
-            </Button>
-            <Button size="small" onClick={() => setIsEditing(false)}>
-              Cancel
-            </Button>
+            <Box sx={{ display: "flex", gap: 1, mt: { xs: 1, sm: 0 } }}>
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleEditSubmit}
+                sx={{
+                  minWidth: { xs: "80px", sm: "60px" },
+                  height: { xs: "30px", sm: "36px" },
+                  fontSize: { xs: "0.75rem", sm: "0.8125rem" },
+                }}
+              >
+                Save
+              </Button>
+              <Button
+                size="small"
+                onClick={() => setIsEditing(false)}
+                sx={{
+                  minWidth: { xs: "80px", sm: "60px" },
+                  height: { xs: "30px", sm: "36px" },
+                  fontSize: { xs: "0.75rem", sm: "0.8125rem" },
+                }}
+              >
+                Cancel
+              </Button>
+            </Box>
           </Box>
         ) : (
           <>
-            <Typography variant="body2" sx={{ flex: 1 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                flex: 1,
+                fontSize: { xs: "0.85rem", sm: "0.875rem" },
+                lineHeight: 1.6,
+                wordBreak: "break-word",
+              }}
+            >
               {reply.content}
             </Typography>
             {canModifyReply() && (
               <IconButton
                 size="small"
                 onClick={(e) => setAnchorEl(e.currentTarget)}
+                sx={{
+                  ml: 0.5,
+                  p: { xs: 0.5, sm: 0.75 },
+                  alignSelf: "flex-start",
+                }}
               >
-                <MoreVertIcon fontSize="small" />
+                <MoreVertIcon
+                  fontSize={window.innerWidth < 600 ? "small" : "medium"}
+                />
               </IconButton>
             )}
           </>
         )}
       </Box>
-      <Typography variant="caption" color="text.secondary">
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{
+          display: "block",
+          mt: 0.5,
+          fontSize: { xs: "0.7rem", sm: "0.75rem" },
+        }}
+      >
         {formatTimestamp(new Date(reply.createdAt))}
         {reply.lastEdited &&
           ` (edited ${formatTimestamp(new Date(reply.lastEdited))})`}
@@ -84,11 +153,22 @@ export const ReviewReply = ({
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
+        PaperProps={{
+          sx: {
+            minWidth: 100,
+            boxShadow: 2,
+            mt: 0.5,
+          },
+        }}
       >
         <MenuItem
           onClick={() => {
             setIsEditing(true);
             setAnchorEl(null);
+          }}
+          sx={{
+            py: { xs: 0.75, sm: 1 },
+            fontSize: { xs: "0.85rem", sm: "0.9rem" },
           }}
         >
           Edit
@@ -97,6 +177,10 @@ export const ReviewReply = ({
           onClick={() => {
             onDelete(review.id, index);
             setAnchorEl(null);
+          }}
+          sx={{
+            py: { xs: 0.75, sm: 1 },
+            fontSize: { xs: "0.85rem", sm: "0.9rem" },
           }}
         >
           Delete

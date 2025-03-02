@@ -10,6 +10,9 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  useTheme,
+  useMediaQuery,
+  Divider,
 } from "@mui/material";
 import AnonymousIcon from "@mui/icons-material/VisibilityOff";
 import DescriptionIcon from "@mui/icons-material/Description";
@@ -22,6 +25,9 @@ import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import TipsAndUpdatesOutlinedIcon from "@mui/icons-material/TipsAndUpdatesOutlined";
 
 export const HowToUseModal = ({ open, onClose }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   return (
     <Dialog
       open={open}
@@ -34,25 +40,49 @@ export const HowToUseModal = ({ open, onClose }) => {
           width: { xs: "95%", sm: "90%" },
           maxHeight: { xs: "95vh", sm: "90vh" },
           overflowY: "auto",
+          px: { xs: 1, sm: 2 },
+          borderRadius: { xs: 1, sm: 2 },
         },
       }}
     >
-      <DialogTitle sx={{ fontSize: { xs: "1.2rem", sm: "1.5rem" } }}>
+      <DialogTitle
+        sx={{
+          fontSize: { xs: "1.2rem", sm: "1.5rem" },
+          pt: { xs: 2, sm: 3 },
+          pb: { xs: 1, sm: 2 },
+          textAlign: { xs: "center", sm: "left" },
+          fontWeight: 600,
+        }}
+      >
         How & Why Use This Platform
       </DialogTitle>
-      <DialogContent>
-        <Box sx={{ mb: 4 }}>
+      <DialogContent
+        sx={{
+          px: { xs: 1, sm: 3 },
+          "& .MuiTypography-paragraph": {
+            fontSize: { xs: "0.9rem", sm: "1rem" },
+            lineHeight: 1.6,
+          },
+        }}
+      >
+        <Box sx={{ mb: { xs: 3, sm: 4 } }}>
           <Typography
             variant="h6"
             sx={{
-              mb: 2,
+              mb: 1.5,
               color: "primary.main",
-              fontSize: { xs: "1rem", sm: "1.25rem" },
+              fontSize: { xs: "1.1rem", sm: "1.25rem" },
+              fontWeight: 600,
             }}
           >
             Why This Platform?
           </Typography>
-          <Typography paragraph>
+          <Typography
+            paragraph
+            sx={{
+              px: { xs: 1, sm: 0 },
+            }}
+          >
             This is a student-driven platform created to help Constructor
             University students make informed decisions about their courses and
             professors. It&apos;s a space where you can share and learn from
@@ -60,75 +90,255 @@ export const HowToUseModal = ({ open, onClose }) => {
           </Typography>
         </Box>
 
-        <Box sx={{ mb: 4 }}>
+        <Divider sx={{ my: { xs: 2, sm: 3 } }} />
+
+        <Box sx={{ mb: { xs: 3, sm: 4 } }}>
           <Typography
             variant="h6"
             sx={{
               mb: 2,
               color: "primary.main",
-              fontSize: { xs: "1rem", sm: "1.25rem" },
+              fontSize: { xs: "1.1rem", sm: "1.25rem" },
+              fontWeight: 600,
             }}
           >
             How to Use Each Feature
           </Typography>
-          <List>
+          <List
+            sx={{
+              pl: { xs: 0, sm: 1 },
+              "& .MuiListItem-root": {
+                flexDirection: { xs: "column", sm: "row" },
+                alignItems: { xs: "flex-start", sm: "flex-start" },
+                mb: { xs: 2, sm: 1.5 },
+                bgcolor: { xs: "rgba(0,0,0,0.02)", sm: "transparent" },
+                borderRadius: 1,
+                p: { xs: 1.5, sm: 1 },
+              },
+              "& .MuiListItemIcon-root": {
+                minWidth: { xs: "100%", sm: 56 },
+                mb: { xs: 1, sm: 0 },
+              },
+            }}
+          >
             <ListItem>
-              <ListItemIcon>
-                <HelpIcon color="primary" />
+              <ListItemIcon
+                sx={{
+                  display: "flex",
+                  justifyContent: { xs: "center", sm: "flex-start" },
+                }}
+              >
+                <HelpIcon
+                  color="primary"
+                  sx={{ fontSize: { xs: "1.5rem", sm: "1.5rem" } }}
+                />
               </ListItemIcon>
               <ListItemText
-                primary="Chat Section"
-                secondary="Interact with our AI assistant that's trained on student reviews. Ask questions about professors, courses, or get personalized recommendations based on submitted reviews."
+                primary={
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      fontSize: { xs: "1rem", sm: "1rem" },
+                      fontWeight: 600,
+                      textAlign: { xs: "center", sm: "left" },
+                    }}
+                  >
+                    Chat Section
+                  </Typography>
+                }
+                secondary={
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontSize: { xs: "0.85rem", sm: "0.875rem" },
+                      textAlign: { xs: "center", sm: "left" },
+                      mt: { xs: 0.5, sm: 0 },
+                    }}
+                  >
+                    Interact with our AI assistant that&apos;s trained on
+                    student reviews. Ask questions about professors, courses, or
+                    get personalized recommendations based on submitted reviews.
+                  </Typography>
+                }
               />
             </ListItem>
 
             <ListItem>
-              <ListItemIcon>
-                <RateReviewOutlinedIcon color="primary" />
+              <ListItemIcon
+                sx={{
+                  display: "flex",
+                  justifyContent: { xs: "center", sm: "flex-start" },
+                }}
+              >
+                <RateReviewOutlinedIcon
+                  color="primary"
+                  sx={{ fontSize: { xs: "1.5rem", sm: "1.5rem" } }}
+                />
               </ListItemIcon>
               <ListItemText
-                primary="Rate Button"
-                secondary="Submit anonymous professor reviews. Describe their teaching style, share your experience, and add a rating. You can describe professors creatively without using names."
+                primary={
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      fontSize: { xs: "1rem", sm: "1rem" },
+                      fontWeight: 600,
+                      textAlign: { xs: "center", sm: "left" },
+                    }}
+                  >
+                    Rate Button
+                  </Typography>
+                }
+                secondary={
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontSize: { xs: "0.85rem", sm: "0.875rem" },
+                      textAlign: { xs: "center", sm: "left" },
+                      mt: { xs: 0.5, sm: 0 },
+                    }}
+                  >
+                    Submit anonymous professor reviews. Describe their teaching
+                    style, share your experience, and add a rating. You can
+                    describe professors creatively without using names.
+                  </Typography>
+                }
               />
             </ListItem>
 
             <ListItem>
-              <ListItemIcon>
-                <VisibilityOutlinedIcon color="primary" />
+              <ListItemIcon
+                sx={{
+                  display: "flex",
+                  justifyContent: { xs: "center", sm: "flex-start" },
+                }}
+              >
+                <VisibilityOutlinedIcon
+                  color="primary"
+                  sx={{ fontSize: { xs: "1.5rem", sm: "1.5rem" } }}
+                />
               </ListItemIcon>
               <ListItemText
-                primary="Reviews Section"
-                secondary="Browse reviews from other students, react with likes or loves, and engage in discussions by replying to reviews. Filter by subject or rating to find relevant feedback."
+                primary={
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      fontSize: { xs: "1rem", sm: "1rem" },
+                      fontWeight: 600,
+                      textAlign: { xs: "center", sm: "left" },
+                    }}
+                  >
+                    Reviews Section
+                  </Typography>
+                }
+                secondary={
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontSize: { xs: "0.85rem", sm: "0.875rem" },
+                      textAlign: { xs: "center", sm: "left" },
+                      mt: { xs: 0.5, sm: 0 },
+                    }}
+                  >
+                    Browse reviews from other students, react with likes or
+                    loves, and engage in discussions by replying to reviews.
+                    Filter by subject or rating to find relevant feedback.
+                  </Typography>
+                }
               />
             </ListItem>
 
             <ListItem>
-              <ListItemIcon>
-                <TipsAndUpdatesOutlinedIcon color="primary" />
+              <ListItemIcon
+                sx={{
+                  display: "flex",
+                  justifyContent: { xs: "center", sm: "flex-start" },
+                }}
+              >
+                <TipsAndUpdatesOutlinedIcon
+                  color="primary"
+                  sx={{ fontSize: { xs: "1.5rem", sm: "1.5rem" } }}
+                />
               </ListItemIcon>
               <ListItemText
-                primary="Tips Section"
-                secondary="Share and discover study techniques, course validation strategies, and helpful advice from fellow students. Add your own tips to help others succeed."
+                primary={
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      fontSize: { xs: "1rem", sm: "1rem" },
+                      fontWeight: 600,
+                      textAlign: { xs: "center", sm: "left" },
+                    }}
+                  >
+                    Tips Section
+                  </Typography>
+                }
+                secondary={
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontSize: { xs: "0.85rem", sm: "0.875rem" },
+                      textAlign: { xs: "center", sm: "left" },
+                      mt: { xs: 0.5, sm: 0 },
+                    }}
+                  >
+                    Share and discover study techniques, course validation
+                    strategies, and helpful advice from fellow students. Add
+                    your own tips to help others succeed.
+                  </Typography>
+                }
               />
             </ListItem>
           </List>
         </Box>
 
-        <Box sx={{ mb: 4 }}>
+        <Divider sx={{ my: { xs: 2, sm: 3 } }} />
+
+        <Box sx={{ mb: { xs: 3, sm: 4 } }}>
           <Typography
             variant="h6"
             sx={{
               mb: 2,
               color: "primary.main",
-              fontSize: { xs: "1rem", sm: "1.25rem" },
+              fontSize: { xs: "1.1rem", sm: "1.25rem" },
+              fontWeight: 600,
             }}
           >
             Key Features
           </Typography>
-          <List>
+          <List
+            sx={{
+              "& .MuiListItem-root": {
+                py: { xs: 1.5, sm: 1 },
+                px: { xs: 1, sm: 2 },
+                flexDirection: { xs: "column", sm: "row" },
+                alignItems: { xs: "center", sm: "flex-start" },
+                mb: { xs: 1.5, sm: 1 },
+                bgcolor: { xs: "rgba(0,0,0,0.02)", sm: "transparent" },
+                borderRadius: 1,
+              },
+              "& .MuiListItemIcon-root": {
+                minWidth: { xs: "auto", sm: 50 },
+                mb: { xs: 1, sm: 0 },
+                mr: { xs: 0, sm: 2 },
+              },
+              "& .MuiListItemText-primary": {
+                fontSize: { xs: "0.95rem", sm: "1rem" },
+                fontWeight: 500,
+                textAlign: { xs: "center", sm: "left" },
+              },
+              "& .MuiListItemText-secondary": {
+                fontSize: { xs: "0.825rem", sm: "0.875rem" },
+                textAlign: { xs: "center", sm: "left" },
+                mt: { xs: 0.5, sm: 0 },
+              },
+            }}
+          >
             <ListItem>
               <ListItemIcon>
-                <AnonymousIcon color="primary" />
+                <AnonymousIcon
+                  color="primary"
+                  sx={{ fontSize: { xs: "1.5rem", sm: "1.4rem" } }}
+                />
               </ListItemIcon>
               <ListItemText
                 primary="100% Anonymous"
@@ -138,7 +348,10 @@ export const HowToUseModal = ({ open, onClose }) => {
 
             <ListItem>
               <ListItemIcon>
-                <DescriptionIcon color="primary" />
+                <DescriptionIcon
+                  color="primary"
+                  sx={{ fontSize: { xs: "1.5rem", sm: "1.4rem" } }}
+                />
               </ListItemIcon>
               <ListItemText
                 primary="Creative Freedom"
@@ -148,7 +361,10 @@ export const HowToUseModal = ({ open, onClose }) => {
 
             <ListItem>
               <ListItemIcon>
-                <HelpIcon color="primary" />
+                <HelpIcon
+                  color="primary"
+                  sx={{ fontSize: { xs: "1.5rem", sm: "1.4rem" } }}
+                />
               </ListItemIcon>
               <ListItemText
                 primary="Decision Support"
@@ -198,33 +414,73 @@ export const HowToUseModal = ({ open, onClose }) => {
           </List>
         </Box>
 
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: { xs: 3, sm: 4 } }}>
           <Typography
             variant="h6"
             sx={{
-              mb: 2,
+              mb: { xs: 1, sm: 2 },
               color: "primary.main",
               fontSize: { xs: "1rem", sm: "1.25rem" },
             }}
           >
             Guidelines
           </Typography>
-          <Typography paragraph>
+          <Typography
+            paragraph
+            sx={{
+              px: { xs: 1, sm: 2 },
+              fontSize: { xs: "0.85rem", sm: "1rem" },
+            }}
+          >
             • Be honest but respectful in your reviews
           </Typography>
-          <Typography paragraph>
+          <Typography
+            paragraph
+            sx={{
+              px: { xs: 1, sm: 2 },
+              fontSize: { xs: "0.85rem", sm: "1rem" },
+            }}
+          >
             • Focus on teaching style, course content, and learning experience
           </Typography>
-          <Typography paragraph>
+          <Typography
+            paragraph
+            sx={{
+              px: { xs: 1, sm: 2 },
+              fontSize: { xs: "0.85rem", sm: "1rem" },
+            }}
+          >
             • Share specific examples that could help other students
           </Typography>
-          <Typography paragraph>
+          <Typography
+            paragraph
+            sx={{
+              px: { xs: 1, sm: 2 },
+              fontSize: { xs: "0.85rem", sm: "1rem" },
+            }}
+          >
             • Feel free to include helpful tips for succeeding in the course
           </Typography>
         </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Close</Button>
+      <DialogActions
+        sx={{
+          p: { xs: 2, sm: 3 },
+          pb: { xs: 3, sm: 3 },
+          justifyContent: "center",
+        }}
+      >
+        <Button
+          onClick={onClose}
+          variant="contained"
+          sx={{
+            minWidth: { xs: 150, sm: 180 },
+            height: { xs: 40, sm: 44 },
+            fontSize: { xs: "0.85rem", sm: "0.9rem" },
+          }}
+        >
+          Got It!
+        </Button>
       </DialogActions>
     </Dialog>
   );
