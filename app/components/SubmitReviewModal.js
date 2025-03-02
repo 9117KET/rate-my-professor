@@ -11,10 +11,14 @@ import {
   Rating,
   Box,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { reviewsService } from "../services/reviewsService";
 
 export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [formData, setFormData] = useState({
     professor: "",
     subject: "",
@@ -159,14 +163,14 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
               onChange={(_, value) =>
                 setFormData({ ...formData, stars: value })
               }
-              size={window.innerWidth < 600 ? "medium" : "large"}
+              size={isMobile ? "medium" : "large"}
             />
           </Box>
           <TextField
             fullWidth
             label="Review"
             multiline
-            rows={window.innerWidth < 600 ? 3 : 4}
+            rows={isMobile ? 3 : 4}
             value={formData.review}
             onChange={(e) =>
               setFormData({ ...formData, review: e.target.value })

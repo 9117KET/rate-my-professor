@@ -49,9 +49,9 @@ export const tipsService = {
       };
 
       const docRef = await addDoc(tipsRef, enrichedTip);
-      if (typeof window !== "undefined") {
-        localStorage.setItem(`tip_${docRef.id}_userId`, userId);
-      }
+
+      // Use clientStorage utility instead of direct localStorage access
+      clientStorage.setItem(`tip_${docRef.id}_userId`, userId);
 
       // Return the tip with a proper Date object for immediate display
       return {

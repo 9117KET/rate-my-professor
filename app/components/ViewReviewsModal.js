@@ -23,6 +23,8 @@ import {
   IconButton,
   Badge,
   Menu,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { db } from "../lib/firebase";
@@ -36,16 +38,13 @@ import { reviewsService } from "../services/reviewsService";
 import { ReviewReply } from "./ReviewReply";
 
 export const ViewReviewsModal = ({ open, onClose }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [reviews, setReviews] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSubject, setFilterSubject] = useState("all");
   const [filterRating, setFilterRating] = useState("all");
-  const [userReactions, setUserReactions] = useState(() => {
-    if (typeof window !== "undefined") {
-      return JSON.parse(localStorage.getItem("userReactions") || "{}");
-    }
-    return {};
-  });
+  const [userReactions, setUserReactions] = useState({});
   const [userIp, setUserIp] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedReview, setSelectedReview] = useState(null);
@@ -73,6 +72,19 @@ export const ViewReviewsModal = ({ open, onClose }) => {
       .then((res) => res.json())
       .then((data) => setUserIp(data.ip))
       .catch((error) => console.error("Error fetching IP:", error));
+  }, []);
+
+  // Load user reactions from localStorage only after component mounts
+  useEffect(() => {
+    const storedReactions = localStorage.getItem("userReactions");
+    if (storedReactions) {
+      try {
+        setUserReactions(JSON.parse(storedReactions));
+      } catch (e) {
+        console.error("Error parsing user reactions:", e);
+        setUserReactions({});
+      }
+    }
   }, []);
 
   // Get unique subjects for filter dropdown
@@ -427,7 +439,7 @@ export const ViewReviewsModal = ({ open, onClose }) => {
                           <Rating
                             value={review.stars}
                             readOnly
-                            size={window.innerWidth < 600 ? "small" : "medium"}
+                            size={isMobile ? "small" : "medium"}
                           />
                           <Typography
                             variant="body1"
@@ -501,9 +513,7 @@ export const ViewReviewsModal = ({ open, onClose }) => {
                               sx={{ display: "flex", gap: { xs: 0.5, sm: 1 } }}
                             >
                               <IconButton
-                                size={
-                                  window.innerWidth < 600 ? "small" : "medium"
-                                }
+                                size={isMobile ? "small" : "medium"}
                                 onClick={() =>
                                   handleReaction(review.id, "thumbsUp")
                                 }
@@ -519,18 +529,12 @@ export const ViewReviewsModal = ({ open, onClose }) => {
                                   color="primary"
                                 >
                                   <ThumbUpIcon
-                                    fontSize={
-                                      window.innerWidth < 600
-                                        ? "small"
-                                        : "medium"
-                                    }
+                                    fontSize={isMobile ? "small" : "medium"}
                                   />
                                 </Badge>
                               </IconButton>
                               <IconButton
-                                size={
-                                  window.innerWidth < 600 ? "small" : "medium"
-                                }
+                                size={isMobile ? "small" : "medium"}
                                 onClick={() =>
                                   handleReaction(review.id, "thumbsDown")
                                 }
@@ -548,18 +552,12 @@ export const ViewReviewsModal = ({ open, onClose }) => {
                                   color="primary"
                                 >
                                   <ThumbDownIcon
-                                    fontSize={
-                                      window.innerWidth < 600
-                                        ? "small"
-                                        : "medium"
-                                    }
+                                    fontSize={isMobile ? "small" : "medium"}
                                   />
                                 </Badge>
                               </IconButton>
                               <IconButton
-                                size={
-                                  window.innerWidth < 600 ? "small" : "medium"
-                                }
+                                size={isMobile ? "small" : "medium"}
                                 onClick={() =>
                                   handleReaction(review.id, "love")
                                 }
@@ -575,20 +573,14 @@ export const ViewReviewsModal = ({ open, onClose }) => {
                                   color="secondary"
                                 >
                                   <FavoriteIcon
-                                    fontSize={
-                                      window.innerWidth < 600
-                                        ? "small"
-                                        : "medium"
-                                    }
+                                    fontSize={isMobile ? "small" : "medium"}
                                   />
                                 </Badge>
                               </IconButton>
                             </Box>
                             {canModifyReview(review) && (
                               <IconButton
-                                size={
-                                  window.innerWidth < 600 ? "small" : "medium"
-                                }
+                                size={isMobile ? "small" : "medium"}
                                 onClick={(e) => {
                                   setAnchorEl(e.currentTarget);
                                   setSelectedReview(review);
@@ -596,9 +588,7 @@ export const ViewReviewsModal = ({ open, onClose }) => {
                                 sx={{ ml: "auto" }}
                               >
                                 <MoreVertIcon
-                                  fontSize={
-                                    window.innerWidth < 600 ? "small" : "medium"
-                                  }
+                                  fontSize={isMobile ? "small" : "medium"}
                                 />
                               </IconButton>
                             )}

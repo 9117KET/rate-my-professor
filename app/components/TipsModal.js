@@ -21,7 +21,7 @@ import {
   useTheme,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import { tipsService } from "../services/tipsService";
+import { tipsService, clientStorage } from "../services/tipsService";
 import { formatTimestamp } from "../utils/formatters";
 import { formatTextWithLinks } from "../utils/linkFormatter";
 
@@ -68,7 +68,7 @@ export const TipsModal = ({ open, onClose }) => {
           ...newTip,
           createdAt: newTip.createdAt || new Date(),
           lastEdited: null,
-          userId: localStorage.getItem(`tip_${newTip.id}_userId`),
+          userId: clientStorage.getItem(`tip_${newTip.id}_userId`),
         };
         setTips([tipWithDefaults, ...tips]);
         setTipFormData("");
@@ -110,7 +110,7 @@ export const TipsModal = ({ open, onClose }) => {
     const createdAt = new Date(tip.createdAt);
     const now = new Date();
     const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
-    const storedUserId = localStorage.getItem(`tip_${tip.id}_userId`);
+    const storedUserId = clientStorage.getItem(`tip_${tip.id}_userId`);
 
     return hoursDiff <= 48 && tip.userId === storedUserId;
   };
@@ -144,6 +144,18 @@ export const TipsModal = ({ open, onClose }) => {
       <DialogContent sx={{ px: { xs: 2, sm: 3 } }}>
         {mounted && (
           <Box sx={{ mb: { xs: 3, sm: 4 } }}>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                mt: { xs: 1, sm: 2 },
+                mb: 1,
+                fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                fontWeight: 500,
+                color: "text.secondary",
+              }}
+            >
+              Share a tip you used in succeeding at a particular course:
+            </Typography>
             <TextField
               fullWidth
               label="Share a tip"

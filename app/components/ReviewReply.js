@@ -7,6 +7,8 @@ import {
   Button,
   Menu,
   MenuItem,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { formatTimestamp } from "../utils/formatters";
@@ -20,6 +22,8 @@ export const ReviewReply = ({
   onEdit,
   sx,
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [anchorEl, setAnchorEl] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(reply.content);
@@ -127,9 +131,7 @@ export const ReviewReply = ({
                   alignSelf: "flex-start",
                 }}
               >
-                <MoreVertIcon
-                  fontSize={window.innerWidth < 600 ? "small" : "medium"}
-                />
+                <MoreVertIcon fontSize={isMobile ? "small" : "medium"} />
               </IconButton>
             )}
           </>

@@ -1,7 +1,8 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAnalytics } from "firebase/analytics";
+// Import getAnalytics dynamically on the client side only
+// import { getAnalytics } from "firebase/analytics";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -34,5 +35,16 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firestore
 export const db = getFirestore(app);
 
-// Initialize Analytics
-const analytics = typeof window !== "undefined" ? getAnalytics(app) : null;
+// Initialize Analytics - but only on the client side
+// We'll initialize analytics in a useEffect in the components that need it
+let analytics = null;
+
+// Export function to initialize analytics on client side only
+export const initAnalytics = () => {
+  if (typeof window !== "undefined" && !analytics) {
+    import("firebase/analytics").then(({ getAnalytics }) => {
+      analytics = getAnalytics(app);
+    });
+  }
+  return analytics;
+};
