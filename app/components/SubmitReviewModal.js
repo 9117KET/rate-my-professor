@@ -26,6 +26,15 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
     review: "",
   });
   const [userIp, setUserIp] = useState(null);
+  const [reviewError, setReviewError] = useState("");
+
+  // Character limits
+  const MIN_REVIEW_LENGTH = 50;
+  const MAX_REVIEW_LENGTH = 1000;
+  const MIN_PROFESSOR_LENGTH = 3;
+  const MAX_PROFESSOR_LENGTH = 100;
+  const MIN_SUBJECT_LENGTH = 2;
+  const MAX_SUBJECT_LENGTH = 50;
 
   useEffect(() => {
     fetch("/api/getIp")
@@ -33,28 +42,123 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
       .then((data) => setUserIp(data.ip));
   }, []);
 
+  const validateReview = (review) => {
+    // Check for minimum length
+    if (review.length < MIN_REVIEW_LENGTH) {
+      return `Review must be at least ${MIN_REVIEW_LENGTH} characters long`;
+    }
+
+    // Check for maximum length
+    if (review.length > MAX_REVIEW_LENGTH) {
+      return `Review cannot exceed ${MAX_REVIEW_LENGTH} characters`;
+    }
+
+    // Check for meaningful content (at least 3 words)
+    const words = review.trim().split(/\s+/);
+    if (words.length < 3) {
+      return "Review must contain at least 3 words";
+    }
+
+    // Check for repetitive characters
+    const repetitivePattern = /(.)\1{4,}/;
+    if (repetitivePattern.test(review)) {
+      return "Review contains too many repetitive characters";
+    }
+
+    // Check for all caps
+    if (review === review.toUpperCase() && review.length > 20) {
+      return "Review cannot be in all capital letters";
+    }
+
+    // Check for gibberish/random characters
+    const gibberishPatterns = [
+      // Pattern for random consonant strings
+      /[bcdfghjklmnpqrstvwxz]{5,}/i,
+      // Pattern for random character sequences
+      /([a-z])\1{2,}|(.)\2{2,}/i,
+      // Pattern for lack of vowels in words
+      /\b[^aeiou\s]{4,}\b/i,
+      // Pattern for excessive consecutive consonants
+      /[bcdfghjklmnpqrstvwxz]{4,}/i,
+    ];
+
+    for (const pattern of gibberishPatterns) {
+      if (pattern.test(review)) {
+        return "Review contains invalid or random text patterns. Please write a meaningful review.";
+      }
+    }
+
+    // Check for word variety (prevent repetitive words)
+    const wordFrequency = {};
+    const normalizedWords = words.map((w) => w.toLowerCase());
+
+    for (const word of normalizedWords) {
+      wordFrequency[word] = (wordFrequency[word] || 0) + 1;
+      // If any word (except common words) is repeated too many times
+      if (wordFrequency[word] > 3 && word.length > 3) {
+        return "Review contains too many repeated words";
+      }
+    }
+
+    // Check for reasonable word lengths (most real words are between 1-15 characters)
+    const hasUnreasonableWords = words.some((word) => {
+      const wordLength = word.length;
+      return wordLength > 15 || (wordLength > 1 && !/[aeiou]/i.test(word));
+    });
+
+    if (hasUnreasonableWords) {
+      return "Review contains unrealistic word patterns";
+    }
+
+    // Check for proper sentence structure (should contain at least one period, question mark, or exclamation point)
+    if (review.length > 100 && !/[.!?]/.test(review)) {
+      return "Please use proper punctuation in your review";
+    }
+
+    return "";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!userIp) {
       alert("Unable to submit review at this time. Please try again later.");
       return;
     }
-    if (!formData.professor.trim()) {
-      alert("Please provide either a professor name or description");
+
+    // Validate professor name
+    if (formData.professor.trim().length < MIN_PROFESSOR_LENGTH) {
+      alert(
+        `Professor name must be at least ${MIN_PROFESSOR_LENGTH} characters long`
+      );
       return;
     }
+    if (formData.professor.trim().length > MAX_PROFESSOR_LENGTH) {
+      alert(`Professor name cannot exceed ${MAX_PROFESSOR_LENGTH} characters`);
+      return;
+    }
+
+    // Validate subject
+    if (formData.subject.trim().length < MIN_SUBJECT_LENGTH) {
+      alert(`Subject must be at least ${MIN_SUBJECT_LENGTH} characters long`);
+      return;
+    }
+    if (formData.subject.trim().length > MAX_SUBJECT_LENGTH) {
+      alert(`Subject cannot exceed ${MAX_SUBJECT_LENGTH} characters`);
+      return;
+    }
+
     if (formData.stars === 0) {
       alert("Please provide a rating");
       return;
     }
-    if (!formData.subject) {
-      alert("Please provide a subject");
+
+    // Validate review
+    const reviewError = validateReview(formData.review);
+    if (reviewError) {
+      setReviewError(reviewError);
       return;
     }
-    if (!formData.review) {
-      alert("Please provide a review");
-      return;
-    }
+
     try {
       await reviewsService.addReview(formData, userIp);
       onClose();
@@ -64,10 +168,17 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
         stars: 0,
         review: "",
       });
+      setReviewError("");
     } catch (error) {
       console.error("Error submitting review:", error);
       alert("Failed to submit review. Please try again.");
     }
+  };
+
+  const handleReviewChange = (e) => {
+    const newReview = e.target.value;
+    setFormData({ ...formData, review: newReview });
+    setReviewError(validateReview(newReview));
   };
 
   return (
@@ -116,6 +227,11 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
             onChange={(e) =>
               setFormData({ ...formData, professor: e.target.value })
             }
+            inputProps={{
+              maxLength: MAX_PROFESSOR_LENGTH,
+              minLength: MIN_PROFESSOR_LENGTH,
+            }}
+            helperText={`${formData.professor.length}/${MAX_PROFESSOR_LENGTH} characters`}
             sx={{
               mb: 2,
               "& .MuiInputBase-root": {
@@ -136,6 +252,11 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
               setFormData({ ...formData, subject: e.target.value })
             }
             required
+            inputProps={{
+              maxLength: MAX_SUBJECT_LENGTH,
+              minLength: MIN_SUBJECT_LENGTH,
+            }}
+            helperText={`${formData.subject.length}/${MAX_SUBJECT_LENGTH} characters`}
             sx={{
               mb: 2,
               "& .MuiInputBase-root": {
@@ -172,10 +293,17 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
             multiline
             rows={isMobile ? 3 : 4}
             value={formData.review}
-            onChange={(e) =>
-              setFormData({ ...formData, review: e.target.value })
-            }
+            onChange={handleReviewChange}
             required
+            error={!!reviewError}
+            helperText={
+              reviewError ||
+              `${formData.review.length}/${MAX_REVIEW_LENGTH} characters (minimum ${MIN_REVIEW_LENGTH})`
+            }
+            inputProps={{
+              maxLength: MAX_REVIEW_LENGTH,
+              minLength: MIN_REVIEW_LENGTH,
+            }}
             sx={{
               "& .MuiInputBase-root": {
                 fontSize: { xs: "0.9rem", sm: "1rem" },

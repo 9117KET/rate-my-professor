@@ -1,8 +1,41 @@
 import { OpenAI } from "openai";
 import { embeddingService } from "../../services/embeddingService";
+import { rateLimiterService } from "../../services/rateLimiterService";
 
 export async function POST(req) {
   try {
+    // Get anonymous user ID from request headers
+    const userId = req.headers.get("x-anonymous-user-id");
+
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "User ID is required" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Check rate limit using anonymous user ID
+    const rateLimitResult = await rateLimiterService.checkRateLimit(userId);
+
+    if (!rateLimitResult.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: "Rate limit exceeded",
+          remaining: rateLimitResult.remaining,
+          resetTime: rateLimitResult.resetTime,
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "X-RateLimit-Limit": "50",
+            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+            "X-RateLimit-Reset": rateLimitResult.resetTime.toString(),
+          },
+        }
+      );
+    }
+
     const messages = await req.json();
     const userMessage = messages[messages.length - 1].content;
 
@@ -67,7 +100,13 @@ Here are relevant professor reviews to inform your responses:\n\n${context}`,
       },
     });
 
-    return new Response(stream);
+    return new Response(stream, {
+      headers: {
+        "X-RateLimit-Limit": "50",
+        "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+        "X-RateLimit-Reset": rateLimitResult.resetTime.toString(),
+      },
+    });
   } catch (error) {
     console.error("Error:", error);
     return new Response(JSON.stringify({ error: error.message }), {

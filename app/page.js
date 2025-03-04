@@ -28,6 +28,7 @@ import { TipsModal } from "./components/TipsModal";
 import { ImprintModal } from "./components/ImprintModal";
 import { chatService } from "./services/chatService";
 import { HowToUseModal } from "./components/HowToUseModal";
+import { userTrackingService } from "./services/userTrackingService";
 
 // Enhanced color palette
 const theme = {
@@ -122,6 +123,7 @@ export default function Home() {
   const messagesEndRef = useRef(null);
   const muiTheme = useTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
+  const [userId, setUserId] = useState(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -131,8 +133,18 @@ export default function Home() {
     scrollToBottom();
   }, [messages]);
 
+  // Initialize user ID on component mount
+  useEffect(() => {
+    try {
+      const id = userTrackingService.getOrCreateUserId();
+      setUserId(id);
+    } catch (error) {
+      console.error("Error initializing user ID:", error);
+    }
+  }, []);
+
   const sendMessage = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() || !userId) return;
 
     setIsLoading(true);
     const newMessages = [
@@ -157,9 +169,28 @@ export default function Home() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-Anonymous-User-ID": userId,
         },
         body: JSON.stringify([...messages, { role: "user", content: message }]),
       });
+
+      if (res.status === 429) {
+        const rateLimitData = await res.json();
+        const resetTime = new Date(rateLimitData.resetTime);
+        const timeUntilReset = Math.ceil((resetTime - new Date()) / 1000 / 60); // Convert to minutes
+
+        const errorMessages = [
+          ...newMessages.slice(0, -1),
+          {
+            role: "assistant",
+            content: `You've reached the rate limit of 50 messages per hour. Please wait ${timeUntilReset} minutes before sending more messages.`,
+            timestamp: new Date(),
+          },
+        ];
+        setMessages(errorMessages);
+        await chatService.saveChat(errorMessages);
+        return;
+      }
 
       if (!res.ok) throw new Error(res.statusText);
 
