@@ -31,7 +31,6 @@ export const reviewsService = {
         reactions: doc.data().reactions || {
           thumbsUp: 0,
           thumbsDown: 0,
-          love: 0,
         },
       }));
     } catch (error) {
@@ -50,7 +49,6 @@ export const reviewsService = {
         reactions: {
           thumbsUp: 0,
           thumbsDown: 0,
-          love: 0,
         },
       };
 
@@ -219,7 +217,6 @@ export const reviewsService = {
         reactions: {
           thumbsUp: 0,
           thumbsDown: 0,
-          love: 0,
         },
       };
 

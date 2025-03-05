@@ -32,7 +32,6 @@ import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { formatTimestamp } from "../utils/formatters";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
-import FavoriteIcon from "@mui/icons-material/Favorite";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { reviewsService } from "../services/reviewsService";
 import { ReviewReply } from "./ReviewReply";
@@ -157,22 +156,6 @@ export const ViewReviewsModal = ({ open, onClose }) => {
           localStorage.setItem("userReactions", JSON.stringify(newReactions));
           return newReactions;
         });
-
-        // Update the UI for adding reaction
-        setReviews((prev) =>
-          prev.map((review) => {
-            if (review.id === reviewId) {
-              return {
-                ...review,
-                reactions: {
-                  ...review.reactions,
-                  [reactionType]: (review.reactions?.[reactionType] || 0) + 1,
-                },
-              };
-            }
-            return review;
-          })
-        );
       } else {
         // Remove reaction
         await reviewsService.removeReaction(reviewId, reactionType);
@@ -182,25 +165,6 @@ export const ViewReviewsModal = ({ open, onClose }) => {
           localStorage.setItem("userReactions", JSON.stringify(newReactions));
           return newReactions;
         });
-
-        // Update the UI for removing reaction
-        setReviews((prev) =>
-          prev.map((review) => {
-            if (review.id === reviewId) {
-              return {
-                ...review,
-                reactions: {
-                  ...review.reactions,
-                  [reactionType]: Math.max(
-                    (review.reactions?.[reactionType] || 0) - 1,
-                    0
-                  ),
-                },
-              };
-            }
-            return review;
-          })
-        );
       }
     } catch (error) {
       console.error("Error toggling reaction:", error);
@@ -589,27 +553,6 @@ export const ViewReviewsModal = ({ open, onClose }) => {
                                   color="primary"
                                 >
                                   <ThumbDownIcon
-                                    fontSize={isMobile ? "small" : "medium"}
-                                  />
-                                </Badge>
-                              </IconButton>
-                              <IconButton
-                                size={isMobile ? "small" : "medium"}
-                                onClick={() =>
-                                  handleReaction(review.id, "love")
-                                }
-                                color={
-                                  hasUserReacted(review.id, "love")
-                                    ? "secondary"
-                                    : "default"
-                                }
-                                sx={{ padding: { xs: 0.5, sm: 1 } }}
-                              >
-                                <Badge
-                                  badgeContent={review.reactions?.love || 0}
-                                  color="secondary"
-                                >
-                                  <FavoriteIcon
                                     fontSize={isMobile ? "small" : "medium"}
                                   />
                                 </Badge>
