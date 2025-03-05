@@ -44,6 +44,7 @@ export const ViewReviewsModal = ({ open, onClose }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSubject, setFilterSubject] = useState("all");
   const [filterRating, setFilterRating] = useState("all");
+  const [filterProfessor, setFilterProfessor] = useState("all");
   const [userReactions, setUserReactions] = useState({});
   const [userIp, setUserIp] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -87,12 +88,19 @@ export const ViewReviewsModal = ({ open, onClose }) => {
     }
   }, []);
 
-  // Get unique subjects for filter dropdown
+  // Get unique subjects and professors for filter dropdowns
   const subjects = useMemo(() => {
     const uniqueSubjects = new Set(
       reviews?.map((review) => review.subject) || []
     );
     return ["all", ...Array.from(uniqueSubjects)].sort();
+  }, [reviews]);
+
+  const professors = useMemo(() => {
+    const uniqueProfessors = new Set(
+      reviews?.map((review) => review.professor) || []
+    );
+    return ["all", ...Array.from(uniqueProfessors)].sort();
   }, [reviews]);
 
   // Filtered and searched reviews
@@ -113,9 +121,14 @@ export const ViewReviewsModal = ({ open, onClose }) => {
       const matchesRating =
         filterRating === "all" || review.stars === Number(filterRating);
 
-      return matchesSearch && matchesSubject && matchesRating;
+      const matchesProfessor =
+        filterProfessor === "all" || review.professor === filterProfessor;
+
+      return (
+        matchesSearch && matchesSubject && matchesRating && matchesProfessor
+      );
     });
-  }, [reviews, searchTerm, filterSubject, filterRating]);
+  }, [reviews, searchTerm, filterSubject, filterRating, filterProfessor]);
 
   // Group reviews by professor
   const groupedReviews = useMemo(() => {
@@ -319,6 +332,30 @@ export const ViewReviewsModal = ({ open, onClose }) => {
                 },
               }}
             />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <FormControl
+              fullWidth
+              size="small"
+              sx={{
+                "& .MuiInputBase-root": {
+                  height: { xs: 40, sm: 44 },
+                },
+              }}
+            >
+              <InputLabel>Professor</InputLabel>
+              <Select
+                value={filterProfessor}
+                label="Professor"
+                onChange={(e) => setFilterProfessor(e.target.value)}
+              >
+                {professors.map((professor) => (
+                  <MenuItem key={professor} value={professor}>
+                    {professor === "all" ? "All Professors" : professor}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
             <FormControl

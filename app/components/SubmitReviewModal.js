@@ -13,8 +13,12 @@ import {
   Typography,
   useMediaQuery,
   useTheme,
+  Autocomplete,
+  Chip,
 } from "@mui/material";
 import { reviewsService } from "../services/reviewsService";
+import { validateText, REVIEW_LIMITS } from "../utils/textValidation";
+import { PROFESSORS, getProfessorSuggestions } from "../utils/professorNames";
 
 export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
   const theme = useTheme();
@@ -27,14 +31,9 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
   });
   const [userIp, setUserIp] = useState(null);
   const [reviewError, setReviewError] = useState("");
-
-  // Character limits
-  const MIN_REVIEW_LENGTH = 50;
-  const MAX_REVIEW_LENGTH = 1000;
-  const MIN_PROFESSOR_LENGTH = 3;
-  const MAX_PROFESSOR_LENGTH = 100;
-  const MIN_SUBJECT_LENGTH = 2;
-  const MAX_SUBJECT_LENGTH = 50;
+  const [professorError, setProfessorError] = useState("");
+  const [subjectError, setSubjectError] = useState("");
+  const [professorSuggestions, setProfessorSuggestions] = useState([]);
 
   useEffect(() => {
     fetch("/api/getIp")
@@ -42,80 +41,58 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
       .then((data) => setUserIp(data.ip));
   }, []);
 
-  const validateReview = (review) => {
-    // Check for minimum length
-    if (review.length < MIN_REVIEW_LENGTH) {
-      return `Review must be at least ${MIN_REVIEW_LENGTH} characters long`;
+  const handleReviewChange = (e) => {
+    const newReview = e.target.value;
+    setFormData({ ...formData, review: newReview });
+    setReviewError(
+      validateText(newReview, {
+        minLength: REVIEW_LIMITS.MIN_LENGTH,
+        maxLength: REVIEW_LIMITS.MAX_LENGTH,
+        type: "review",
+      })
+    );
+  };
+
+  const handleProfessorChange = (e, newValue) => {
+    const newProfessor = newValue ? newValue.name : e.target.value || "";
+    setFormData({ ...formData, professor: newProfessor });
+    if (
+      !newProfessor ||
+      newProfessor.trim().length < REVIEW_LIMITS.MIN_PROFESSOR_LENGTH
+    ) {
+      setProfessorError(
+        `Professor name must be at least ${REVIEW_LIMITS.MIN_PROFESSOR_LENGTH} characters long`
+      );
+    } else if (
+      newProfessor.trim().length > REVIEW_LIMITS.MAX_PROFESSOR_LENGTH
+    ) {
+      setProfessorError(
+        `Professor name cannot exceed ${REVIEW_LIMITS.MAX_PROFESSOR_LENGTH} characters`
+      );
+    } else {
+      setProfessorError("");
     }
+  };
 
-    // Check for maximum length
-    if (review.length > MAX_REVIEW_LENGTH) {
-      return `Review cannot exceed ${MAX_REVIEW_LENGTH} characters`;
+  const handleProfessorInputChange = (e, newInputValue) => {
+    const suggestions = getProfessorSuggestions(newInputValue);
+    setProfessorSuggestions(suggestions);
+  };
+
+  const handleSubjectChange = (e) => {
+    const newSubject = e.target.value;
+    setFormData({ ...formData, subject: newSubject });
+    if (newSubject.trim().length < REVIEW_LIMITS.MIN_SUBJECT_LENGTH) {
+      setSubjectError(
+        `Subject must be at least ${REVIEW_LIMITS.MIN_SUBJECT_LENGTH} characters long`
+      );
+    } else if (newSubject.trim().length > REVIEW_LIMITS.MAX_SUBJECT_LENGTH) {
+      setSubjectError(
+        `Subject cannot exceed ${REVIEW_LIMITS.MAX_SUBJECT_LENGTH} characters`
+      );
+    } else {
+      setSubjectError("");
     }
-
-    // Check for meaningful content (at least 3 words)
-    const words = review.trim().split(/\s+/);
-    if (words.length < 3) {
-      return "Review must contain at least 3 words";
-    }
-
-    // Check for repetitive characters
-    const repetitivePattern = /(.)\1{4,}/;
-    if (repetitivePattern.test(review)) {
-      return "Review contains too many repetitive characters";
-    }
-
-    // Check for all caps
-    if (review === review.toUpperCase() && review.length > 20) {
-      return "Review cannot be in all capital letters";
-    }
-
-    // Check for gibberish/random characters
-    const gibberishPatterns = [
-      // Pattern for random consonant strings
-      /[bcdfghjklmnpqrstvwxz]{5,}/i,
-      // Pattern for random character sequences
-      /([a-z])\1{2,}|(.)\2{2,}/i,
-      // Pattern for lack of vowels in words
-      /\b[^aeiou\s]{4,}\b/i,
-      // Pattern for excessive consecutive consonants
-      /[bcdfghjklmnpqrstvwxz]{4,}/i,
-    ];
-
-    for (const pattern of gibberishPatterns) {
-      if (pattern.test(review)) {
-        return "Review contains invalid or random text patterns. Please write a meaningful review.";
-      }
-    }
-
-    // Check for word variety (prevent repetitive words)
-    const wordFrequency = {};
-    const normalizedWords = words.map((w) => w.toLowerCase());
-
-    for (const word of normalizedWords) {
-      wordFrequency[word] = (wordFrequency[word] || 0) + 1;
-      // If any word (except common words) is repeated too many times
-      if (wordFrequency[word] > 3 && word.length > 3) {
-        return "Review contains too many repeated words";
-      }
-    }
-
-    // Check for reasonable word lengths (most real words are between 1-15 characters)
-    const hasUnreasonableWords = words.some((word) => {
-      const wordLength = word.length;
-      return wordLength > 15 || (wordLength > 1 && !/[aeiou]/i.test(word));
-    });
-
-    if (hasUnreasonableWords) {
-      return "Review contains unrealistic word patterns";
-    }
-
-    // Check for proper sentence structure (should contain at least one period, question mark, or exclamation point)
-    if (review.length > 100 && !/[.!?]/.test(review)) {
-      return "Please use proper punctuation in your review";
-    }
-
-    return "";
   };
 
   const handleSubmit = async (e) => {
@@ -126,24 +103,30 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
     }
 
     // Validate professor name
-    if (formData.professor.trim().length < MIN_PROFESSOR_LENGTH) {
-      alert(
-        `Professor name must be at least ${MIN_PROFESSOR_LENGTH} characters long`
+    if (formData.professor.trim().length < REVIEW_LIMITS.MIN_PROFESSOR_LENGTH) {
+      setProfessorError(
+        `Professor name must be at least ${REVIEW_LIMITS.MIN_PROFESSOR_LENGTH} characters long`
       );
       return;
     }
-    if (formData.professor.trim().length > MAX_PROFESSOR_LENGTH) {
-      alert(`Professor name cannot exceed ${MAX_PROFESSOR_LENGTH} characters`);
+    if (formData.professor.trim().length > REVIEW_LIMITS.MAX_PROFESSOR_LENGTH) {
+      setProfessorError(
+        `Professor name cannot exceed ${REVIEW_LIMITS.MAX_PROFESSOR_LENGTH} characters`
+      );
       return;
     }
 
     // Validate subject
-    if (formData.subject.trim().length < MIN_SUBJECT_LENGTH) {
-      alert(`Subject must be at least ${MIN_SUBJECT_LENGTH} characters long`);
+    if (formData.subject.trim().length < REVIEW_LIMITS.MIN_SUBJECT_LENGTH) {
+      setSubjectError(
+        `Subject must be at least ${REVIEW_LIMITS.MIN_SUBJECT_LENGTH} characters long`
+      );
       return;
     }
-    if (formData.subject.trim().length > MAX_SUBJECT_LENGTH) {
-      alert(`Subject cannot exceed ${MAX_SUBJECT_LENGTH} characters`);
+    if (formData.subject.trim().length > REVIEW_LIMITS.MAX_SUBJECT_LENGTH) {
+      setSubjectError(
+        `Subject cannot exceed ${REVIEW_LIMITS.MAX_SUBJECT_LENGTH} characters`
+      );
       return;
     }
 
@@ -153,7 +136,11 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
     }
 
     // Validate review
-    const reviewError = validateReview(formData.review);
+    const reviewError = validateText(formData.review.trim(), {
+      minLength: REVIEW_LIMITS.MIN_LENGTH,
+      maxLength: REVIEW_LIMITS.MAX_LENGTH,
+      type: "review",
+    });
     if (reviewError) {
       setReviewError(reviewError);
       return;
@@ -169,16 +156,12 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
         review: "",
       });
       setReviewError("");
+      setProfessorError("");
+      setSubjectError("");
     } catch (error) {
       console.error("Error submitting review:", error);
       alert("Failed to submit review. Please try again.");
     }
-  };
-
-  const handleReviewChange = (e) => {
-    const newReview = e.target.value;
-    setFormData({ ...formData, review: newReview });
-    setReviewError(validateReview(newReview));
   };
 
   return (
@@ -187,76 +170,87 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
       onClose={onClose}
       maxWidth="sm"
       fullWidth
-      sx={{
-        "& .MuiDialog-paper": {
-          margin: { xs: 1, sm: 2 },
-          width: { xs: "95%", sm: "90%" },
-          maxHeight: { xs: "95vh", sm: "90vh" },
-          borderRadius: { xs: 1, sm: 2 },
+      PaperProps={{
+        sx: {
+          borderRadius: { xs: 2, sm: 3 },
+          m: { xs: 1, sm: 2 },
         },
       }}
     >
       <DialogTitle
         sx={{
-          pb: { xs: 1, sm: 2 },
-          pt: { xs: 2, sm: 3 },
-          fontSize: { xs: "1.2rem", sm: "1.4rem" },
-          fontWeight: 600,
-          textAlign: { xs: "center", sm: "left" },
+          fontSize: { xs: "1.25rem", sm: "1.5rem" },
+          pb: { xs: 1, sm: 1.5 },
         }}
       >
-        Submit Anonymous Review
+        Submit a Review
       </DialogTitle>
       <DialogContent sx={{ px: { xs: 2, sm: 3 } }}>
-        <Box
-          component="form"
-          onSubmit={handleSubmit}
-          sx={{
-            mt: { xs: 1, sm: 2 },
-            "& .MuiTextField-root": {
-              mb: { xs: 1.5, sm: 2 },
-            },
-          }}
-        >
-          <TextField
-            fullWidth
-            size="small"
-            label="Professor Name or Description"
-            placeholder="e.g., 'Dr. Smith' or 'The Statistics prof with colorful bowties'"
-            value={formData.professor}
-            onChange={(e) =>
-              setFormData({ ...formData, professor: e.target.value })
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          <Autocomplete
+            freeSolo
+            options={professorSuggestions}
+            getOptionLabel={(option) =>
+              typeof option === "string" ? option : option.name
             }
-            inputProps={{
-              maxLength: MAX_PROFESSOR_LENGTH,
-              minLength: MIN_PROFESSOR_LENGTH,
-            }}
-            helperText={`${formData.professor.length}/${MAX_PROFESSOR_LENGTH} characters`}
-            sx={{
-              mb: 2,
-              "& .MuiInputBase-root": {
-                height: { xs: "auto", sm: "auto" },
-                fontSize: { xs: "0.9rem", sm: "1rem" },
-              },
-              "& .MuiInputLabel-root": {
-                fontSize: { xs: "0.9rem", sm: "1rem" },
-              },
-            }}
+            value={formData.professor}
+            onChange={handleProfessorChange}
+            onInputChange={handleProfessorInputChange}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                fullWidth
+                size="small"
+                label="Professor Name"
+                placeholder="Start typing to search..."
+                error={!!professorError}
+                helperText={
+                  professorError ||
+                  `${formData.professor.length}/${REVIEW_LIMITS.MAX_PROFESSOR_LENGTH} characters`
+                }
+                inputProps={{
+                  ...params.inputProps,
+                  maxLength: REVIEW_LIMITS.MAX_PROFESSOR_LENGTH,
+                  minLength: REVIEW_LIMITS.MIN_PROFESSOR_LENGTH,
+                }}
+                sx={{
+                  mb: 2,
+                  "& .MuiInputBase-root": {
+                    height: { xs: "auto", sm: "auto" },
+                    fontSize: { xs: "0.9rem", sm: "1rem" },
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontSize: { xs: "0.9rem", sm: "1rem" },
+                  },
+                }}
+              />
+            )}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  {...getTagProps({ index })}
+                  key={option}
+                  label={typeof option === "string" ? option : option.name}
+                />
+              ))
+            }
           />
           <TextField
             fullWidth
             label="Subject"
             size="small"
             value={formData.subject}
-            onChange={(e) =>
-              setFormData({ ...formData, subject: e.target.value })
-            }
+            onChange={handleSubjectChange}
             required
+            error={!!subjectError}
+            helperText={
+              subjectError ||
+              `${formData.subject.length}/${REVIEW_LIMITS.MAX_SUBJECT_LENGTH} characters`
+            }
             inputProps={{
-              maxLength: MAX_SUBJECT_LENGTH,
-              minLength: MIN_SUBJECT_LENGTH,
+              maxLength: REVIEW_LIMITS.MAX_SUBJECT_LENGTH,
+              minLength: REVIEW_LIMITS.MIN_SUBJECT_LENGTH,
             }}
-            helperText={`${formData.subject.length}/${MAX_SUBJECT_LENGTH} characters`}
             sx={{
               mb: 2,
               "& .MuiInputBase-root": {
@@ -268,46 +262,51 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
               },
             }}
           />
-          <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+          <Box sx={{ mb: 2 }}>
             <Typography
               component="legend"
               sx={{
-                mb: 0.5,
                 fontSize: { xs: "0.9rem", sm: "1rem" },
-                fontWeight: 500,
+                mb: 1,
               }}
             >
               Rating
             </Typography>
             <Rating
               value={formData.stars}
-              onChange={(_, value) =>
-                setFormData({ ...formData, stars: value })
-              }
-              size={isMobile ? "medium" : "large"}
+              onChange={(e, newValue) => {
+                setFormData({ ...formData, stars: newValue });
+              }}
+              size="large"
+              sx={{
+                "& .MuiRating-icon": {
+                  fontSize: { xs: "2rem", sm: "2.5rem" },
+                },
+              }}
             />
           </Box>
           <TextField
             fullWidth
-            label="Review"
             multiline
-            rows={isMobile ? 3 : 4}
+            rows={4}
+            label="Review"
+            size="small"
             value={formData.review}
             onChange={handleReviewChange}
             required
             error={!!reviewError}
             helperText={
               reviewError ||
-              `${formData.review.length}/${MAX_REVIEW_LENGTH} characters (minimum ${MIN_REVIEW_LENGTH})`
+              `${formData.review.length}/${REVIEW_LIMITS.MAX_LENGTH} characters`
             }
             inputProps={{
-              maxLength: MAX_REVIEW_LENGTH,
-              minLength: MIN_REVIEW_LENGTH,
+              maxLength: REVIEW_LIMITS.MAX_LENGTH,
+              minLength: REVIEW_LIMITS.MIN_LENGTH,
             }}
             sx={{
+              mb: 2,
               "& .MuiInputBase-root": {
                 fontSize: { xs: "0.9rem", sm: "1rem" },
-                lineHeight: 1.6,
               },
               "& .MuiInputLabel-root": {
                 fontSize: { xs: "0.9rem", sm: "1rem" },
@@ -341,7 +340,16 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
         <Button
           onClick={handleSubmit}
           variant="contained"
-          disabled={loading}
+          disabled={
+            loading ||
+            !!reviewError ||
+            !!professorError ||
+            !!subjectError ||
+            !formData.review.trim() ||
+            !formData.professor.trim() ||
+            !formData.subject.trim() ||
+            formData.stars === 0
+          }
           sx={{
             height: { xs: 40, sm: 44 },
             minWidth: { xs: "100%", sm: 120 },

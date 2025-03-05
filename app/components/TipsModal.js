@@ -24,12 +24,14 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { tipsService, clientStorage } from "../services/tipsService";
 import { formatTimestamp } from "../utils/formatters";
 import { formatTextWithLinks } from "../utils/linkFormatter";
+import { validateText, TIP_LIMITS } from "../utils/textValidation";
 
 export const TipsModal = ({ open, onClose }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [tips, setTips] = useState([]);
   const [tipFormData, setTipFormData] = useState("");
+  const [tipError, setTipError] = useState("");
   const [loading, setLoading] = useState(true);
   const [editingTip, setEditingTip] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -60,26 +62,59 @@ export const TipsModal = ({ open, onClose }) => {
     }
   };
 
+  const handleTipChange = (e) => {
+    const newTip = e.target.value;
+    setTipFormData(newTip);
+    setTipError(
+      validateText(newTip, {
+        minLength: TIP_LIMITS.MIN_LENGTH,
+        maxLength: TIP_LIMITS.MAX_LENGTH,
+        type: "tip",
+      })
+    );
+  };
+
   const handleAddTip = async () => {
-    if (tipFormData.trim()) {
-      try {
-        const newTip = await tipsService.addTip(tipFormData);
-        const tipWithDefaults = {
-          ...newTip,
-          createdAt: newTip.createdAt || new Date(),
-          lastEdited: null,
-          userId: clientStorage.getItem(`tip_${newTip.id}_userId`),
-        };
-        setTips([tipWithDefaults, ...tips]);
-        setTipFormData("");
-      } catch (error) {
-        console.error("Error adding tip:", error);
-        alert("Failed to add tip");
-      }
+    const validationError = validateText(tipFormData.trim(), {
+      minLength: TIP_LIMITS.MIN_LENGTH,
+      maxLength: TIP_LIMITS.MAX_LENGTH,
+      type: "tip",
+    });
+
+    if (validationError) {
+      setTipError(validationError);
+      return;
+    }
+
+    try {
+      const newTip = await tipsService.addTip(tipFormData);
+      const tipWithDefaults = {
+        ...newTip,
+        createdAt: newTip.createdAt || new Date(),
+        lastEdited: null,
+        userId: clientStorage.getItem(`tip_${newTip.id}_userId`),
+      };
+      setTips([tipWithDefaults, ...tips]);
+      setTipFormData("");
+      setTipError("");
+    } catch (error) {
+      console.error("Error adding tip:", error);
+      alert("Failed to add tip");
     }
   };
 
   const handleEditTip = async (tipId, newContent) => {
+    const validationError = validateText(newContent.trim(), {
+      minLength: TIP_LIMITS.MIN_LENGTH,
+      maxLength: TIP_LIMITS.MAX_LENGTH,
+      type: "tip",
+    });
+
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
+
     try {
       await tipsService.updateTip(tipId, newContent);
       setTips(
@@ -160,10 +195,19 @@ export const TipsModal = ({ open, onClose }) => {
               fullWidth
               label="Share a tip"
               value={tipFormData}
-              onChange={(e) => setTipFormData(e.target.value)}
+              onChange={handleTipChange}
               margin="normal"
               multiline
               rows={isMobile ? 2 : 3}
+              error={!!tipError}
+              helperText={
+                tipError ||
+                `${tipFormData.length}/${TIP_LIMITS.MAX_LENGTH} characters (minimum ${TIP_LIMITS.MIN_LENGTH})`
+              }
+              inputProps={{
+                maxLength: TIP_LIMITS.MAX_LENGTH,
+                minLength: TIP_LIMITS.MIN_LENGTH,
+              }}
               sx={{
                 mt: { xs: 1, sm: 2 },
                 "& .MuiInputBase-root": {
@@ -178,6 +222,7 @@ export const TipsModal = ({ open, onClose }) => {
             <Button
               onClick={handleAddTip}
               variant="contained"
+              disabled={!!tipError || !tipFormData.trim()}
               sx={{
                 mt: 2,
                 height: { xs: 40, sm: 44 },
