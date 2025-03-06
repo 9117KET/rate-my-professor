@@ -43,34 +43,40 @@ export const validateText = (text, options = {}) => {
     } must contain at least 3 words`;
   }
 
-  // Check for repetitive characters (more lenient now)
-  const repetitivePattern = /(.)\1{7,}/;
+  // Check for repetitive characters
+  const repetitivePattern = /(.)\1{4,}/;
   if (repetitivePattern.test(text)) {
     return "Text contains too many repetitive characters";
   }
 
-  // Check for all caps (more lenient - now requires longer text)
-  if (text === text.toUpperCase() && text.length > 50) {
+  // Check for all caps
+  if (text === text.toUpperCase() && text.length > 20) {
     return "Text cannot be in all capital letters";
   }
 
   // Check for obvious gibberish patterns
   const gibberishPatterns = [
-    // Random consonant strings (more lenient)
+    // Random consonant strings (more permissive)
     /[bcdfghjklmnpqrstvwxz]{7,}/i,
-    // Keyboard smashing patterns
-    /[asdfghjkl]{5,}|[qwertyuiop]{5,}|[zxcvbnm]{5,}/i,
-    // Extremely long words without vowels (more lenient)
+    // Keyboard smashing patterns (more permissive)
+    /[asdfghjkl]{6,}|[qwertyuiop]{6,}|[zxcvbnm]{6,}/i,
+    // Words without vowels (only check longer strings)
     /\b[^aeiou\s]{7,}\b/i,
+    // Random character combinations (more permissive)
+    /[^a-zA-Z0-9\s.,!?'"-]{4,}/,
+    // Repeated short patterns (more specific)
+    /(.{2,3})\1{3,}/,
+    // Random letter sequences (more specific)
+    /[a-z]{3,}[0-9]{3,}[a-z]{3,}|[0-9]{3,}[a-z]{3,}[0-9]{3,}/i,
   ];
 
   for (const pattern of gibberishPatterns) {
     if (pattern.test(text)) {
-      return "Text appears to contain random characters. Please write meaningful content.";
+      return "Text appears to contain random characters or gibberish. Please write meaningful content.";
     }
   }
 
-  // Check for word variety (more lenient now)
+  // Check for word variety with more permissive limits
   const wordFrequency = {};
   const normalizedWords = words.map((w) => w.toLowerCase());
   const commonWords = new Set([
@@ -88,31 +94,119 @@ export const validateText = (text, options = {}) => {
     "of",
     "with",
     "by",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "this",
+    "that",
+    "these",
+    "those",
+    "it",
+    "they",
+    "he",
+    "she",
+    "my",
+    "your",
+    "his",
+    "her",
+    "their",
+    "our",
+    "its",
+    "i",
+    "you",
+    "not",
+    "very",
+    "too",
+    "so",
+    "would",
+    "could",
+    "should",
+    "will",
+    "have",
+    "has",
+    "had",
+    "been",
+    "can",
+    "may",
+    "might",
+    "must",
+    "about",
+    "before",
+    "after",
+    "during",
+    "while",
+    "when",
+    "where",
+    "why",
+    "how",
+    "all",
+    "any",
+    "both",
+    "each",
+    "more",
+    "most",
+    "other",
+    "some",
+    "such",
+    "than",
+    "well",
+    "just",
+    "now",
   ]);
 
+  let meaningfulWordCount = 0;
   for (const word of normalizedWords) {
+    if (word.length < 2) continue; // Skip single characters
     if (commonWords.has(word)) continue;
+    meaningfulWordCount++;
     wordFrequency[word] = (wordFrequency[word] || 0) + 1;
-    // Only flag if a non-common word is repeated excessively
+    // More permissive repetition limit
     if (wordFrequency[word] > 5 && word.length > 3) {
       return "Text contains too many repeated words";
     }
   }
 
-  // Check for reasonable word lengths (more lenient)
+  // More permissive meaningful word count
+  if (meaningfulWordCount < 2) {
+    return `${
+      type === "review" ? "Review" : "Tip"
+    } must contain at least 2 meaningful words`;
+  }
+
+  // Check for reasonable word lengths with more permissive limits
   const hasUnreasonableWords = words.some((word) => {
     const wordLength = word.length;
-    // Allow longer words, only flag extremely long ones
-    return wordLength > 25 || (wordLength > 7 && !/[aeiou]/i.test(word));
+    return (
+      wordLength > 30 || // Allow longer words
+      (wordLength > 8 && !/[aeiou]/i.test(word)) || // Only check longer words for vowels
+      (/^\d+$/.test(word) && wordLength > 8) // Allow longer number sequences
+    );
   });
 
   if (hasUnreasonableWords) {
-    return "Text contains unreasonably long words";
+    return "Text contains unreasonably long or invalid words";
   }
 
-  // Remove punctuation check for shorter texts
-  if (text.length > 200 && !/[.!?]/.test(text)) {
-    return "Please use proper punctuation in longer texts";
+  // More permissive sentence structure checks
+  if (text.length > 200) {
+    // Only check longer texts
+    // Check for punctuation
+    if (!/[.!?]/.test(text)) {
+      return "Please use proper punctuation in your text";
+    }
+
+    // Only check sentence case for longer texts
+    if (text.length > 300) {
+      const sentences = text.split(/[.!?]+/).filter((s) => s.trim());
+      for (const sentence of sentences) {
+        const trimmed = sentence.trim();
+        if (trimmed && trimmed.length > 20 && !/^[A-Z]/.test(trimmed)) {
+          return "Please start longer sentences with capital letters";
+        }
+      }
+    }
   }
 
   return "";

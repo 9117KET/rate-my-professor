@@ -34,6 +34,7 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
   const [professorError, setProfessorError] = useState("");
   const [subjectError, setSubjectError] = useState("");
   const [professorSuggestions, setProfessorSuggestions] = useState([]);
+  const [availableSubjects, setAvailableSubjects] = useState([]);
 
   useEffect(() => {
     fetch("/api/getIp")
@@ -55,7 +56,25 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
 
   const handleProfessorChange = (e, newValue) => {
     const newProfessor = newValue ? newValue.name : e.target.value || "";
-    setFormData({ ...formData, professor: newProfessor });
+
+    if (newValue) {
+      const professorSubjects = newValue.subjects || [];
+      setAvailableSubjects(professorSubjects);
+      // Automatically set the first subject
+      setFormData({
+        ...formData,
+        professor: newProfessor,
+        subject: professorSubjects[0] || "",
+      });
+    } else {
+      setAvailableSubjects([]);
+      setFormData({
+        ...formData,
+        professor: newProfessor,
+        subject: "",
+      });
+    }
+
     if (
       !newProfessor ||
       newProfessor.trim().length < REVIEW_LIMITS.MIN_PROFESSOR_LENGTH
@@ -79,14 +98,14 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
     setProfessorSuggestions(suggestions);
   };
 
-  const handleSubjectChange = (e) => {
-    const newSubject = e.target.value;
+  const handleSubjectChange = (e, newValue) => {
+    const newSubject = newValue || "";
     setFormData({ ...formData, subject: newSubject });
-    if (newSubject.trim().length < REVIEW_LIMITS.MIN_SUBJECT_LENGTH) {
+    if (newSubject.length < REVIEW_LIMITS.MIN_SUBJECT_LENGTH) {
       setSubjectError(
         `Subject must be at least ${REVIEW_LIMITS.MIN_SUBJECT_LENGTH} characters long`
       );
-    } else if (newSubject.trim().length > REVIEW_LIMITS.MAX_SUBJECT_LENGTH) {
+    } else if (newSubject.length > REVIEW_LIMITS.MAX_SUBJECT_LENGTH) {
       setSubjectError(
         `Subject cannot exceed ${REVIEW_LIMITS.MAX_SUBJECT_LENGTH} characters`
       );
@@ -235,32 +254,39 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
               ))
             }
           />
-          <TextField
-            fullWidth
-            label="Subject"
-            size="small"
+          <Autocomplete
+            options={availableSubjects}
             value={formData.subject}
             onChange={handleSubjectChange}
-            required
-            error={!!subjectError}
-            helperText={
-              subjectError ||
-              `${formData.subject.length}/${REVIEW_LIMITS.MAX_SUBJECT_LENGTH} characters`
-            }
-            inputProps={{
-              maxLength: REVIEW_LIMITS.MAX_SUBJECT_LENGTH,
-              minLength: REVIEW_LIMITS.MIN_SUBJECT_LENGTH,
-            }}
-            sx={{
-              mb: 2,
-              "& .MuiInputBase-root": {
-                height: { xs: "40px", sm: "44px" },
-                fontSize: { xs: "0.9rem", sm: "1rem" },
-              },
-              "& .MuiInputLabel-root": {
-                fontSize: { xs: "0.9rem", sm: "1rem" },
-              },
-            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                fullWidth
+                label="Subject"
+                size="small"
+                required
+                error={!!subjectError}
+                helperText={
+                  subjectError ||
+                  `${formData.subject.length}/${REVIEW_LIMITS.MAX_SUBJECT_LENGTH} characters`
+                }
+                inputProps={{
+                  ...params.inputProps,
+                  maxLength: REVIEW_LIMITS.MAX_SUBJECT_LENGTH,
+                  minLength: REVIEW_LIMITS.MIN_SUBJECT_LENGTH,
+                }}
+                sx={{
+                  mb: 2,
+                  "& .MuiInputBase-root": {
+                    height: { xs: "40px", sm: "44px" },
+                    fontSize: { xs: "0.9rem", sm: "1rem" },
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontSize: { xs: "0.9rem", sm: "1rem" },
+                  },
+                }}
+              />
+            )}
           />
           <Box sx={{ mb: 2 }}>
             <Typography
