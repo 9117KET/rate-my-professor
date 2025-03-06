@@ -24,14 +24,14 @@ import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import TipsAndUpdatesOutlinedIcon from "@mui/icons-material/TipsAndUpdatesOutlined";
 
-export const HowToUseModal = ({ open, onClose }) => {
+export const HowToUseModal = ({ open, onClose, disableClose }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={disableClose ? undefined : onClose}
       maxWidth="md"
       fullWidth
       sx={{
@@ -52,10 +52,29 @@ export const HowToUseModal = ({ open, onClose }) => {
           pb: { xs: 1, sm: 2 },
           textAlign: { xs: "center", sm: "left" },
           fontWeight: 600,
+          pr: disableClose ? 2 : 6,
         }}
       >
-        How & Why Use This Platform
+        Welcome to Rate My Professor!
       </DialogTitle>
+      {disableClose && (
+        <Box
+          sx={{
+            px: 3,
+            pb: 2,
+            bgcolor: "primary.light",
+            color: "white",
+            mx: 2,
+            borderRadius: 1,
+          }}
+        >
+          <Typography variant="subtitle1" sx={{ py: 1 }}>
+            👋 Welcome! Let&apos;s get you started with our platform. First,
+            we&apos;ll show you how to use it, then you&apos;ll be asked to
+            submit your first review to access all features.
+          </Typography>
+        </Box>
+      )}
       <DialogContent
         sx={{
           px: { xs: 1, sm: 3 },
@@ -479,7 +498,7 @@ export const HowToUseModal = ({ open, onClose }) => {
             fontSize: { xs: "0.85rem", sm: "0.9rem" },
           }}
         >
-          Got It!
+          {disableClose ? "Got It! Let's Rate" : "Got It!"}
         </Button>
       </DialogActions>
     </Dialog>

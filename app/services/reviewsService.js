@@ -39,13 +39,13 @@ export const reviewsService = {
     }
   },
 
-  async addReview(reviewData, ipAddress) {
+  async addReview(reviewData) {
     try {
       const reviewsRef = collection(db, COLLECTION_NAME);
       const enrichedReview = {
         ...reviewData,
         createdAt: serverTimestamp(),
-        ipAddress: ipAddress,
+        userId: reviewData.userId,
         reactions: {
           thumbsUp: 0,
           thumbsDown: 0,
@@ -76,18 +76,18 @@ export const reviewsService = {
     }
   },
 
-  async editReview(reviewId, newContent, ipAddress) {
+  async editReview(reviewId, newContent, userId) {
     try {
       const reviewRef = doc(db, COLLECTION_NAME, reviewId);
       const reviewSnap = await getDoc(reviewRef);
       const reviewData = reviewSnap.data();
 
-      // Check if review exists and IP matches
+      // Check if review exists and userId matches
       if (!reviewSnap.exists()) {
         throw new Error("Review not found");
       }
 
-      if (reviewData.ipAddress !== ipAddress) {
+      if (reviewData.userId !== userId) {
         throw new Error("Unauthorized to edit this review");
       }
 
@@ -130,18 +130,18 @@ export const reviewsService = {
     }
   },
 
-  async deleteReview(reviewId, ipAddress) {
+  async deleteReview(reviewId, userId) {
     try {
       const reviewRef = doc(db, COLLECTION_NAME, reviewId);
       const reviewSnap = await getDoc(reviewRef);
       const reviewData = reviewSnap.data();
 
-      // Check if review exists and IP matches
+      // Check if review exists and userId matches
       if (!reviewSnap.exists()) {
         throw new Error("Review not found");
       }
 
-      if (reviewData.ipAddress !== ipAddress) {
+      if (reviewData.userId !== userId) {
         throw new Error("Unauthorized to delete this review");
       }
 
@@ -204,7 +204,7 @@ export const reviewsService = {
     }
   },
 
-  async addReply(reviewId, replyData, ipAddress) {
+  async addReply(reviewId, replyData, userId) {
     try {
       const reviewRef = doc(db, COLLECTION_NAME, reviewId);
       const now = new Date();
@@ -212,7 +212,7 @@ export const reviewsService = {
       const reply = {
         content: replyData.content,
         createdAt: now,
-        ipAddress: ipAddress,
+        userId: userId,
         lastEdited: null,
         reactions: {
           thumbsUp: 0,
@@ -231,7 +231,7 @@ export const reviewsService = {
     }
   },
 
-  async deleteReply(reviewId, replyIndex, ipAddress) {
+  async deleteReply(reviewId, replyIndex, userId) {
     try {
       const reviewRef = doc(db, COLLECTION_NAME, reviewId);
       const reviewSnap = await getDoc(reviewRef);
@@ -244,7 +244,7 @@ export const reviewsService = {
       const replies = reviewData.replies || [];
       const reply = replies[replyIndex];
 
-      if (!reply || reply.ipAddress !== ipAddress) {
+      if (!reply || reply.userId !== userId) {
         throw new Error("Unauthorized to delete this reply");
       }
 
@@ -268,7 +268,7 @@ export const reviewsService = {
     }
   },
 
-  async editReply(reviewId, replyIndex, newContent, ipAddress) {
+  async editReply(reviewId, replyIndex, newContent, userId) {
     try {
       const reviewRef = doc(db, COLLECTION_NAME, reviewId);
       const reviewSnap = await getDoc(reviewRef);
@@ -281,7 +281,7 @@ export const reviewsService = {
       const replies = reviewData.replies || [];
       const reply = replies[replyIndex];
 
-      if (!reply || reply.ipAddress !== ipAddress) {
+      if (!reply || reply.userId !== userId) {
         throw new Error("Unauthorized to edit this reply");
       }
 

@@ -19,8 +19,15 @@ import {
 import { reviewsService } from "../services/reviewsService";
 import { validateText, REVIEW_LIMITS } from "../utils/textValidation";
 import { PROFESSORS, getProfessorSuggestions } from "../utils/professorNames";
+import { userTrackingService } from "../services/userTrackingService";
 
-export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
+export const SubmitReviewModal = ({
+  open,
+  onClose,
+  onSubmit,
+  loading,
+  disableClose,
+}) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [formData, setFormData] = useState({
@@ -29,18 +36,11 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
     stars: 0,
     review: "",
   });
-  const [userIp, setUserIp] = useState(null);
   const [reviewError, setReviewError] = useState("");
   const [professorError, setProfessorError] = useState("");
   const [subjectError, setSubjectError] = useState("");
   const [professorSuggestions, setProfessorSuggestions] = useState([]);
   const [availableSubjects, setAvailableSubjects] = useState([]);
-
-  useEffect(() => {
-    fetch("/api/getIp")
-      .then((res) => res.json())
-      .then((data) => setUserIp(data.ip));
-  }, []);
 
   const handleReviewChange = (e) => {
     const newReview = e.target.value;
@@ -116,7 +116,8 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!userIp) {
+    const userId = userTrackingService.getOrCreateUserId();
+    if (!userId) {
       alert("Unable to submit review at this time. Please try again later.");
       return;
     }
@@ -166,7 +167,16 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
     }
 
     try {
-      await reviewsService.addReview(formData, userIp);
+      // Add userId to the review data
+      const reviewWithUserId = {
+        ...formData,
+        userId: userId,
+      };
+
+      await reviewsService.addReview(reviewWithUserId);
+      if (onSubmit) {
+        await onSubmit(reviewWithUserId);
+      }
       onClose();
       setFormData({
         professor: "",
@@ -186,7 +196,7 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={disableClose ? undefined : onClose}
       maxWidth="sm"
       fullWidth
       PaperProps={{
@@ -200,10 +210,25 @@ export const SubmitReviewModal = ({ open, onClose, onSubmit, loading }) => {
         sx={{
           fontSize: { xs: "1.25rem", sm: "1.5rem" },
           pb: { xs: 1, sm: 1.5 },
+          pr: disableClose ? 2 : 6,
         }}
       >
-        Submit a Review
+        {disableClose ? "Submit Your First Review" : "Submit a Review"}
       </DialogTitle>
+      {disableClose && (
+        <Typography
+          variant="subtitle1"
+          sx={{
+            px: 3,
+            pb: 2,
+            color: "text.secondary",
+          }}
+        >
+          Now that you know how to use the platform, please submit your first
+          review to access all features. This helps us maintain a valuable
+          community of shared experiences.
+        </Typography>
+      )}
       <DialogContent sx={{ px: { xs: 2, sm: 3 } }}>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
           <Autocomplete

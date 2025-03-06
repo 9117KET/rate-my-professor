@@ -29,6 +29,7 @@ import { ImprintModal } from "./components/ImprintModal";
 import { chatService } from "./services/chatService";
 import { HowToUseModal } from "./components/HowToUseModal";
 import { userTrackingService } from "./services/userTrackingService";
+import { reviewsService } from "./services/reviewsService";
 
 // Enhanced color palette
 const theme = {
@@ -120,10 +121,22 @@ export default function Home() {
   const [openImprintModal, setOpenImprintModal] = useState(false);
   const [openHowToUseModal, setOpenHowToUseModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
   const messagesEndRef = useRef(null);
   const muiTheme = useTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
   const [userId, setUserId] = useState(null);
+
+  // Check if user has submitted a review before
+  useEffect(() => {
+    const hasReviewed = localStorage.getItem("has_submitted_review");
+    if (hasReviewed) {
+      setHasSubmittedReview(true);
+    } else {
+      // Show How to Use modal first
+      setOpenHowToUseModal(true);
+    }
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -242,6 +255,33 @@ export default function Home() {
     }
   };
 
+  const handleReviewSubmit = async (reviewData) => {
+    try {
+      await reviewsService.addReview(reviewData);
+      setHasSubmittedReview(true);
+      localStorage.setItem("has_submitted_review", "true");
+      setOpenRateModal(false);
+      setOpenHowToUseModal(false);
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      alert("Failed to submit review. Please try again.");
+    }
+  };
+
+  // Prevent closing the rate modal if user hasn't submitted a review
+  const handleRateModalClose = () => {
+    if (hasSubmittedReview) {
+      setOpenRateModal(false);
+    }
+  };
+
+  // Handle How to Use modal close
+  const handleHowToUseClose = () => {
+    setOpenHowToUseModal(false);
+    // Show Rate modal after How to Use is closed
+    setOpenRateModal(true);
+  };
+
   return (
     <Box
       sx={{
@@ -251,6 +291,8 @@ export default function Home() {
         bgcolor: theme.background.default,
         overflow: "hidden",
         maxWidth: "100vw",
+        pointerEvents: !hasSubmittedReview ? "none" : "auto",
+        opacity: !hasSubmittedReview ? 0.5 : 1,
       }}
     >
       <Box
@@ -657,20 +699,30 @@ export default function Home() {
       </Box>
       <SubmitReviewModal
         open={openRateModal}
-        onClose={() => setOpenRateModal(false)}
+        onClose={handleRateModalClose}
+        onSubmit={handleReviewSubmit}
+        loading={isLoading}
+        disableClose={!hasSubmittedReview}
       />
       <ViewReviewsModal
         open={openViewModal}
-        onClose={() => setOpenViewModal(false)}
+        onClose={() => hasSubmittedReview && setOpenViewModal(false)}
+        disableClose={!hasSubmittedReview}
       />
-      <TipsModal open={openTipsModal} onClose={() => setOpenTipsModal(false)} />
+      <TipsModal
+        open={openTipsModal}
+        onClose={() => hasSubmittedReview && setOpenTipsModal(false)}
+        disableClose={!hasSubmittedReview}
+      />
       <ImprintModal
         open={openImprintModal}
-        onClose={() => setOpenImprintModal(false)}
+        onClose={() => hasSubmittedReview && setOpenImprintModal(false)}
+        disableClose={!hasSubmittedReview}
       />
       <HowToUseModal
         open={openHowToUseModal}
-        onClose={() => setOpenHowToUseModal(false)}
+        onClose={handleHowToUseClose}
+        disableClose={!hasSubmittedReview}
       />
       <Box
         component="footer"

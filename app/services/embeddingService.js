@@ -23,21 +23,23 @@ export const embeddingService = {
 
   async syncFirestoreWithPinecone() {
     try {
+      console.log("Starting Pinecone sync...");
       const { openai, pc } = await this.getClients();
       const index = pc.Index("rag");
 
       // Step 1: Get all reviews from Firestore
       const reviews = await reviewsService.getAllReviews();
+      console.log(`Found ${reviews.length} reviews in Firestore`);
       const firestoreIds = reviews.map((review) => review.id);
 
       // Step 2: Try to get all existing vector IDs from Pinecone
-      // Note: listVectors may not be available in all Pinecone plans
       try {
         const existingVectors = await index.listVectors();
         const pineconeIds =
           existingVectors?.vectors?.map((vector) => vector.id) || [];
+        console.log(`Found ${pineconeIds.length} vectors in Pinecone`);
 
-        // Step 3: Find vectors to delete (in Pinecone but not in Firestore)
+        // Step 3: Find vectors to delete
         const vectorsToDelete = pineconeIds.filter(
           (id) => !firestoreIds.includes(id)
         );
@@ -54,11 +56,11 @@ export const embeddingService = {
           "Unable to list vectors from Pinecone. Falling back to alternative method:",
           listError.message
         );
-        // If listVectors is not available, fall back to the alternative method
         return this.syncFirestoreWithPineconeFallback();
       }
 
       // Step 5: Create or update embeddings for current reviews
+      console.log("Generating embeddings for reviews...");
       const processedData = await Promise.all(
         reviews.map(async (review) => {
           const response = await openai.embeddings.create({
@@ -81,9 +83,11 @@ export const embeddingService = {
 
       // Step 6: Upsert to Pinecone
       if (processedData.length > 0) {
+        console.log(`Upserting ${processedData.length} vectors to Pinecone`);
         await index.upsert(processedData);
       }
 
+      console.log("Pinecone sync completed successfully");
       return true;
     } catch (error) {
       console.error("Error syncing with Pinecone:", error);
