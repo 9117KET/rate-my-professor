@@ -6,11 +6,18 @@ import {
   Button,
   Typography,
   Box,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
   useTheme,
   useMediaQuery,
-  Divider,
-  Paper,
 } from "@mui/material";
+import InfoIcon from "@mui/icons-material/Info";
+import SecurityIcon from "@mui/icons-material/Security";
+import GavelIcon from "@mui/icons-material/Gavel";
+import CodeIcon from "@mui/icons-material/Code";
 
 export const ImprintModal = ({ open, onClose }) => {
   const theme = useTheme();
@@ -20,238 +27,168 @@ export const ImprintModal = ({ open, onClose }) => {
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="md"
+      maxWidth="sm"
       fullWidth
       sx={{
         "& .MuiDialog-paper": {
-          margin: { xs: 1, sm: 2, md: 3 },
-          width: { xs: "95%", sm: "90%", md: "80%" },
+          margin: { xs: 1, sm: 2 },
+          width: { xs: "95%", sm: "90%" },
           maxHeight: { xs: "95vh", sm: "90vh" },
-          overflowY: "auto",
           borderRadius: { xs: 1, sm: 2 },
         },
       }}
     >
       <DialogTitle
         sx={{
-          fontSize: { xs: "1.2rem", sm: "1.5rem", md: "1.8rem" },
-          py: { xs: 2, sm: 2.5, md: 3 },
-          px: { xs: 2, sm: 3, md: 4 },
-          textAlign: { xs: "center", sm: "left" },
+          fontSize: { xs: "1.2rem", sm: "1.5rem" },
+          pt: { xs: 2, sm: 3 },
+          pb: { xs: 1, sm: 2 },
+          textAlign: "center",
           fontWeight: 600,
         }}
       >
-        Imprint & Legal Notice
+        ⚖️ Legal Information
       </DialogTitle>
-      <DialogContent
-        sx={{
-          px: { xs: 2, sm: 3, md: 4 },
-          py: { xs: 1, sm: 2 },
-          "& a": {
-            color: theme.palette.primary.main,
-            textDecoration: "none",
-            "&:hover": {
-              textDecoration: "underline",
-            },
-          },
-        }}
-      >
-        {/* <Box sx={{ mb: 4 }}>
-          <Typography
-            variant="h6"
-            sx={{ mb: 2, fontSize: { xs: "1rem", sm: "1.25rem" } }}
-          >
-            Service Provider
-          </Typography>
-          <Typography>Kinlo ET</Typography>
-          <Typography>Campus Ring 1</Typography>
-          <Typography>28759 Bremen</Typography>
-          <Typography>Germany</Typography>
-        </Box> */}
 
-        {/* <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            Contact
-          </Typography>
-          <Typography>
-            <a
-              href="https://www.linkedin.com/in/kinlo-ephriam-tangiri-a70113218/"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "#0077b5", textDecoration: "none" }}
-            >
-              LinkedIn
-            </a>
-          </Typography>
-        </Box> */}
+      <DialogContent>
+        <List>
+          {/* Created By Section */}
+          <ListItem sx={{ pt: 1 }}>
+            <ListItemIcon>
+              <CodeIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Created By
+                </Typography>
+              }
+              secondary={
+                <Box sx={{ mt: 0.5 }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      fontStyle: "italic",
+                      fontWeight: 500,
+                      color: "primary.main",
+                    }}
+                  >
+                    Kinlo ET
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Constructor University Bremen Student
+                  </Typography>
+                </Box>
+              }
+            />
+          </ListItem>
 
-        <Paper
-          elevation={0}
-          sx={{
-            p: { xs: 2, sm: 3 },
-            mb: { xs: 3, sm: 4 },
-            bgcolor: "rgba(0, 27, 63, 0.02)",
-            borderRadius: 2,
-          }}
-        >
-          <Typography
-            variant="h6"
-            sx={{
-              mb: { xs: 1.5, sm: 2 },
-              fontSize: { xs: "1.1rem", sm: "1.25rem", md: "1.35rem" },
-              fontWeight: 600,
-              color: "primary.main",
-            }}
-          >
-            Legal Disclaimers
-          </Typography>
-          <Typography
-            paragraph
-            sx={{
-              fontSize: { xs: "0.875rem", sm: "1rem" },
-              mb: { xs: 1.5, sm: 2 },
-              lineHeight: { xs: 1.5, sm: 1.7 },
-            }}
-          >
-            This platform is for informational purposes only. The reviews and
-            ratings are user-generated content and do not represent my official
-            views or the views of Constructor University.
-          </Typography>
-          <Typography
-            paragraph
-            sx={{
-              fontSize: { xs: "0.875rem", sm: "1rem" },
-              mb: { xs: 1.5, sm: 2 },
-              lineHeight: { xs: 1.5, sm: 1.7 },
-            }}
-          >
-            To protect privacy and maintain anonymity, users should not directly
-            state professor names. Instead, describe the professor in a way that
-            students familiar with the course would recognize (e.g., &quot;The
-            Statistics professor who uses many real-world examples&quot; or
-            &quot;The Physics professor who always wears colorful
-            bowties&quot;).
-          </Typography>
-          <Typography
-            paragraph
-            sx={{
-              fontSize: { xs: "0.875rem", sm: "1rem" },
-              mb: { xs: 1.5, sm: 2 },
-              lineHeight: { xs: 1.5, sm: 1.7 },
-            }}
-          >
-            I will try to maintain the accuracy of information but make no
-            guarantees regarding the completeness, reliability, or accuracy of
-            the content.
-          </Typography>
-          <Typography
-            paragraph
-            sx={{
-              fontSize: { xs: "0.875rem", sm: "1rem" },
-              mb: { xs: 0, sm: 0 },
-              lineHeight: { xs: 1.5, sm: 1.7 },
-            }}
-          >
-            Users are responsible for ensuring their submissions comply with
-            applicable laws and do not violate any rights of third parties.
-          </Typography>
-        </Paper>
+          <Divider sx={{ my: 1 }} />
 
-        <Paper
-          elevation={0}
-          sx={{
-            p: { xs: 2, sm: 3 },
-            mb: { xs: 3, sm: 4 },
-            bgcolor: "rgba(0, 27, 63, 0.02)",
-            borderRadius: 2,
-          }}
-        >
-          <Typography
-            variant="h6"
-            sx={{
-              mb: { xs: 1.5, sm: 2 },
-              fontSize: { xs: "1.1rem", sm: "1.25rem", md: "1.35rem" },
-              fontWeight: 600,
-              color: "primary.main",
-            }}
-          >
-            Data Protection
-          </Typography>
-          <Typography
-            paragraph
-            sx={{
-              fontSize: { xs: "0.875rem", sm: "1rem" },
-              mb: { xs: 0, sm: 0 },
-              lineHeight: { xs: 1.5, sm: 1.7 },
-            }}
-          >
-            Data generated on this platform is anonymous data and we have no way
-            to track the user data for the purpose of giving honest review of
-            their experiences with professors at Constructor University. I
-            strive to make sure the data is in accordance with the EU General
-            Data Protection Regulation (GDPR).
-          </Typography>
-        </Paper>
+          {/* About Section */}
+          <ListItem>
+            <ListItemIcon>
+              <InfoIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography variant="subtitle1" fontWeight={600}>
+                  About This Platform
+                </Typography>
+              }
+              secondary={
+                <Typography variant="body2" color="text.secondary">
+                  A student-driven platform for Constructor University Bremen,
+                  created to help students make informed decisions about courses
+                  and professors.
+                </Typography>
+              }
+            />
+          </ListItem>
 
-        <Divider sx={{ my: { xs: 2, sm: 3 } }} />
+          <Divider sx={{ my: 1 }} />
+
+          {/* Privacy Section */}
+          <ListItem>
+            <ListItemIcon>
+              <SecurityIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Privacy & Anonymity
+                </Typography>
+              }
+              secondary={
+                <Typography variant="body2" color="text.secondary">
+                  • All reviews are anonymous
+                  <br />
+                  • No personal data is collected
+                  <br />• Reviews are stored securely
+                  <br />• Everyone can view submitted reviews
+                </Typography>
+              }
+            />
+          </ListItem>
+
+          <Divider sx={{ my: 1 }} />
+
+          {/* Guidelines Section */}
+          <ListItem>
+            <ListItemIcon>
+              <GavelIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Review Guidelines
+                </Typography>
+              }
+              secondary={
+                <Typography variant="body2" color="text.secondary">
+                  • Focus on teaching style and course content
+                  <br />
+                  • No harassment or personal attacks
+                  <br />• No sharing of private information
+                </Typography>
+              }
+            />
+          </ListItem>
+        </List>
 
         <Box
           sx={{
-            mb: { xs: 2, sm: 2 },
-            textAlign: "center",
-            p: { xs: 2, sm: 2 },
-            bgcolor: { xs: "transparent", sm: "transparent" },
-            borderRadius: 2,
+            mt: 2,
+            p: 2,
+            bgcolor: "grey.100",
+            borderRadius: 1,
+            border: "1px solid",
+            borderColor: "grey.300",
           }}
         >
-          <Typography
-            variant="body1"
-            sx={{
-              fontSize: { xs: "0.9rem", sm: "1rem" },
-              mb: 1,
-              fontWeight: 500,
-            }}
-          >
-            Developed by Kinlo
-          </Typography>
-          <Typography>
-            <a
-              href="https://www.linkedin.com/in/kinlo-ephriam-tangiri-a70113218/"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: theme.palette.primary.main,
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                fontSize: isMobile ? "0.85rem" : "0.95rem",
-              }}
-            >
-              Connect on LinkedIn
-            </a>
+          <Typography variant="caption" color="text.secondary" display="block">
+            This platform is an independent student initiative and is not
+            officially affiliated with Constructor University Bremen. All
+            reviews reflect personal student experiences and opinions.
           </Typography>
         </Box>
       </DialogContent>
-      <DialogActions
-        sx={{
-          px: { xs: 2, sm: 3, md: 4 },
-          py: { xs: 2, sm: 2.5 },
-          justifyContent: "center",
-          pb: { xs: 3, sm: 3 },
-        }}
-      >
+
+      <DialogActions sx={{ px: 3, pb: 3 }}>
         <Button
-          onClick={onClose}
           variant="contained"
+          onClick={onClose}
+          fullWidth
+          size="large"
           sx={{
-            minWidth: { xs: 140, sm: 160 },
-            py: { xs: 1, sm: 1 },
             borderRadius: 2,
-            fontSize: { xs: "0.85rem", sm: "0.9rem" },
-            fontWeight: 500,
+            py: 1.5,
+            fontSize: "1rem",
+            textTransform: "none",
           }}
         >
-          Got It
+          I Understand
         </Button>
       </DialogActions>
     </Dialog>
