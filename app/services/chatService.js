@@ -1,5 +1,12 @@
 import { db } from "../lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  getDocs,
+  query,
+  orderBy,
+} from "firebase/firestore";
 
 export const chatService = {
   async saveChat(messages) {
@@ -15,6 +22,23 @@ export const chatService = {
       });
     } catch (error) {
       console.error("Error saving chat:", error);
+      throw error;
+    }
+  },
+
+  async getAllChats() {
+    try {
+      const chatRef = collection(db, "chats");
+      const q = query(chatRef, orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
+
+      return snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+      }));
+    } catch (error) {
+      console.error("Error getting chats:", error);
       throw error;
     }
   },
