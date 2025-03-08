@@ -154,23 +154,24 @@ export const reviewsService = {
       const reviewSnap = await getDoc(reviewRef);
       const reviewData = reviewSnap.data();
 
-      // Check if review exists and userId matches
+      // Check if review exists
       if (!reviewSnap.exists()) {
         throw new Error("Review not found");
       }
 
+      // Check if userId matches
       if (reviewData.userId !== userId) {
         throw new Error("Unauthorized to delete this review");
       }
 
-      // Check if within 24 hours
+      // Check if within 2 hours
       const createdAt = reviewData.createdAt.toDate();
       const now = new Date();
       const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
 
-      if (hoursDiff > 24) {
+      if (hoursDiff > 2) {
         throw new Error(
-          "Review can only be deleted within 24 hours of creation"
+          "Review can only be deleted within 2 hours of creation"
         );
       }
 

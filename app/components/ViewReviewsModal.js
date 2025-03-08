@@ -35,6 +35,8 @@ import ThumbDownIcon from "@mui/icons-material/ThumbDown";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { reviewsService } from "../services/reviewsService";
 import { ReviewReply } from "./ReviewReply";
+import DeleteIcon from "@mui/icons-material/Delete";
+import { userTrackingService } from "../services/userTrackingService";
 
 export const ViewReviewsModal = ({ open, onClose }) => {
   const theme = useTheme();
@@ -49,6 +51,7 @@ export const ViewReviewsModal = ({ open, onClose }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedReview, setSelectedReview] = useState(null);
   const [replyContent, setReplyContent] = useState({});
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   useEffect(() => {
     const reviewsRef = collection(db, "reviews");
@@ -85,6 +88,11 @@ export const ViewReviewsModal = ({ open, onClose }) => {
         setUserReactions({});
       }
     }
+  }, []);
+
+  useEffect(() => {
+    const userId = userTrackingService.getOrCreateUserId();
+    setCurrentUserId(userId);
   }, []);
 
   // Get unique subjects and professors for filter dropdowns
@@ -183,9 +191,14 @@ export const ViewReviewsModal = ({ open, onClose }) => {
   };
 
   const handleDeleteReview = async (reviewId) => {
+    if (!currentUserId) {
+      alert("You must be logged in to delete a review");
+      return;
+    }
+
     if (window.confirm("Are you sure you want to delete this review?")) {
       try {
-        await reviewsService.deleteReview(reviewId, userIp);
+        await reviewsService.deleteReview(reviewId, currentUserId);
         // The reviews will update automatically through the onSnapshot listener
       } catch (error) {
         alert(error.message);
@@ -233,6 +246,17 @@ export const ViewReviewsModal = ({ open, onClose }) => {
       console.error("Error editing reply:", error);
       alert(error.message);
     }
+  };
+
+  const canDeleteReview = (review) => {
+    if (!review || !currentUserId || review.userId !== currentUserId)
+      return false;
+
+    const createdAt = new Date(review.createdAt);
+    const now = new Date();
+    const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
+
+    return hoursDiff <= 2;
   };
 
   return (
@@ -570,6 +594,18 @@ export const ViewReviewsModal = ({ open, onClose }) => {
                                 <MoreVertIcon
                                   fontSize={isMobile ? "small" : "medium"}
                                 />
+                              </IconButton>
+                            )}
+                            {canDeleteReview(review) && (
+                              <IconButton
+                                onClick={() => handleDeleteReview(review.id)}
+                                size="small"
+                                sx={{
+                                  ml: 1,
+                                  color: "error.main",
+                                }}
+                              >
+                                <DeleteIcon />
                               </IconButton>
                             )}
                           </Box>

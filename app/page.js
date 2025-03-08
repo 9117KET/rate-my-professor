@@ -110,8 +110,7 @@ export default function Home() {
     {
       role: "assistant",
       content:
-        "Hi! I am the Rate My Professor AI support assistant. How can I help you today?",
-      timestamp: new Date(),
+        "# Welcome to Rate My CUB Professor! \n\n what info about a prof or course do you need help with?"
     },
   ]);
   const [message, setMessage] = useState("");
@@ -570,6 +569,76 @@ export default function Home() {
                 zIndex: 1,
               }}
             >
+              {/* Suggestion buttons */}
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 1,
+                  mb: 2,
+                  flexWrap: "wrap",
+                }}
+              >
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={async () => {
+                    setMessage("Who are the highest rated professors?");
+                    await sendMessage();
+                  }}
+                  disabled={isLoading}
+                  sx={{
+                    borderRadius: 3,
+                    borderColor: "rgba(0,0,0,0.1)",
+                    color: theme.text.secondary,
+                    "&:hover": {
+                      borderColor: theme.primary.main,
+                      bgcolor: "rgba(0,27,63,0.05)",
+                    },
+                  }}
+                >
+                  🌟 Best rated professors
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={async () => {
+                    setMessage("How do I submit a review?");
+                    await sendMessage();
+                  }}
+                  disabled={isLoading}
+                  sx={{
+                    borderRadius: 3,
+                    borderColor: "rgba(0,0,0,0.1)",
+                    color: theme.text.secondary,
+                    "&:hover": {
+                      borderColor: theme.primary.main,
+                      bgcolor: "rgba(0,27,63,0.05)",
+                    },
+                  }}
+                >
+                  ✍️ How to submit a review
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={async () => {
+                    setMessage("What are the tips for succeeding in courses?");
+                    await sendMessage();
+                  }}
+                  disabled={isLoading}
+                  sx={{
+                    borderRadius: 3,
+                    borderColor: "rgba(0,0,0,0.1)",
+                    color: theme.text.secondary,
+                    "&:hover": {
+                      borderColor: theme.primary.main,
+                      bgcolor: "rgba(0,27,63,0.05)",
+                    },
+                  }}
+                >
+                  💡 Show me reviews for
+                </Button>
+              </Box>
               <Stack
                 direction="row"
                 spacing={1}
