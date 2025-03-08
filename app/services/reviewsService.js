@@ -66,23 +66,26 @@ export const reviewsService = {
         createdAt: docSnap.data().createdAt?.toDate() || new Date(),
       };
 
-      // Sync with Pinecone
-      try {
-        console.log("Starting Pinecone sync for new review...");
-        await embeddingService.syncFirestoreWithPinecone();
-        console.log(`Successfully synced review ${docRef.id} to Pinecone`);
-      } catch (syncError) {
-        console.error("Error during Pinecone sync:", syncError);
-        // Attempt alternative sync method
+      // Sync with Pinecone in the background
+      setTimeout(async () => {
         try {
-          console.log("Attempting alternative sync method...");
-          await embeddingService.syncFirestoreWithPineconeFallback();
-          console.log("Alternative sync successful");
-        } catch (fallbackError) {
-          console.error("Alternative sync failed:", fallbackError);
-          throw new Error("Failed to sync review with search index");
+          console.log("Starting Pinecone sync for new review...");
+          await embeddingService.syncFirestoreWithPinecone();
+          console.log(`Successfully synced review ${docRef.id} to Pinecone`);
+        } catch (syncError) {
+          console.error("Error during Pinecone sync:", syncError);
+          // Attempt alternative sync method
+          try {
+            console.log("Attempting alternative sync method...");
+            await embeddingService.syncFirestoreWithPineconeFallback();
+            console.log("Alternative sync successful");
+          } catch (fallbackError) {
+            console.error("Alternative sync failed:", fallbackError);
+            // Log error but don't throw since this is background sync
+            console.error("Failed to sync review with search index");
+          }
         }
-      }
+      }, 0);
 
       return savedReview;
     } catch (error) {

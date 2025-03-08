@@ -173,11 +173,12 @@ export const SubmitReviewModal = ({
         userId: userId,
       };
 
-      await reviewsService.addReview(reviewWithUserId);
+      // Call onSubmit with the review data - this will handle both saving and UI updates
       if (onSubmit) {
         await onSubmit(reviewWithUserId);
       }
-      onClose();
+
+      // Reset form
       setFormData({
         professor: "",
         subject: "",
@@ -187,6 +188,7 @@ export const SubmitReviewModal = ({
       setReviewError("");
       setProfessorError("");
       setSubjectError("");
+      onClose();
     } catch (error) {
       console.error("Error submitting review:", error);
       alert("Failed to submit review. Please try again.");
