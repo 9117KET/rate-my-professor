@@ -20,6 +20,7 @@ import { reviewsService } from "../services/reviewsService";
 import { validateText, REVIEW_LIMITS } from "../utils/textValidation";
 import { PROFESSORS, getProfessorSuggestions } from "../utils/professorNames";
 import { userTrackingService } from "../services/userTrackingService";
+import { contentModerationService } from "../services/contentModerationService";
 
 export const SubmitReviewModal = ({
   open,
@@ -166,11 +167,21 @@ export const SubmitReviewModal = ({
       return;
     }
 
+    // Content moderation check
     try {
+      const moderationResult = await contentModerationService.moderateContent(
+        formData.review
+      );
+      if (!moderationResult.isValid) {
+        setReviewError(moderationResult.issues.join(". "));
+        return;
+      }
+
       // Add userId to the review data
       const reviewWithUserId = {
         ...formData,
         userId: userId,
+        review: moderationResult.sanitizedText, // Use the sanitized text
       };
 
       // Call onSubmit with the review data - this will handle both saving and UI updates

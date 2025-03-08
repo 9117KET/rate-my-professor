@@ -110,7 +110,7 @@ export default function Home() {
     {
       role: "assistant",
       content:
-        "# Welcome to Rate My CUB Professor! \n\n what info about a prof or course do you need help with?"
+        "Welcome to Rate My CUB Professor! What info about a prof or course do you need help with?",
     },
   ]);
   const [message, setMessage] = useState("");

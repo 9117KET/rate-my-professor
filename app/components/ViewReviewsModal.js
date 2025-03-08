@@ -37,6 +37,7 @@ import { reviewsService } from "../services/reviewsService";
 import { ReviewReply } from "./ReviewReply";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { userTrackingService } from "../services/userTrackingService";
+import { contentModerationService } from "../services/contentModerationService";
 
 export const ViewReviewsModal = ({ open, onClose }) => {
   const theme = useTheme();
@@ -71,10 +72,29 @@ export const ViewReviewsModal = ({ open, onClose }) => {
 
   useEffect(() => {
     // Fetch user's IP address
-    fetch("/api/getIp")
-      .then((res) => res.json())
-      .then((data) => setUserIp(data.ip))
-      .catch((error) => console.error("Error fetching IP:", error));
+    const fetchIp = async () => {
+      try {
+        const res = await fetch("/api/getIp");
+        if (!res.ok) {
+          throw new Error("Failed to fetch IP");
+        }
+        const data = await res.json();
+        if (data.ip) {
+          setUserIp(data.ip);
+        } else {
+          console.warn("No IP address returned from server");
+        }
+      } catch (error) {
+        console.error("Error fetching IP:", error);
+        // Generate a temporary random IP for development
+        const tempIp = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(
+          Math.random() * 255
+        )}`;
+        setUserIp(tempIp);
+      }
+    };
+
+    fetchIp();
   }, []);
 
   // Load user reactions from localStorage only after component mounts
@@ -221,10 +241,19 @@ export const ViewReviewsModal = ({ open, onClose }) => {
     if (!replyContent[reviewId]?.trim()) return;
 
     try {
+      // Content moderation check
+      const moderationResult = await contentModerationService.moderateContent(
+        replyContent[reviewId]
+      );
+      if (!moderationResult.isValid) {
+        alert(moderationResult.issues.join(". "));
+        return;
+      }
+
       await reviewsService.addReply(
         reviewId,
         {
-          content: replyContent[reviewId],
+          content: moderationResult.sanitizedText,
         },
         userIp
       );
@@ -241,7 +270,21 @@ export const ViewReviewsModal = ({ open, onClose }) => {
 
   const handleEditReply = async (reviewId, replyIndex, newContent) => {
     try {
-      await reviewsService.editReply(reviewId, replyIndex, newContent, userIp);
+      // Content moderation check
+      const moderationResult = await contentModerationService.moderateContent(
+        newContent
+      );
+      if (!moderationResult.isValid) {
+        alert(moderationResult.issues.join(". "));
+        return;
+      }
+
+      await reviewsService.editReply(
+        reviewId,
+        replyIndex,
+        moderationResult.sanitizedText,
+        userIp
+      );
     } catch (error) {
       console.error("Error editing reply:", error);
       alert(error.message);

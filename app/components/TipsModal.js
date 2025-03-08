@@ -25,6 +25,8 @@ import { tipsService, clientStorage } from "../services/tipsService";
 import { formatTimestamp } from "../utils/formatters";
 import { formatTextWithLinks } from "../utils/linkFormatter";
 import { validateText, TIP_LIMITS } from "../utils/textValidation";
+import { contentModerationService } from "../services/contentModerationService";
+import { userTrackingService } from "../services/userTrackingService";
 
 export const TipsModal = ({ open, onClose }) => {
   const theme = useTheme();
@@ -75,31 +77,36 @@ export const TipsModal = ({ open, onClose }) => {
   };
 
   const handleAddTip = async () => {
-    const validationError = validateText(tipFormData.trim(), {
-      minLength: TIP_LIMITS.MIN_LENGTH,
-      maxLength: TIP_LIMITS.MAX_LENGTH,
-      type: "tip",
-    });
-
-    if (validationError) {
-      setTipError(validationError);
-      return;
-    }
+    if (!tipFormData.trim()) return;
 
     try {
-      const newTip = await tipsService.addTip(tipFormData);
-      const tipWithDefaults = {
-        ...newTip,
-        createdAt: newTip.createdAt || new Date(),
-        lastEdited: null,
-        userId: clientStorage.getItem(`tip_${newTip.id}_userId`),
+      // Content moderation check
+      const moderationResult = await contentModerationService.moderateContent(
+        tipFormData
+      );
+      if (!moderationResult.isValid) {
+        setTipError(moderationResult.issues.join(". "));
+        return;
+      }
+
+      const userId = userTrackingService.getOrCreateUserId();
+      if (!userId) {
+        alert("Unable to submit tip at this time. Please try again later.");
+        return;
+      }
+
+      const newTip = {
+        content: moderationResult.sanitizedText,
+        createdAt: new Date().toISOString(),
+        userId: userId,
       };
-      setTips([tipWithDefaults, ...tips]);
+
+      await tipsService.addTip(newTip);
       setTipFormData("");
       setTipError("");
     } catch (error) {
       console.error("Error adding tip:", error);
-      alert("Failed to add tip");
+      alert("Failed to add tip. Please try again.");
     }
   };
 
