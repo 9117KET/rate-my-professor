@@ -42,6 +42,8 @@ export const reviewsService = {
   async addReview(reviewData) {
     try {
       const reviewsRef = collection(db, COLLECTION_NAME);
+
+      // Enrich the review data with required fields
       const enrichedReview = {
         ...reviewData,
         createdAt: serverTimestamp(),
@@ -52,24 +54,37 @@ export const reviewsService = {
         },
       };
 
+      // Save to Firestore
       const docRef = await addDoc(reviewsRef, enrichedReview);
       console.log(`Added new review with ID: ${docRef.id}`);
 
-      // Sync with Pinecone after adding new review
+      // Get the actual document with server timestamp
+      const docSnap = await getDoc(docRef);
+      const savedReview = {
+        id: docRef.id,
+        ...docSnap.data(),
+        createdAt: docSnap.data().createdAt?.toDate() || new Date(),
+      };
+
+      // Sync with Pinecone
       try {
+        console.log("Starting Pinecone sync for new review...");
         await embeddingService.syncFirestoreWithPinecone();
-        console.log(
-          `Successfully synced Pinecone after adding review: ${docRef.id}`
-        );
+        console.log(`Successfully synced review ${docRef.id} to Pinecone`);
       } catch (syncError) {
-        console.error(
-          `Error syncing with Pinecone after adding review: ${docRef.id}`,
-          syncError
-        );
-        // We don't throw here to not disrupt the user flow, but we log the error
+        console.error("Error during Pinecone sync:", syncError);
+        // Attempt alternative sync method
+        try {
+          console.log("Attempting alternative sync method...");
+          await embeddingService.syncFirestoreWithPineconeFallback();
+          console.log("Alternative sync successful");
+        } catch (fallbackError) {
+          console.error("Alternative sync failed:", fallbackError);
+          throw new Error("Failed to sync review with search index");
+        }
       }
 
-      return { id: docRef.id, ...enrichedReview };
+      return savedReview;
     } catch (error) {
       console.error("Error adding review:", error);
       throw error;

@@ -30,54 +30,83 @@ export const embeddingService = {
       // Step 1: Get all reviews from Firestore
       const reviews = await reviewsService.getAllReviews();
       console.log(`Found ${reviews.length} reviews in Firestore`);
+
+      if (reviews.length === 0) {
+        console.log("No reviews found in Firestore, skipping sync");
+        return true;
+      }
+
       const firestoreIds = reviews.map((review) => review.id);
 
       // Step 2: Try to get all existing vector IDs from Pinecone
       try {
-        const existingVectors = await index.listVectors();
-        const pineconeIds =
-          existingVectors?.vectors?.map((vector) => vector.id) || [];
-        console.log(`Found ${pineconeIds.length} vectors in Pinecone`);
+        const existingVectors = await index.describeIndexStats();
+        console.log("Current Pinecone index stats:", existingVectors);
 
-        // Step 3: Find vectors to delete
-        const vectorsToDelete = pineconeIds.filter(
-          (id) => !firestoreIds.includes(id)
-        );
+        if (existingVectors.totalRecordCount > 0) {
+          const vectorsList = await index.listVectors();
+          const pineconeIds =
+            vectorsList?.vectors?.map((vector) => vector.id) || [];
+          console.log(`Found ${pineconeIds.length} vectors in Pinecone`);
 
-        // Step 4: Delete vectors that no longer exist in Firestore
-        if (vectorsToDelete.length > 0) {
-          console.log(
-            `Deleting ${vectorsToDelete.length} vectors from Pinecone that no longer exist in Firestore`
+          // Step 3: Find vectors to delete
+          const vectorsToDelete = pineconeIds.filter(
+            (id) => !firestoreIds.includes(id)
           );
-          await index.deleteMany(vectorsToDelete);
+
+          // Step 4: Delete vectors that no longer exist in Firestore
+          if (vectorsToDelete.length > 0) {
+            console.log(
+              `Deleting ${vectorsToDelete.length} vectors from Pinecone that no longer exist in Firestore`
+            );
+            await index.deleteMany(vectorsToDelete);
+          }
         }
       } catch (listError) {
         console.warn(
-          "Unable to list vectors from Pinecone. Falling back to alternative method:",
+          "Unable to list vectors from Pinecone, attempting cleanup:",
           listError.message
         );
-        return this.syncFirestoreWithPineconeFallback();
+        // Try to clean up the index
+        try {
+          await index.deleteAll();
+          console.log("Cleared Pinecone index for fresh start");
+        } catch (deleteError) {
+          console.error("Failed to clear Pinecone index:", deleteError);
+        }
       }
 
       // Step 5: Create or update embeddings for current reviews
       console.log("Generating embeddings for reviews...");
       const processedData = await Promise.all(
         reviews.map(async (review) => {
-          const response = await openai.embeddings.create({
-            input: review.review,
-            model: "text-embedding-3-small",
-          });
+          try {
+            const response = await openai.embeddings.create({
+              input: review.review,
+              model: "text-embedding-3-small",
+            });
 
-          return {
-            values: response.data[0].embedding,
-            id: review.id,
-            metadata: {
-              review: review.review,
-              subject: review.subject,
-              stars: review.stars,
-              professor: review.professor,
-            },
-          };
+            return {
+              values: response.data[0].embedding,
+              id: review.id,
+              metadata: {
+                review: review.review,
+                subject: review.subject,
+                stars: review.stars,
+                professor: review.professor,
+                createdAt:
+                  review.createdAt instanceof Date
+                    ? review.createdAt.toISOString()
+                    : new Date(review.createdAt).toISOString(),
+              },
+            };
+          } catch (error) {
+            console.error(
+              `Failed to generate embedding for review ${review.id}:`,
+              error
+            );
+            throw error;
+          }
         })
       );
 
@@ -85,6 +114,16 @@ export const embeddingService = {
       if (processedData.length > 0) {
         console.log(`Upserting ${processedData.length} vectors to Pinecone`);
         await index.upsert(processedData);
+
+        // Verify the upsert
+        const stats = await index.describeIndexStats();
+        console.log("Post-upsert Pinecone stats:", stats);
+
+        if (stats.totalRecordCount !== reviews.length) {
+          console.warn(
+            `Warning: Pinecone record count (${stats.totalRecordCount}) doesn't match Firestore review count (${reviews.length})`
+          );
+        }
       }
 
       console.log("Pinecone sync completed successfully");
