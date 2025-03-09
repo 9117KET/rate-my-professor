@@ -9,15 +9,26 @@ import {
 } from "firebase/firestore";
 
 export const chatService = {
-  async saveChat(messages) {
+  async saveChat(messages, userId) {
     try {
+      if (!userId) {
+        throw new Error("User ID is required to save chat");
+      }
+
+      if (!Array.isArray(messages)) {
+        throw new Error("Messages must be an array");
+      }
+
       const chatRef = collection(db, "chats");
       await addDoc(chatRef, {
         messages: messages.map((msg) => ({
-          role: msg.role,
-          content: msg.content,
-          timestamp: msg.timestamp,
+          role: msg.role || "user",
+          content: msg.content || "",
+          timestamp: msg.timestamp
+            ? msg.timestamp.toISOString()
+            : new Date().toISOString(),
         })),
+        userId: userId,
         createdAt: serverTimestamp(),
       });
     } catch (error) {

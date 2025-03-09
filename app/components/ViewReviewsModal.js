@@ -28,7 +28,16 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { db } from "../lib/firebase";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
+  doc,
+  updateDoc,
+  arrayRemove,
+  arrayUnion,
+} from "firebase/firestore";
 import { formatTimestamp } from "../utils/formatters";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
@@ -39,65 +48,42 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { userTrackingService } from "../services/userTrackingService";
 import { contentModerationService } from "../services/contentModerationService";
 
-export const ViewReviewsModal = ({ open, onClose }) => {
+export const ViewReviewsModal = ({ open, onClose, userId }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSubject, setFilterSubject] = useState("all");
   const [filterRating, setFilterRating] = useState("all");
   const [filterProfessor, setFilterProfessor] = useState("all");
   const [userReactions, setUserReactions] = useState({});
-  const [userIp, setUserIp] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedReview, setSelectedReview] = useState(null);
   const [replyContent, setReplyContent] = useState({});
-  const [currentUserId, setCurrentUserId] = useState(null);
+  const [editingReply, setEditingReply] = useState({
+    reviewId: null,
+    replyIndex: null,
+  });
 
   useEffect(() => {
     const reviewsRef = collection(db, "reviews");
+    // Create a query that orders reviews by timestamp
     const q = query(reviewsRef, orderBy("createdAt", "desc"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const reviewsData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate().toString(),
+        createdAt: doc.data().createdAt?.toDate?.() || new Date(),
       }));
       setReviews(reviewsData);
+      setLoading(false);
     });
 
-    return () => unsubscribe(); // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    // Fetch user's IP address
-    const fetchIp = async () => {
-      try {
-        const res = await fetch("/api/getIp");
-        if (!res.ok) {
-          throw new Error("Failed to fetch IP");
-        }
-        const data = await res.json();
-        if (data.ip) {
-          setUserIp(data.ip);
-        } else {
-          console.warn("No IP address returned from server");
-        }
-      } catch (error) {
-        console.error("Error fetching IP:", error);
-        // Generate a temporary random IP for development
-        const tempIp = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(
-          Math.random() * 255
-        )}`;
-        setUserIp(tempIp);
-      }
-    };
-
-    fetchIp();
-  }, []);
-
-  // Load user reactions from localStorage only after component mounts
   useEffect(() => {
     const storedReactions = localStorage.getItem("userReactions");
     if (storedReactions) {
@@ -108,11 +94,6 @@ export const ViewReviewsModal = ({ open, onClose }) => {
         setUserReactions({});
       }
     }
-  }, []);
-
-  useEffect(() => {
-    const userId = userTrackingService.getOrCreateUserId();
-    setCurrentUserId(userId);
   }, []);
 
   // Get unique subjects and professors for filter dropdowns
@@ -130,24 +111,58 @@ export const ViewReviewsModal = ({ open, onClose }) => {
     return ["all", ...Array.from(uniqueProfessors)].sort();
   }, [reviews]);
 
-  // Filtered and searched reviews
+  // Calculate average ratings by professor and department
+  const professorStats = useMemo(() => {
+    const stats = {};
+    reviews.forEach((review) => {
+      if (!review.professor || !review.subject || !review.stars) return;
+
+      if (!stats[review.professor]) {
+        stats[review.professor] = {
+          totalRating: 0,
+          count: 0,
+          department: review.subject,
+          reviews: [],
+        };
+      }
+
+      stats[review.professor].totalRating += review.stars;
+      stats[review.professor].count += 1;
+      stats[review.professor].reviews.push(review);
+    });
+
+    // Calculate averages and sort
+    return Object.entries(stats)
+      .map(([professor, data]) => ({
+        professor,
+        department: data.department,
+        averageRating: data.totalRating / data.count,
+        reviewCount: data.count,
+        reviews: data.reviews,
+      }))
+      .sort((a, b) => b.averageRating - a.averageRating);
+  }, [reviews]);
+
+  // Filtered and searched reviews with department/subject awareness
   const filteredReviews = useMemo(() => {
     return reviews.filter((review) => {
+      // Basic text search across all fields
+      const searchText = searchTerm.toLowerCase();
       const matchesSearch =
-        (review.professor?.toLowerCase() || "").includes(
-          searchTerm.toLowerCase()
-        ) ||
-        (review.subject?.toLowerCase() || "").includes(
-          searchTerm.toLowerCase()
-        ) ||
-        (review.review?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+        searchTerm === "" ||
+        [review.professor, review.subject, review.review].some((field) =>
+          (field || "").toLowerCase().includes(searchText)
+        );
 
+      // Department/Subject filter
       const matchesSubject =
         filterSubject === "all" || review.subject === filterSubject;
 
+      // Rating filter
       const matchesRating =
         filterRating === "all" || review.stars === Number(filterRating);
 
+      // Professor filter
       const matchesProfessor =
         filterProfessor === "all" || review.professor === filterProfessor;
 
@@ -157,68 +172,90 @@ export const ViewReviewsModal = ({ open, onClose }) => {
     });
   }, [reviews, searchTerm, filterSubject, filterRating, filterProfessor]);
 
-  // Group reviews by professor
+  // Group reviews by professor with sorting by average rating
   const groupedReviews = useMemo(() => {
     const groups = {};
+    const professorAverages = {};
+
+    // First pass: calculate averages
+    filteredReviews.forEach((review) => {
+      if (!professorAverages[review.professor]) {
+        professorAverages[review.professor] = {
+          total: 0,
+          count: 0,
+        };
+      }
+      professorAverages[review.professor].total += review.stars;
+      professorAverages[review.professor].count += 1;
+    });
+
+    // Second pass: group reviews
     filteredReviews.forEach((review) => {
       if (!groups[review.professor]) {
         groups[review.professor] = [];
       }
       groups[review.professor].push(review);
     });
-    return groups;
+
+    // Sort professors by average rating
+    return Object.fromEntries(
+      Object.entries(groups).sort(([profA, reviewsA], [profB, reviewsB]) => {
+        const avgA =
+          professorAverages[profA].total / professorAverages[profA].count;
+        const avgB =
+          professorAverages[profB].total / professorAverages[profB].count;
+        return avgB - avgA; // Sort in descending order
+      })
+    );
   }, [filteredReviews]);
 
   const hasUserReacted = (reviewId, reactionType) => {
-    return userReactions[`${reviewId}_${reactionType}`];
+    const review = reviews.find((r) => r.id === reviewId);
+    // Ensure reactions and the specific reaction type exist and are arrays
+    return (
+      Array.isArray(review?.reactions?.[reactionType]) &&
+      review.reactions[reactionType].includes(userId)
+    );
   };
 
   const handleReaction = async (reviewId, reactionType) => {
-    const reactionKey = `${reviewId}_${reactionType}`;
     try {
-      if (!userReactions[reactionKey]) {
-        // Add reaction
-        await reviewsService.addReaction(reviewId, reactionType);
-        setUserReactions((prev) => {
-          const newReactions = { ...prev, [reactionKey]: true };
-          localStorage.setItem("userReactions", JSON.stringify(newReactions));
-          return newReactions;
+      const reviewRef = doc(db, "reviews", reviewId);
+      const review = reviews.find((r) => r.id === reviewId);
+
+      // Initialize reactions object if it doesn't exist
+      const currentReactions = review?.reactions || {};
+
+      // Initialize the specific reaction type array if it doesn't exist
+      if (!Array.isArray(currentReactions[reactionType])) {
+        currentReactions[reactionType] = [];
+      }
+
+      const hasReacted = currentReactions[reactionType].includes(userId);
+
+      if (hasReacted) {
+        await updateDoc(reviewRef, {
+          [`reactions.${reactionType}`]: arrayRemove(userId),
         });
       } else {
-        // Remove reaction
-        await reviewsService.removeReaction(reviewId, reactionType);
-        setUserReactions((prev) => {
-          const newReactions = { ...prev };
-          delete newReactions[reactionKey];
-          localStorage.setItem("userReactions", JSON.stringify(newReactions));
-          return newReactions;
+        await updateDoc(reviewRef, {
+          [`reactions.${reactionType}`]: arrayUnion(userId),
         });
       }
     } catch (error) {
-      console.error("Error toggling reaction:", error);
-      alert("Failed to toggle reaction");
+      console.error("Error updating reaction:", error);
+      alert("Failed to update reaction");
     }
   };
 
   const canModifyReview = (review) => {
-    if (!review.ipAddress || !userIp) return false;
-
-    const createdAt = new Date(review.createdAt);
-    const now = new Date();
-    const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
-
-    return hoursDiff <= 24 && review.ipAddress === userIp;
+    return review.userId === userId;
   };
 
   const handleDeleteReview = async (reviewId) => {
-    if (!currentUserId) {
-      alert("You must be logged in to delete a review");
-      return;
-    }
-
     if (window.confirm("Are you sure you want to delete this review?")) {
       try {
-        await reviewsService.deleteReview(reviewId, currentUserId);
+        await reviewsService.deleteReview(reviewId, userId);
         // The reviews will update automatically through the onSnapshot listener
       } catch (error) {
         alert(error.message);
@@ -229,7 +266,7 @@ export const ViewReviewsModal = ({ open, onClose }) => {
   const handleDeleteReply = async (reviewId, replyIndex) => {
     if (window.confirm("Are you sure you want to delete this reply?")) {
       try {
-        await reviewsService.deleteReply(reviewId, replyIndex, userIp);
+        await reviewsService.deleteReply(reviewId, replyIndex, userId);
         // The replies will update automatically through the onSnapshot listener
       } catch (error) {
         alert(error.message);
@@ -255,7 +292,7 @@ export const ViewReviewsModal = ({ open, onClose }) => {
         {
           content: moderationResult.sanitizedText,
         },
-        userIp
+        userId
       );
 
       setReplyContent((prev) => ({
@@ -283,7 +320,7 @@ export const ViewReviewsModal = ({ open, onClose }) => {
         reviewId,
         replyIndex,
         moderationResult.sanitizedText,
-        userIp
+        userId
       );
     } catch (error) {
       console.error("Error editing reply:", error);
@@ -292,14 +329,7 @@ export const ViewReviewsModal = ({ open, onClose }) => {
   };
 
   const canDeleteReview = (review) => {
-    if (!review || !currentUserId || review.userId !== currentUserId)
-      return false;
-
-    const createdAt = new Date(review.createdAt);
-    const now = new Date();
-    const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
-
-    return hoursDiff <= 2;
+    return review.userId === userId;
   };
 
   return (
@@ -526,7 +556,7 @@ export const ViewReviewsModal = ({ open, onClose }) => {
                                 review={review}
                                 reply={reply}
                                 index={replyIndex}
-                                userIp={userIp}
+                                userId={userId}
                                 onDelete={handleDeleteReply}
                                 onEdit={handleEditReply}
                               />

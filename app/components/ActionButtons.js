@@ -10,26 +10,26 @@ export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
   return (
     <Stack
       direction="row"
-      spacing={{ xs: 1, sm: 2 }}
+      spacing={{ xs: 0.75, sm: 1.5 }}
       sx={{
-        mt: { xs: 2, sm: 3 },
+        mt: { xs: 1, sm: 1.5 },
         justifyContent: "center",
         alignItems: "center",
         width: "100%",
         maxWidth: { xs: "100%", sm: "90%", md: "80%" },
         mx: "auto",
-        px: { xs: 2, sm: 2 },
+        px: { xs: 1, sm: 1.5 },
         "& .MuiButton-root": {
-          minWidth: { xs: "auto", sm: "130px", md: "150px" },
-          fontSize: { xs: "0.7rem", sm: "0.875rem", md: "0.95rem" },
-          py: { xs: 0.75, sm: 1, md: 1.2 },
-          px: { xs: 1, sm: 2, md: 3 },
-          borderRadius: 2,
+          minWidth: { xs: "auto", sm: "110px", md: "130px" },
+          fontSize: { xs: "0.65rem", sm: "0.75rem", md: "0.85rem" },
+          py: { xs: 0.5, sm: 0.75, md: 1 },
+          px: { xs: 0.75, sm: 1.5, md: 2 },
+          borderRadius: 1.5,
           transition: "all 0.2s ease-in-out",
-          boxShadow: 2,
+          boxShadow: 1,
           "&:hover": {
             transform: "translateY(-2px)",
-            boxShadow: 3,
+            boxShadow: 2,
           },
         },
       }}
@@ -38,7 +38,7 @@ export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
         variant="contained"
         startIcon={
           <RateReviewOutlinedIcon
-            sx={{ fontSize: { xs: "1.1rem", sm: "1.25rem", md: "1.4rem" } }}
+            sx={{ fontSize: { xs: "0.9rem", sm: "1rem", md: "1.2rem" } }}
           />
         }
         onClick={onRateClick}
@@ -56,7 +56,7 @@ export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
         variant="contained"
         startIcon={
           <VisibilityOutlinedIcon
-            sx={{ fontSize: { xs: "1.1rem", sm: "1.25rem", md: "1.4rem" } }}
+            sx={{ fontSize: { xs: "0.9rem", sm: "1rem", md: "1.2rem" } }}
           />
         }
         onClick={onViewClick}
@@ -74,7 +74,7 @@ export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
         variant="contained"
         startIcon={
           <TipsAndUpdatesOutlinedIcon
-            sx={{ fontSize: { xs: "1.1rem", sm: "1.25rem", md: "1.4rem" } }}
+            sx={{ fontSize: { xs: "0.9rem", sm: "1rem", md: "1.2rem" } }}
           />
         }
         onClick={onTipsClick}
@@ -86,7 +86,7 @@ export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
           },
         }}
       >
-        TIPS
+        Tips
       </Button>
     </Stack>
   );

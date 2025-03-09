@@ -47,7 +47,7 @@ export const ImprintModal = ({ open, onClose }) => {
           fontWeight: 600,
         }}
       >
-        ⚖️ Legal Information
+        ⚖️ Guidelines
       </DialogTitle>
 
       <DialogContent>

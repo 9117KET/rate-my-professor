@@ -110,7 +110,7 @@ export default function Home() {
     {
       role: "assistant",
       content:
-        "Welcome to Rate My CUB Professor! What info about a prof or course do you need help with?",
+        "Welcome to Rate My CUB Professor! What info about a professor or course do you need help with?",
     },
   ]);
   const [message, setMessage] = useState("");
@@ -183,7 +183,14 @@ export default function Home() {
           "Content-Type": "application/json",
           "X-Anonymous-User-ID": userId,
         },
-        body: JSON.stringify([...messages, { role: "user", content: message }]),
+        body: JSON.stringify([
+          ...messages,
+          {
+            role: "user",
+            content: message,
+            timestamp: new Date().toISOString(),
+          },
+        ]),
       });
 
       if (res.status === 429) {
@@ -200,7 +207,7 @@ export default function Home() {
           },
         ];
         setMessages(errorMessages);
-        await chatService.saveChat(errorMessages);
+        await chatService.saveChat(errorMessages, userId);
         return;
       }
 
@@ -236,7 +243,7 @@ export default function Home() {
           timestamp: new Date(),
         },
       ];
-      await chatService.saveChat(finalMessages);
+      await chatService.saveChat(finalMessages, userId);
     } catch (error) {
       console.error("Error:", error);
       const errorMessages = [
@@ -248,7 +255,7 @@ export default function Home() {
         },
       ];
       setMessages(errorMessages);
-      await chatService.saveChat(errorMessages);
+      await chatService.saveChat(errorMessages, userId);
     } finally {
       setIsLoading(false);
     }
@@ -297,7 +304,7 @@ export default function Home() {
       <Box
         component="header"
         sx={{
-          p: { xs: 2, sm: 3 },
+          p: { xs: 1, sm: 1.5 },
           bgcolor: theme.primary.main,
           color: "white",
           textAlign: "center",
@@ -324,13 +331,13 @@ export default function Home() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              mb: 1,
+              mb: { xs: 1, sm: 1.5 },
             }}
           >
             <SchoolIcon
               sx={{
-                fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
-                mr: 2,
+                fontSize: { xs: "1.5rem", sm: "2rem", md: "2.5rem" },
+                mr: 1.5,
                 color: theme.secondary.main,
               }}
             />
@@ -339,7 +346,7 @@ export default function Home() {
               component="h1"
               sx={{
                 color: "white",
-                fontSize: { xs: "1.5rem", sm: "2rem", md: "2.5rem" },
+                fontSize: { xs: "1.1rem", sm: "1.5rem", md: "1.75rem" },
                 fontWeight: 700,
                 letterSpacing: "-0.01em",
                 textShadow: "0 2px 4px rgba(0,0,0,0.2)",
@@ -352,8 +359,8 @@ export default function Home() {
             variant="subtitle1"
             sx={{
               color: "white",
-              fontSize: { xs: "0.9rem", sm: "1rem" },
-              mb: { xs: 2, sm: 3 },
+              fontSize: { xs: "0.8rem", sm: "0.9rem" },
+              mb: { xs: 0.75, sm: 1 },
               opacity: 0.9,
               maxWidth: "600px",
               mx: "auto",
@@ -463,7 +470,7 @@ export default function Home() {
                           right: message.role === "user" ? 8 : "auto",
                           left: message.role === "assistant" ? 8 : "auto",
                         },
-                        mb: 3,
+                        mb: { xs: 1, sm: 1.5 },
                         wordBreak: "break-word",
                         transition: "all 0.2s ease-in-out",
                         "&:hover": {
@@ -561,7 +568,7 @@ export default function Home() {
             {/* Input area */}
             <Box
               sx={{
-                p: { xs: 2, sm: 2.5 },
+                p: { xs: 1, sm: 1.5 },
                 bgcolor: theme.background.light,
                 borderTop: "1px solid rgba(0,0,0,0.06)",
                 position: "sticky",
@@ -573,9 +580,11 @@ export default function Home() {
               <Box
                 sx={{
                   display: "flex",
-                  gap: 1,
-                  mb: 2,
-                  flexWrap: "wrap",
+                  gap: { xs: 0.25, sm: 1 },
+                  mb: { xs: 1.5, sm: 2 },
+                  flexWrap: "nowrap",
+                  justifyContent: "space-between",
+                  width: "100%",
                 }}
               >
                 <Button
@@ -590,13 +599,22 @@ export default function Home() {
                     borderRadius: 3,
                     borderColor: "rgba(0,0,0,0.1)",
                     color: theme.text.secondary,
+                    fontSize: { xs: "0.6rem", sm: "0.8rem" },
+                    px: { xs: 0.5, sm: 2 },
+                    py: { xs: 0.25, sm: 0.75 },
+                    minWidth: 0,
+                    flex: 1,
+                    mx: 0.25,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                     "&:hover": {
                       borderColor: theme.primary.main,
                       bgcolor: "rgba(0,27,63,0.05)",
                     },
                   }}
                 >
-                  🌟 Best rated professors
+                  🌟 Best rated
                 </Button>
                 <Button
                   variant="outlined"
@@ -610,13 +628,22 @@ export default function Home() {
                     borderRadius: 3,
                     borderColor: "rgba(0,0,0,0.1)",
                     color: theme.text.secondary,
+                    fontSize: { xs: "0.6rem", sm: "0.8rem" },
+                    px: { xs: 0.5, sm: 2 },
+                    py: { xs: 0.25, sm: 0.75 },
+                    minWidth: 0,
+                    flex: 1,
+                    mx: 0.25,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                     "&:hover": {
                       borderColor: theme.primary.main,
                       bgcolor: "rgba(0,27,63,0.05)",
                     },
                   }}
                 >
-                  ✍️ How to submit a review
+                  ✍️ submit a review
                 </Button>
                 <Button
                   variant="outlined"
@@ -630,13 +657,22 @@ export default function Home() {
                     borderRadius: 3,
                     borderColor: "rgba(0,0,0,0.1)",
                     color: theme.text.secondary,
+                    fontSize: { xs: "0.6rem", sm: "0.8rem" },
+                    px: { xs: 0.5, sm: 2 },
+                    py: { xs: 0.25, sm: 0.75 },
+                    minWidth: 0,
+                    flex: 1,
+                    mx: 0.25,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                     "&:hover": {
                       borderColor: theme.primary.main,
                       bgcolor: "rgba(0,27,63,0.05)",
                     },
                   }}
                 >
-                  💡 Show me reviews for
+                  💡 Tips for courses
                 </Button>
               </Box>
               <Stack
@@ -777,6 +813,7 @@ export default function Home() {
         open={openViewModal}
         onClose={() => hasSubmittedReview && setOpenViewModal(false)}
         disableClose={!hasSubmittedReview}
+        userId={userId}
       />
       <TipsModal
         open={openTipsModal}
@@ -796,20 +833,20 @@ export default function Home() {
       <Box
         component="footer"
         sx={{
-          p: { xs: 2, sm: 2.5 },
+          p: { xs: 0.75, sm: 1 },
           bgcolor: theme.primary.main,
           color: "white",
           textAlign: "center",
           display: "flex",
           flexDirection: "row",
           justifyContent: "center",
-          gap: { xs: 1, sm: 3 },
+          gap: { xs: 0.5, sm: 2 },
           "& .MuiButton-root": {
-            fontSize: { xs: "0.75rem", sm: "0.875rem" },
+            fontSize: { xs: "0.65rem", sm: "0.75rem" },
             minWidth: { xs: "auto", sm: "auto" },
-            px: { xs: 1, sm: 2 },
-            py: 1,
-            borderRadius: 8,
+            px: { xs: 0.5, sm: 1 },
+            py: 0.5,
+            borderRadius: 6,
             transition: "all 0.3s ease",
           },
           background: `linear-gradient(135deg, ${theme.primary.main} 0%, ${theme.primary.light} 100%)`,
