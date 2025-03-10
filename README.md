@@ -128,6 +128,43 @@ CRON_SECRET_KEY=your_secret_key_for_cron_jobs
 
 Plus Firebase configuration variables.
 
+### Firebase Configuration
+
+For the Firebase configuration, you must set the following environment variables in your `.env.local` file:
+
+```
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_firebase_project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_firebase_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_firebase_project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_firebase_measurement_id
+```
+
+### Security Best Practices
+
+1. **Never commit API keys or secrets to version control**
+
+   - The project is configured to ignore `.env` and `.env.local` files in `.gitignore`
+   - Always use environment variables for secrets
+
+2. **Environment Variable Management**
+
+   - Use `.env` for template/documentation of required variables (with empty values)
+   - Use `.env.local` for actual values (this file should never be committed)
+   - For production, set environment variables through your hosting platform's dashboard
+
+3. **API Key Security**
+
+   - Firebase API keys are meant to be public, but still follow best practices
+   - Use Firebase Security Rules to secure your database (see Firebase documentation)
+   - Use server-side API routes to interact with sensitive APIs where possible
+
+4. **Required Environment Variables Check**
+   - The application checks for required environment variables on startup
+   - In development mode, it will log warnings if any required variables are missing
+
 ## License
 
 [MIT](LICENSE)
