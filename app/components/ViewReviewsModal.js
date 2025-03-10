@@ -25,6 +25,8 @@ import {
   Menu,
   useMediaQuery,
   useTheme,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { db } from "../lib/firebase";
@@ -65,6 +67,11 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
     reviewId: null,
     replyIndex: null,
   });
+  const [migrationStatus, setMigrationStatus] = useState({
+    done: false,
+    count: 0,
+  });
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   useEffect(() => {
     const reviewsRef = collection(db, "reviews");
@@ -81,6 +88,33 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
       setLoading(false);
     });
 
+    // Migrate any old reaction formats to new format, but only once
+    const migrateReactions = async () => {
+      // Check if migration already ran in this session
+      const migrationRan = sessionStorage.getItem("reactionsMigrated");
+      if (migrationRan === "true") {
+        console.log(
+          "Reactions migration already ran in this session, skipping"
+        );
+        return;
+      }
+
+      try {
+        setLoading(true); // Keep loading state while migration runs
+        console.log("Starting reactions migration...");
+        const count = await reviewsService.migrateReactionsFormat();
+        setMigrationStatus({ done: true, count });
+        // Mark migration as complete for this session
+        sessionStorage.setItem("reactionsMigrated", "true");
+      } catch (error) {
+        console.error("Error migrating reactions:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    migrateReactions();
+
     return () => unsubscribe();
   }, []);
 
@@ -95,6 +129,20 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
       }
     }
   }, []);
+
+  useEffect(() => {
+    // When migration status changes and is done with count > 0, show the snackbar
+    if (migrationStatus.done && migrationStatus.count > 0) {
+      setSnackbarOpen(true);
+    }
+  }, [migrationStatus]);
+
+  const handleSnackbarClose = (event, reason) => {
+    if (reason === "clickaway") {
+      return;
+    }
+    setSnackbarOpen(false);
+  };
 
   // Get unique subjects and professors for filter dropdowns
   const subjects = useMemo(() => {
@@ -234,13 +282,9 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
       const hasReacted = currentReactions[reactionType].includes(userId);
 
       if (hasReacted) {
-        await updateDoc(reviewRef, {
-          [`reactions.${reactionType}`]: arrayRemove(userId),
-        });
+        await reviewsService.removeReaction(reviewId, reactionType, userId);
       } else {
-        await updateDoc(reviewRef, {
-          [`reactions.${reactionType}`]: arrayUnion(userId),
-        });
+        await reviewsService.addReaction(reviewId, reactionType, userId);
       }
     } catch (error) {
       console.error("Error updating reaction:", error);
@@ -338,12 +382,10 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
       onClose={onClose}
       maxWidth="md"
       fullWidth
-      sx={{
-        "& .MuiDialog-paper": {
-          margin: { xs: 1, sm: 2 },
-          width: { xs: "95%", sm: "90%", md: "80%" },
-          maxHeight: { xs: "95vh", sm: "90vh" },
+      PaperProps={{
+        sx: {
           borderRadius: { xs: 1, sm: 2 },
+          maxHeight: "90vh",
         },
       }}
     >
@@ -623,7 +665,11 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
                                 sx={{ padding: { xs: 0.5, sm: 1 } }}
                               >
                                 <Badge
-                                  badgeContent={review.reactions?.thumbsUp || 0}
+                                  badgeContent={
+                                    Array.isArray(review.reactions?.thumbsUp)
+                                      ? review.reactions.thumbsUp.length
+                                      : 0
+                                  }
                                   color="primary"
                                 >
                                   <ThumbUpIcon
@@ -645,7 +691,9 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
                               >
                                 <Badge
                                   badgeContent={
-                                    review.reactions?.thumbsDown || 0
+                                    Array.isArray(review.reactions?.thumbsDown)
+                                      ? review.reactions.thumbsDown.length
+                                      : 0
                                   }
                                   color="primary"
                                 >
@@ -729,6 +777,20 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
           Delete
         </MenuItem>
       </Menu>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
+          {`Updated ${migrationStatus.count} reviews to a new format. You should now see reactions displayed correctly.`}
+        </Alert>
+      </Snackbar>
     </Dialog>
   );
 };

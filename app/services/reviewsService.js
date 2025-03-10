@@ -12,6 +12,7 @@ import {
   deleteDoc,
   getDoc,
   arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { embeddingService } from "./embeddingService";
 
@@ -29,8 +30,8 @@ export const reviewsService = {
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate() || new Date(),
         reactions: doc.data().reactions || {
-          thumbsUp: 0,
-          thumbsDown: 0,
+          thumbsUp: [],
+          thumbsDown: [],
         },
       }));
     } catch (error) {
@@ -49,8 +50,8 @@ export const reviewsService = {
         createdAt: serverTimestamp(),
         userId: reviewData.userId,
         reactions: {
-          thumbsUp: 0,
-          thumbsDown: 0,
+          thumbsUp: [],
+          thumbsDown: [],
         },
       };
 
@@ -199,24 +200,24 @@ export const reviewsService = {
     }
   },
 
-  async addReaction(reviewId, reactionType) {
+  async addReaction(reviewId, reactionType, userId) {
     try {
       const reviewRef = doc(db, COLLECTION_NAME, reviewId);
-      const updateData = {};
-      updateData[`reactions.${reactionType}`] = increment(1);
-      await updateDoc(reviewRef, updateData);
+      await updateDoc(reviewRef, {
+        [`reactions.${reactionType}`]: arrayUnion(userId),
+      });
     } catch (error) {
       console.error("Error adding reaction:", error);
       throw error;
     }
   },
 
-  async removeReaction(reviewId, reactionType) {
+  async removeReaction(reviewId, reactionType, userId) {
     try {
       const reviewRef = doc(db, COLLECTION_NAME, reviewId);
-      const updateData = {};
-      updateData[`reactions.${reactionType}`] = increment(-1);
-      await updateDoc(reviewRef, updateData);
+      await updateDoc(reviewRef, {
+        [`reactions.${reactionType}`]: arrayRemove(userId),
+      });
     } catch (error) {
       console.error("Error removing reaction:", error);
       throw error;
@@ -234,8 +235,8 @@ export const reviewsService = {
         userId: userId,
         lastEdited: null,
         reactions: {
-          thumbsUp: 0,
-          thumbsDown: 0,
+          thumbsUp: [],
+          thumbsDown: [],
         },
       };
 
@@ -322,6 +323,114 @@ export const reviewsService = {
       return replies[replyIndex];
     } catch (error) {
       console.error("Error editing reply:", error);
+      throw error;
+    }
+  },
+
+  async migrateReactionsFormat() {
+    try {
+      const reviewsRef = collection(db, COLLECTION_NAME);
+      const snapshot = await getDocs(reviewsRef);
+
+      const batch = [];
+
+      for (const docSnapshot of snapshot.docs) {
+        const reviewData = docSnapshot.data();
+        const reviewId = docSnapshot.id;
+        const reviewRef = doc(db, COLLECTION_NAME, reviewId);
+        let needsUpdate = false;
+        let updatedData = {};
+
+        // Check if main review reactions exist and are in the old number format
+        if (reviewData.reactions) {
+          const { thumbsUp, thumbsDown } = reviewData.reactions;
+
+          if (typeof thumbsUp === "number" || typeof thumbsDown === "number") {
+            console.log(`Migrating reactions for review: ${reviewId}`);
+
+            // Create updated reactions object with empty arrays
+            updatedData.reactions = {
+              thumbsUp: [],
+              thumbsDown: [],
+            };
+            needsUpdate = true;
+          }
+        } else {
+          // No reactions at all, initialize them
+          updatedData.reactions = {
+            thumbsUp: [],
+            thumbsDown: [],
+          };
+          needsUpdate = true;
+        }
+
+        // Check for replies with reactions in the old format
+        if (
+          Array.isArray(reviewData.replies) &&
+          reviewData.replies.length > 0
+        ) {
+          const updatedReplies = [...reviewData.replies];
+          let repliesUpdated = false;
+
+          updatedReplies.forEach((reply, index) => {
+            if (reply.reactions) {
+              const { thumbsUp, thumbsDown } = reply.reactions;
+
+              if (
+                typeof thumbsUp === "number" ||
+                typeof thumbsDown === "number"
+              ) {
+                console.log(
+                  `Migrating reactions for reply #${index} in review: ${reviewId}`
+                );
+
+                updatedReplies[index] = {
+                  ...reply,
+                  reactions: {
+                    thumbsUp: [],
+                    thumbsDown: [],
+                  },
+                };
+                repliesUpdated = true;
+              }
+            } else {
+              // Reply has no reactions, initialize them
+              updatedReplies[index] = {
+                ...reply,
+                reactions: {
+                  thumbsUp: [],
+                  thumbsDown: [],
+                },
+              };
+              repliesUpdated = true;
+            }
+          });
+
+          if (repliesUpdated) {
+            updatedData.replies = updatedReplies;
+            needsUpdate = true;
+          }
+        }
+
+        // Update the document if needed
+        if (needsUpdate) {
+          batch.push(updateDoc(reviewRef, updatedData));
+        }
+      }
+
+      // Execute all updates in parallel
+      if (batch.length > 0) {
+        await Promise.all(batch);
+        console.log(
+          `Migrated ${batch.length} documents to new reaction format`
+        );
+      } else {
+        console.log("No reviews needed migration");
+      }
+
+      return batch.length;
+    } catch (error) {
+      console.error("Error migrating reactions:", error);
       throw error;
     }
   },
