@@ -556,7 +556,7 @@ export default function Home() {
                           h1: ({ children }) => (
                             <Typography
                               variant="h5"
-                              component="h1"
+                              component="div"
                               sx={{
                                 mb: 1.5,
                                 fontWeight: 600,
@@ -569,7 +569,7 @@ export default function Home() {
                           h2: ({ children }) => (
                             <Typography
                               variant="h6"
-                              component="h2"
+                              component="div"
                               sx={{
                                 mb: 1.5,
                                 fontWeight: 600,
@@ -595,7 +595,11 @@ export default function Home() {
                       >
                         {message.content}
                       </ReactMarkdown>
-                      <Typography className="timestamp" variant="caption">
+                      <Typography
+                        className="timestamp"
+                        variant="caption"
+                        component="div"
+                      >
                         {formatTimestamp(message.timestamp)}
                       </Typography>
                     </Paper>

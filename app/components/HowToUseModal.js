@@ -61,6 +61,8 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
             <ListItemText
               primary="Read reviews from other students"
               secondary="Read honest reviews about your best (and worst) professors"
+              primaryTypographyProps={{ component: "div" }}
+              secondaryTypographyProps={{ component: "div" }}
             />
           </ListItem>
 
@@ -71,6 +73,8 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
             <ListItemText
               primary="Ask Our AI Assistant Anything"
               secondary="Get personalized course and professor recommendations"
+              primaryTypographyProps={{ component: "div" }}
+              secondaryTypographyProps={{ component: "div" }}
             />
           </ListItem>
 
@@ -81,6 +85,8 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
             <ListItemText
               primary="Share Your Experience"
               secondary="Help other students make informed decisions"
+              primaryTypographyProps={{ component: "div" }}
+              secondaryTypographyProps={{ component: "div" }}
             />
           </ListItem>
         </List>
