@@ -1,18 +1,20 @@
-import { NextResponse } from "next/server";
 import { embeddingService } from "../../services/embeddingService";
+import { withCors } from "../../utils/cors";
+import { createErrorResponse, logError } from "../../utils/errorHandler";
 
 // This is a server-side only operation and should be protected
-export async function POST(req) {
+async function syncEmbeddingsHandler(req) {
   try {
     // Simple API key check - you should implement better authentication
     const authHeader = req.headers.get("authorization");
     const expectedKey = process.env.API_SECRET_KEY;
 
     if (!authHeader || !expectedKey || authHeader !== `Bearer ${expectedKey}`) {
-      return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
+      return createErrorResponse(
+        new Error("Invalid or missing API key"),
+        "PERMISSION_DENIED",
+        401
+      );
     }
 
     // Option to use alternative sync method
@@ -24,7 +26,7 @@ export async function POST(req) {
       await embeddingService.syncFirestoreWithPinecone();
     }
 
-    return new NextResponse(
+    return new Response(
       JSON.stringify({
         success: true,
         message: "Vector store successfully synchronized with database",
@@ -35,17 +37,35 @@ export async function POST(req) {
       }
     );
   } catch (error) {
-    console.error("Error in sync-embeddings API:", error);
+    // Log detailed error information for debugging
+    logError(error, "sync-embeddings-api", {
+      method: req.method,
+      useAltMethod: req.json?.useAltMethod,
+    });
 
-    return new NextResponse(
-      JSON.stringify({
-        error: "Error synchronizing vector store",
-        details: error.message,
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
+    // Return a sanitized error response
+    return createErrorResponse(
+      error,
+      error.message?.includes("Pinecone")
+        ? "EXTERNAL_SERVICE_ERROR"
+        : "SERVER_ERROR",
+      503
     );
   }
 }
+
+// Apply CORS middleware with stricter configuration for admin API
+const corsConfig = {
+  allowedOrigins:
+    process.env.NODE_ENV === "production"
+      ? [
+          // Add your production domains here
+          process.env.NEXT_PUBLIC_SITE_URL || "https://ratemycubprofessor.com",
+          "https://admin.ratemycubprofessor.com",
+        ]
+      : ["http://localhost:3000", "http://localhost:3001"],
+  allowedMethods: ["POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+export const POST = withCors(syncEmbeddingsHandler, corsConfig);

@@ -17,6 +17,39 @@ const requiredEnvVars = [
   "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID",
 ];
 
+// Create custom error for configuration issues
+class FirebaseConfigError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "FirebaseConfigError";
+  }
+}
+
+// Function to safely log errors without exposing sensitive information
+function logFirebaseError(error, context = "firebase") {
+  const sensitiveInfoPattern = /(key|token|secret|password|credential|auth)/i;
+
+  // Only log detailed errors in development
+  if (process.env.NODE_ENV === "development") {
+    console.error(`Firebase Error (${context}):`, {
+      name: error.name,
+      message: error.message,
+      // Redact potentially sensitive information in the stack trace
+      stack: error.stack
+        ?.split("\n")
+        .map((line) =>
+          sensitiveInfoPattern.test(line)
+            ? "[REDACTED SENSITIVE INFORMATION]"
+            : line
+        )
+        .join("\n"),
+    });
+  } else {
+    // In production, log minimal information
+    console.error(`Firebase Error (${context}): ${error.name}`);
+  }
+}
+
 // In development, warn about missing environment variables
 if (process.env.NODE_ENV === "development") {
   const missingEnvVars = requiredEnvVars.filter(
@@ -51,7 +84,7 @@ let analytics = null;
 try {
   // Make sure we have the minimum required config
   if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-    throw new Error(
+    throw new FirebaseConfigError(
       "Missing required Firebase configuration. Check your environment variables."
     );
   }
@@ -59,7 +92,14 @@ try {
   app = initializeApp(firebaseConfig);
   db = getFirestore(app);
 } catch (error) {
-  console.error("Firebase initialization failed:", error.message);
+  logFirebaseError(error, "initialization");
+
+  // In development, show a more specific error
+  if (process.env.NODE_ENV === "development") {
+    console.error(
+      "Firebase initialization failed. The app will continue with limited functionality."
+    );
+  }
 }
 
 // Export Firestore instance
@@ -68,9 +108,17 @@ export { db };
 // Export function to initialize analytics on client side only
 export const initAnalytics = () => {
   if (typeof window !== "undefined" && !analytics && app) {
-    import("firebase/analytics").then(({ getAnalytics }) => {
-      analytics = getAnalytics(app);
-    });
+    try {
+      import("firebase/analytics")
+        .then(({ getAnalytics }) => {
+          analytics = getAnalytics(app);
+        })
+        .catch((error) => {
+          logFirebaseError(error, "analytics");
+        });
+    } catch (error) {
+      logFirebaseError(error, "analytics-import");
+    }
   }
   return analytics;
 };

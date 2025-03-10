@@ -49,6 +49,7 @@ import { ReviewReply } from "./ReviewReply";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { userTrackingService } from "../services/userTrackingService";
 import { contentModerationService } from "../services/contentModerationService";
+import { formatClientError, logClientError } from "../utils/clientErrorHandler";
 
 export const ViewReviewsModal = ({ open, onClose, userId }) => {
   const theme = useTheme();
@@ -72,6 +73,7 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
     count: 0,
   });
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
 
   useEffect(() => {
     const reviewsRef = collection(db, "reviews");
@@ -287,8 +289,13 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
         await reviewsService.addReaction(reviewId, reactionType, userId);
       }
     } catch (error) {
-      console.error("Error updating reaction:", error);
-      alert("Failed to update reaction");
+      // Log the error with context
+      logClientError(error, "handle-reaction", { reviewId, reactionType });
+
+      // Display a user-friendly error message
+      const errorMessage = formatClientError(error);
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
     }
   };
 
@@ -302,7 +309,13 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
         await reviewsService.deleteReview(reviewId, userId);
         // The reviews will update automatically through the onSnapshot listener
       } catch (error) {
-        alert(error.message);
+        // Log the error with context
+        logClientError(error, "delete-review", { reviewId });
+
+        // Display a user-friendly error message
+        const errorMessage = formatClientError(error);
+        setSnackbarMessage(errorMessage);
+        setSnackbarOpen(true);
       }
     }
   };
@@ -313,7 +326,13 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
         await reviewsService.deleteReply(reviewId, replyIndex, userId);
         // The replies will update automatically through the onSnapshot listener
       } catch (error) {
-        alert(error.message);
+        // Log the error with context
+        logClientError(error, "delete-reply", { reviewId, replyIndex });
+
+        // Display a user-friendly error message
+        const errorMessage = formatClientError(error);
+        setSnackbarMessage(errorMessage);
+        setSnackbarOpen(true);
       }
     }
   };
@@ -324,10 +343,12 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
     try {
       // Content moderation check
       const moderationResult = await contentModerationService.moderateContent(
-        replyContent[reviewId]
+        replyContent[reviewId],
+        userId
       );
       if (!moderationResult.isValid) {
-        alert(moderationResult.issues.join(". "));
+        setSnackbarMessage(moderationResult.issues.join(". "));
+        setSnackbarOpen(true);
         return;
       }
 
@@ -339,13 +360,22 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
         userId
       );
 
-      setReplyContent((prev) => ({
-        ...prev,
+      // Clear the reply input
+      setReplyContent({
+        ...replyContent,
         [reviewId]: "",
-      }));
+      });
     } catch (error) {
-      console.error("Error adding reply:", error);
-      alert("Failed to add reply");
+      // Log the error with context
+      logClientError(error, "add-reply", {
+        reviewId,
+        contentLength: replyContent[reviewId]?.length,
+      });
+
+      // Display a user-friendly error message
+      const errorMessage = formatClientError(error);
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
     }
   };
 
@@ -788,7 +818,7 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
           severity="success"
           sx={{ width: "100%" }}
         >
-          {`Updated ${migrationStatus.count} reviews to a new format. You should now see reactions displayed correctly.`}
+          {snackbarMessage}
         </Alert>
       </Snackbar>
     </Dialog>

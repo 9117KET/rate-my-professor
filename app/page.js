@@ -30,6 +30,9 @@ import { chatService } from "./services/chatService";
 import { HowToUseModal } from "./components/HowToUseModal";
 import { userTrackingService } from "./services/userTrackingService";
 import { reviewsService } from "./services/reviewsService";
+import { PrivacyPolicyModal } from "./components/PrivacyPolicyModal";
+import { UserDataManagementModal } from "./components/UserDataManagementModal";
+import { PrivacyConsentBanner } from "./components/PrivacyConsentBanner";
 
 // Enhanced color palette
 const theme = {
@@ -119,6 +122,8 @@ export default function Home() {
   const [openTipsModal, setOpenTipsModal] = useState(false);
   const [openImprintModal, setOpenImprintModal] = useState(false);
   const [openHowToUseModal, setOpenHowToUseModal] = useState(false);
+  const [openPrivacyModal, setOpenPrivacyModal] = useState(false);
+  const [openUserDataModal, setOpenUserDataModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
   const messagesEndRef = useRef(null);
@@ -830,6 +835,15 @@ export default function Home() {
         onClose={handleHowToUseClose}
         disableClose={!hasSubmittedReview}
       />
+      <PrivacyPolicyModal
+        open={openPrivacyModal}
+        onClose={() => setOpenPrivacyModal(false)}
+      />
+      <UserDataManagementModal
+        open={openUserDataModal}
+        onClose={() => setOpenUserDataModal(false)}
+      />
+      <PrivacyConsentBanner onPrivacyClick={() => setOpenPrivacyModal(true)} />
       <Box
         component="footer"
         sx={{
@@ -864,6 +878,32 @@ export default function Home() {
           }}
         >
           How to Use
+        </Button>
+        <Button
+          variant="text"
+          onClick={() => setOpenPrivacyModal(true)}
+          sx={{
+            color: "white",
+            "&:hover": {
+              bgcolor: "rgba(255,255,255,0.1)",
+              transform: "translateY(-2px)",
+            },
+          }}
+        >
+          Privacy
+        </Button>
+        <Button
+          variant="text"
+          onClick={() => setOpenUserDataModal(true)}
+          sx={{
+            color: "white",
+            "&:hover": {
+              bgcolor: "rgba(255,255,255,0.1)",
+              transform: "translateY(-2px)",
+            },
+          }}
+        >
+          My Data
         </Button>
         <Button
           variant="text"

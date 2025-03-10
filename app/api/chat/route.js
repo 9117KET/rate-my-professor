@@ -1,34 +1,48 @@
 import { OpenAI } from "openai";
 import { embeddingService } from "../../services/embeddingService";
 import { rateLimiterService } from "../../services/rateLimiterService";
+import { withCors } from "../../utils/cors";
+import {
+  createErrorResponse,
+  logError,
+  identifyErrorType,
+} from "../../utils/errorHandler";
 
-export async function POST(req) {
+async function chatHandler(req) {
   try {
     // Get anonymous user ID from request headers
     const userId = req.headers.get("x-anonymous-user-id");
 
     if (!userId) {
-      return new Response(JSON.stringify({ error: "User ID is required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return createErrorResponse(
+        new Error("User ID is required"),
+        "AUTHENTICATION_REQUIRED",
+        400
+      );
     }
 
-    // Check rate limit using anonymous user ID
-    const rateLimitResult = await rateLimiterService.checkRateLimit(userId);
+    // Check rate limit using anonymous user ID with CHAT action type
+    const rateLimitResult = await rateLimiterService.checkRateLimit(
+      userId,
+      "CHAT"
+    );
 
     if (!rateLimitResult.allowed) {
+      // Return a rate limit error with the relevant rate limit information
+      // This is acceptable information to share with users
       return new Response(
         JSON.stringify({
-          error: "Rate limit exceeded",
-          remaining: rateLimitResult.remaining,
-          resetTime: rateLimitResult.resetTime,
+          error: {
+            message: "Rate limit exceeded. Please try again later.",
+            remaining: rateLimitResult.remaining,
+            resetTime: rateLimitResult.resetTime,
+          },
         }),
         {
           status: 429,
           headers: {
             "Content-Type": "application/json",
-            "X-RateLimit-Limit": "50",
+            "X-RateLimit-Limit": rateLimitResult.limit.toString(),
             "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
             "X-RateLimit-Reset": rateLimitResult.resetTime.toString(),
           },
@@ -92,28 +106,47 @@ Here are relevant professor reviews to inform your responses:\n\n${context}`,
     // Create and return the stream
     const stream = new ReadableStream({
       async start(controller) {
-        for await (const chunk of response) {
-          const text = chunk.choices[0]?.delta?.content || "";
-          controller.enqueue(text);
+        try {
+          for await (const chunk of response) {
+            const text = chunk.choices[0]?.delta?.content || "";
+            controller.enqueue(text);
+          }
+          controller.close();
+        } catch (streamError) {
+          // Log the error but don't expose it to the client
+          logError(streamError, "chat-stream-processing");
+
+          // Send a safe error message to the client
+          controller.enqueue(
+            "\n\nI'm sorry, but I encountered an issue while generating a response. Please try again."
+          );
+          controller.close();
         }
-        controller.close();
       },
     });
 
     return new Response(stream, {
       headers: {
-        "X-RateLimit-Limit": "50",
+        "X-RateLimit-Limit": rateLimitResult.limit.toString(),
         "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
         "X-RateLimit-Reset": rateLimitResult.resetTime.toString(),
       },
     });
   } catch (error) {
-    console.error("Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: {
-        "Content-Type": "application/json",
-      },
+    // Log the error with full details for debugging
+    logError(error, "chat-api", {
+      userId: req.headers.get("x-anonymous-user-id"),
     });
+
+    // Identify the type of error and create a sanitized response
+    const errorType = identifyErrorType(error);
+    return createErrorResponse(
+      error,
+      errorType,
+      errorType === "EXTERNAL_SERVICE_ERROR" ? 503 : 500
+    );
   }
 }
+
+// Apply CORS middleware to chat handler
+export const POST = withCors(chatHandler);

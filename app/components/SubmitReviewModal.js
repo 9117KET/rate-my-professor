@@ -21,6 +21,7 @@ import { validateText, REVIEW_LIMITS } from "../utils/textValidation";
 import { PROFESSORS, getProfessorSuggestions } from "../utils/professorNames";
 import { userTrackingService } from "../services/userTrackingService";
 import { contentModerationService } from "../services/contentModerationService";
+import { formatClientError, logClientError } from "../utils/clientErrorHandler";
 
 export const SubmitReviewModal = ({
   open,
@@ -119,7 +120,9 @@ export const SubmitReviewModal = ({
     e.preventDefault();
     const userId = userTrackingService.getOrCreateUserId();
     if (!userId) {
-      alert("Unable to submit review at this time. Please try again later.");
+      setReviewError(
+        "Unable to identify user. Please try again or refresh the page."
+      );
       return;
     }
 
@@ -170,8 +173,10 @@ export const SubmitReviewModal = ({
     // Content moderation check
     try {
       const moderationResult = await contentModerationService.moderateContent(
-        formData.review
+        formData.review,
+        userId
       );
+
       if (!moderationResult.isValid) {
         setReviewError(moderationResult.issues.join(". "));
         return;
@@ -201,8 +206,15 @@ export const SubmitReviewModal = ({
       setSubjectError("");
       onClose();
     } catch (error) {
-      console.error("Error submitting review:", error);
-      alert("Failed to submit review. Please try again.");
+      // Log the error with context for debugging
+      logClientError(error, "submit-review", {
+        professorLength: formData.professor.length,
+        subjectLength: formData.subject.length,
+        reviewLength: formData.review.length,
+      });
+
+      // Display user-friendly error message
+      setReviewError(formatClientError(error));
     }
   };
 

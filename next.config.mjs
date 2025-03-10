@@ -28,6 +28,61 @@ const nextConfig = {
     NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID:
       process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
   },
+
+  // Force HTTPS in production
+  async headers() {
+    return [
+      {
+        // Apply these headers to all routes
+        source: "/:path*",
+        headers: [
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "SAMEORIGIN",
+          },
+          {
+            key: "X-XSS-Protection",
+            value: "1; mode=block",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+        ],
+      },
+    ];
+  },
+
+  // Redirect HTTP to HTTPS in production
+  async redirects() {
+    const redirects = [];
+
+    // Only add the HTTP to HTTPS redirect in production
+    if (process.env.NODE_ENV === "production") {
+      redirects.push({
+        source: "/:path*",
+        destination: "https://:host/:path*",
+        permanent: true,
+        has: [
+          {
+            type: "header",
+            key: "x-forwarded-proto",
+            value: "http",
+          },
+        ],
+      });
+    }
+
+    return redirects;
+  },
 };
 
 export default nextConfig;

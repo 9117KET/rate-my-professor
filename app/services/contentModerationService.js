@@ -1,3 +1,5 @@
+import { rateLimiterService } from "./rateLimiterService";
+
 // List of words to filter (this is a basic list - you may want to expand it)
 const inappropriateWords = [
   // Profanity and slurs
@@ -117,7 +119,25 @@ class ContentModerationService {
       .trim();
   }
 
-  async moderateContent(text) {
+  async moderateContent(text, userId = null) {
+    // If userId is provided, check rate limit
+    if (userId) {
+      const rateLimitResult = await rateLimiterService.checkRateLimit(
+        userId,
+        "CONTENT_MODERATION"
+      );
+
+      if (!rateLimitResult.allowed) {
+        throw new Error(
+          `Rate limit exceeded for content moderation checks. You can make ${
+            rateLimitResult.limit
+          } moderation checks per hour. Please try again in ${Math.ceil(
+            (rateLimitResult.resetTime - Date.now()) / 60000
+          )} minutes.`
+        );
+      }
+    }
+
     // Sanitize the input first
     const sanitizedText = this.sanitizeText(text);
 

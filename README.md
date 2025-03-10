@@ -162,8 +162,129 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_firebase_measurement_id
    - Use server-side API routes to interact with sensitive APIs where possible
 
 4. **Required Environment Variables Check**
+
    - The application checks for required environment variables on startup
    - In development mode, it will log warnings if any required variables are missing
+
+5. **HTTPS and CORS Security**
+
+   - The application is configured to force HTTPS in production environments
+   - HTTP Strict Transport Security (HSTS) is enabled to protect against downgrade attacks
+   - Additional security headers are set to protect against common web vulnerabilities
+   - CORS is properly configured for all API routes to prevent unauthorized cross-origin requests
+   - Different CORS policies are applied to different API endpoints based on their sensitivity
+
+6. **Secure Error Handling**
+   - Error messages are sanitized to prevent leaking sensitive information
+   - Detailed error information is only logged server-side, not exposed to clients
+   - Client-facing error messages are user-friendly and do not reveal implementation details
+   - Error logging includes context but redacts sensitive information
+   - Custom error classes help standardize error handling throughout the application
+
+### HTTPS Configuration
+
+The application uses the following security headers:
+
+- **Strict-Transport-Security**: Forces HTTPS for the site and all subdomains
+- **X-Content-Type-Options**: Prevents MIME type sniffing
+- **X-Frame-Options**: Prevents clickjacking attacks
+- **X-XSS-Protection**: Enables browser's XSS filtering
+- **Referrer-Policy**: Controls what information is sent in the Referer header
+
+In production, all HTTP requests are automatically redirected to HTTPS.
+
+### CORS Configuration
+
+API endpoints are protected by CORS (Cross-Origin Resource Sharing) middleware:
+
+- Only specified origins can access the API
+- Different API endpoints have different CORS configurations based on their sensitivity
+- The CORS middleware handles preflight requests automatically
+- Only necessary HTTP methods are allowed for each endpoint
+- Only required headers are allowed
+
+To customize CORS configuration for specific environments, update the `allowedOrigins` in `app/utils/cors.js`.
+
+### Error Handling
+
+The application implements a comprehensive error handling strategy that prioritizes security:
+
+#### Server-Side Error Handling
+
+- **Centralized Error Handling**: The `errorHandler.js` utility provides standardized error handling across API routes
+- **Error Categorization**: Errors are categorized by type for appropriate responses
+- **Sanitized Error Responses**: API endpoints return sanitized error messages that don't expose sensitive information
+- **Contextual Logging**: Detailed error information is logged server-side with relevant context for debugging
+- **Custom Status Codes**: HTTP status codes are mapped appropriately to error types
+
+#### Client-Side Error Handling
+
+- **User-Friendly Messages**: Errors are translated into user-friendly messages via `clientErrorHandler.js`
+- **Consistent Error Display**: Errors are displayed consistently in the UI (form errors, alerts, snackbars)
+- **Privacy Protection**: Error messages never include stack traces or sensitive implementation details
+- **Error Translation**: Raw errors are mapped to appropriate user-facing messages based on error type
+
+#### Implementation Approach
+
+Error handling is implemented at multiple layers:
+
+1. **API Routes**: Use `createErrorResponse()` to generate sanitized error responses
+2. **Services**: Use custom error classes like `ReviewError` to standardize error types
+3. **Components**: Use `formatClientError()` to display user-friendly error messages
+4. **Firebase Initialization**: Uses specialized error handling to protect sensitive configuration details
+
+To extend or modify error handling:
+
+- Add new error types to `ERROR_TYPES` in `errorHandler.js`
+- Add new user-friendly messages to `ERROR_MESSAGES` in `clientErrorHandler.js`
+- Use the appropriate error handling functions in new code
+
+### Privacy Features
+
+The application includes comprehensive privacy features to ensure transparency and user control over their data:
+
+#### Privacy Policy
+
+- **Clear Communication**: A detailed privacy policy explains what data is collected and how it's used
+- **Accessible**: The privacy policy is easily accessible from the footer of the application
+- **Transparent**: The policy clearly outlines data retention periods and third-party services used
+
+#### User Data Management
+
+- **Data Access**: Users can view all their content (reviews, replies, reactions) in one place
+- **Data Export**: Users can export their data in JSON format
+- **Data Deletion**: Users can delete individual reviews or all their data at once
+- **Anonymous IDs**: User identification is done through anonymous UUIDs stored in local storage
+
+#### Consent Management
+
+- **Privacy Consent Banner**: First-time visitors see a consent banner explaining data practices
+- **Consent Storage**: User consent is recorded with timestamp and policy version
+- **Privacy Settings**: Users can adjust their privacy preferences
+
+#### Implementation Details
+
+1. **User Tracking Service**:
+
+   - Manages anonymous user IDs
+   - Handles privacy consent and settings
+   - Provides methods for data deletion
+
+2. **Privacy Components**:
+
+   - `PrivacyPolicyModal`: Displays the detailed privacy policy
+   - `UserDataManagementModal`: Interface for viewing, exporting, and deleting user data
+   - `PrivacyConsentBanner`: Obtains and records user consent
+
+3. **Backend Services**:
+   - `reviewsService.getUserContent()`: Retrieves all content associated with a user ID
+   - `reviewsService.deleteAllUserContent()`: Removes all user content from the database
+
+To customize the privacy features:
+
+- Update the privacy policy text in `PrivacyPolicyModal.js`
+- Modify data retention periods in both the UI and backend services
+- Adjust the consent banner messaging in `PrivacyConsentBanner.js`
 
 ## License
 
