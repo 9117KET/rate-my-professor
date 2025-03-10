@@ -12,16 +12,15 @@ import {
   Typography,
   CircularProgress,
   Divider,
-  IconButton,
-  Menu,
-  MenuItem,
   List,
   ListItem,
   useMediaQuery,
   useTheme,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import { tipsService, clientStorage } from "../services/tipsService";
+import DeleteIcon from "@mui/icons-material/Delete";
+import { tipsService } from "../services/tipsService";
 import { formatTimestamp } from "../utils/formatters";
 import { formatTextWithLinks } from "../utils/linkFormatter";
 import { validateText, TIP_LIMITS } from "../utils/textValidation";
@@ -35,15 +34,14 @@ export const TipsModal = ({ open, onClose }) => {
   const [tipFormData, setTipFormData] = useState("");
   const [tipError, setTipError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [editingTip, setEditingTip] = useState(null);
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [selectedTip, setSelectedTip] = useState(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [tipToDelete, setTipToDelete] = useState(null);
   const [mounted, setMounted] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [deleteInProgress, setDeleteInProgress] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    const userId = userTrackingService.getOrCreateUserId();
+    setCurrentUserId(userId);
   }, []);
 
   useEffect(() => {
@@ -77,7 +75,7 @@ export const TipsModal = ({ open, onClose }) => {
   };
 
   const handleAddTip = async () => {
-    if (!tipFormData.trim()) return;
+    if (typeof tipFormData !== "string" || !tipFormData.trim()) return;
 
     try {
       // Content moderation check
@@ -102,6 +100,7 @@ export const TipsModal = ({ open, onClose }) => {
       };
 
       await tipsService.addTip(newTip);
+      loadTips(); // Reload tips after adding
       setTipFormData("");
       setTipError("");
     } catch (error) {
@@ -110,51 +109,25 @@ export const TipsModal = ({ open, onClose }) => {
     }
   };
 
-  const handleEditTip = async (tipId, newContent) => {
-    const validationError = validateText(newContent.trim(), {
-      minLength: TIP_LIMITS.MIN_LENGTH,
-      maxLength: TIP_LIMITS.MAX_LENGTH,
-      type: "tip",
-    });
-
-    if (validationError) {
-      alert(validationError);
-      return;
-    }
-
-    try {
-      await tipsService.updateTip(tipId, newContent);
-      setTips(
-        tips.map((tip) =>
-          tip.id === tipId ? { ...tip, content: newContent } : tip
-        )
-      );
-      setEditingTip(null);
-    } catch (error) {
-      console.error("Error updating tip:", error);
-      alert("Failed to update tip");
-    }
-  };
-
   const handleDeleteTip = async (tipId) => {
+    if (!currentUserId || deleteInProgress) return;
+
     try {
-      await tipsService.deleteTip(tipId);
+      setDeleteInProgress(true);
+      await tipsService.deleteTip(tipId, currentUserId);
       setTips(tips.filter((tip) => tip.id !== tipId));
     } catch (error) {
       console.error("Error deleting tip:", error);
-      alert("Failed to delete tip");
+      alert(error.message || "Failed to delete tip. Please try again.");
+    } finally {
+      setDeleteInProgress(false);
     }
   };
 
-  const canModifyTip = (tip) => {
-    if (!mounted) return false;
-
-    const createdAt = new Date(tip.createdAt);
-    const now = new Date();
-    const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
-    const storedUserId = clientStorage.getItem(`tip_${tip.id}_userId`);
-
-    return hoursDiff <= 48 && tip.userId === storedUserId;
+  const isUsersTip = (tip) => {
+    // For immediate rendering, we check the userId directly
+    // The deletion verification will happen in the service
+    return tip.userId === currentUserId;
   };
 
   return (
@@ -229,7 +202,11 @@ export const TipsModal = ({ open, onClose }) => {
             <Button
               onClick={handleAddTip}
               variant="contained"
-              disabled={!!tipError || !tipFormData.trim()}
+              disabled={
+                !!tipError ||
+                !tipFormData ||
+                (typeof tipFormData === "string" ? !tipFormData.trim() : true)
+              }
               sx={{
                 mt: 2,
                 height: { xs: 40, sm: 44 },
@@ -294,19 +271,18 @@ export const TipsModal = ({ open, onClose }) => {
                     >
                       {formatTextWithLinks(tip.content)}
                     </Typography>
-                    {mounted && canModifyTip(tip) && (
-                      <IconButton
-                        size={isMobile ? "small" : "medium"}
-                        onClick={(e) => {
-                          setAnchorEl(e.currentTarget);
-                          setSelectedTip(tip);
-                        }}
-                        sx={{ ml: 1, p: { xs: 0.5, sm: 1 } }}
-                      >
-                        <MoreVertIcon
-                          fontSize={isMobile ? "small" : "medium"}
-                        />
-                      </IconButton>
+                    {isUsersTip(tip) && (
+                      <Tooltip title="Delete your tip">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDeleteTip(tip.id)}
+                          disabled={deleteInProgress}
+                          sx={{ ml: 1 }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     )}
                   </Box>
                   <Typography
@@ -353,100 +329,6 @@ export const TipsModal = ({ open, onClose }) => {
           Close
         </Button>
       </DialogActions>
-
-      {mounted && (
-        <>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={() => setAnchorEl(null)}
-            PaperProps={{
-              sx: {
-                minWidth: 120,
-                boxShadow: 2,
-                mt: 0.5,
-              },
-            }}
-          >
-            <MenuItem
-              onClick={() => {
-                setEditingTip(selectedTip.id);
-                setTipFormData(selectedTip.content);
-                setAnchorEl(null);
-              }}
-              sx={{
-                py: { xs: 0.75, sm: 1 },
-                fontSize: { xs: "0.85rem", sm: "0.9rem" },
-              }}
-            >
-              Edit
-            </MenuItem>
-            <MenuItem
-              onClick={() => {
-                setTipToDelete(selectedTip.id);
-                setDeleteConfirmOpen(true);
-                setAnchorEl(null);
-              }}
-              sx={{
-                py: { xs: 0.75, sm: 1 },
-                fontSize: { xs: "0.85rem", sm: "0.9rem" },
-              }}
-            >
-              Delete
-            </MenuItem>
-          </Menu>
-
-          <Dialog
-            open={deleteConfirmOpen}
-            onClose={() => setDeleteConfirmOpen(false)}
-            PaperProps={{
-              sx: {
-                width: { xs: "85%", sm: "auto" },
-                minWidth: { sm: 300 },
-                p: { xs: 1, sm: 1 },
-                borderRadius: { xs: 1, sm: 2 },
-              },
-            }}
-          >
-            <DialogTitle
-              sx={{
-                fontSize: { xs: "1.1rem", sm: "1.2rem" },
-                pt: { xs: 2, sm: 2 },
-                pb: { xs: 1, sm: 1 },
-              }}
-            >
-              Delete Tip
-            </DialogTitle>
-            <DialogContent>
-              <Typography sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
-                Are you sure you want to delete this tip?
-              </Typography>
-            </DialogContent>
-            <DialogActions
-              sx={{ px: { xs: 2, sm: 2 }, py: { xs: 1, sm: 1.5 } }}
-            >
-              <Button
-                onClick={() => setDeleteConfirmOpen(false)}
-                sx={{ fontSize: { xs: "0.85rem", sm: "0.9rem" } }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  handleDeleteTip(tipToDelete);
-                  setDeleteConfirmOpen(false);
-                  setTipToDelete(null);
-                }}
-                color="error"
-                variant="contained"
-                sx={{ fontSize: { xs: "0.85rem", sm: "0.9rem" } }}
-              >
-                Delete
-              </Button>
-            </DialogActions>
-          </Dialog>
-        </>
-      )}
     </Dialog>
   );
 };

@@ -10,6 +10,7 @@ import {
   doc,
   updateDoc,
   where,
+  getDoc,
 } from "firebase/firestore";
 import { generateId } from "../utils/generateId";
 
@@ -37,12 +38,67 @@ export const tipsService = {
     }
   },
 
+  async getUserTips(userId) {
+    try {
+      if (!userId) {
+        throw new Error("User ID is required");
+      }
+
+      const tipsRef = collection(db, COLLECTION_NAME);
+      const q = query(
+        tipsRef,
+        where("userId", "==", userId),
+        orderBy("createdAt", "desc")
+      );
+      const snapshot = await getDocs(q);
+
+      return snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+          lastEdited: data.lastEdited?.toDate?.() || null,
+        };
+      });
+    } catch (error) {
+      console.error("Error getting user tips:", error);
+      throw error;
+    }
+  },
+
+  async isUsersTip(tipId, userId) {
+    try {
+      if (!userId || !tipId) {
+        return false;
+      }
+
+      const tipRef = doc(db, COLLECTION_NAME, tipId);
+      const tipSnap = await getDoc(tipRef);
+
+      if (!tipSnap.exists()) {
+        return false;
+      }
+
+      const tipData = tipSnap.data();
+      return tipData.userId === userId;
+    } catch (error) {
+      console.error("Error checking tip ownership:", error);
+      return false;
+    }
+  },
+
   async addTip(tip) {
     try {
       const tipsRef = collection(db, COLLECTION_NAME);
-      const userId = generateId();
+      const userId = tip.userId || generateId();
+
+      // Check if tip is an object with content property or a string
+      const content =
+        typeof tip === "object" && tip.content ? tip.content : tip;
+
       const enrichedTip = {
-        content: tip,
+        content: content,
         createdAt: serverTimestamp(),
         userId,
         canEdit: true,
@@ -79,10 +135,32 @@ export const tipsService = {
     }
   },
 
-  async deleteTip(tipId) {
+  async deleteTip(tipId, userId) {
     try {
+      if (!userId) {
+        throw new Error("User ID is required to delete a tip");
+      }
+
       const tipRef = doc(db, COLLECTION_NAME, tipId);
+      const tipSnap = await getDoc(tipRef);
+
+      if (!tipSnap.exists()) {
+        throw new Error("Tip not found");
+      }
+
+      const tipData = tipSnap.data();
+
+      // Verify the user owns this tip
+      if (tipData.userId !== userId) {
+        throw new Error("Unauthorized: You can only delete your own tips");
+      }
+
       await deleteDoc(tipRef);
+
+      // Clean up local storage
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(`tip_${tipId}_userId`);
+      }
     } catch (error) {
       console.error("Error deleting tip:", error);
       throw error;

@@ -31,7 +31,6 @@ import { HowToUseModal } from "./components/HowToUseModal";
 import { userTrackingService } from "./services/userTrackingService";
 import { reviewsService } from "./services/reviewsService";
 import { PrivacyPolicyModal } from "./components/PrivacyPolicyModal";
-import { UserDataManagementModal } from "./components/UserDataManagementModal";
 import { PrivacyConsentBanner } from "./components/PrivacyConsentBanner";
 
 // Enhanced color palette
@@ -123,7 +122,6 @@ export default function Home() {
   const [openImprintModal, setOpenImprintModal] = useState(false);
   const [openHowToUseModal, setOpenHowToUseModal] = useState(false);
   const [openPrivacyModal, setOpenPrivacyModal] = useState(false);
-  const [openUserDataModal, setOpenUserDataModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
   const messagesEndRef = useRef(null);
@@ -839,10 +837,6 @@ export default function Home() {
         open={openPrivacyModal}
         onClose={() => setOpenPrivacyModal(false)}
       />
-      <UserDataManagementModal
-        open={openUserDataModal}
-        onClose={() => setOpenUserDataModal(false)}
-      />
       <PrivacyConsentBanner onPrivacyClick={() => setOpenPrivacyModal(true)} />
       <Box
         component="footer"
@@ -891,19 +885,6 @@ export default function Home() {
           }}
         >
           Privacy
-        </Button>
-        <Button
-          variant="text"
-          onClick={() => setOpenUserDataModal(true)}
-          sx={{
-            color: "white",
-            "&:hover": {
-              bgcolor: "rgba(255,255,255,0.1)",
-              transform: "translateY(-2px)",
-            },
-          }}
-        >
-          My Data
         </Button>
         <Button
           variant="text"
