@@ -98,7 +98,7 @@ Here are relevant professor reviews to inform your responses:\n\n${context}`,
       ],
       stream: true,
       temperature: 0.7,
-      max_tokens: 800,
+      max_tokens: 1500,
       presence_penalty: 0.1,
       frequency_penalty: 0.1,
     });

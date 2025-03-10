@@ -122,7 +122,7 @@ export async function POST(req) {
         ...messages,
       ],
       stream: true,
-      max_tokens: 150, // Limit response length
+      max_tokens: 1500, // Increased response length to prevent cutting off
       temperature: 0.7,
     });
 
