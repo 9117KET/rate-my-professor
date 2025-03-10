@@ -49,31 +49,17 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
         🎓 Welcome to Rate My Professor!
       </DialogTitle>
 
-      {disableClose && (
-        <Box
-          sx={{
-            px: 3,
-            pb: 2,
-            bgcolor: "primary.light",
-            color: "white",
-            mx: 2,
-            borderRadius: 1,
-          }}
-        >
-          <Typography variant="subtitle1" sx={{ py: 1, textAlign: "center" }}>
-            Submit your first professor rating to unlock:
-          </Typography>
-        </Box>
-      )}
-
       <DialogContent sx={{ pt: 2 }}>
+        <Typography variant="body1" sx={{ mb: 2, textAlign: "center" }}>
+          Here&apos;s how to make the most of our platform:
+        </Typography>
         <List sx={{ py: 0 }}>
           <ListItem sx={{ py: 1 }}>
             <ListItemIcon>
               <VisibilityOutlinedIcon color="primary" />
             </ListItemIcon>
             <ListItemText
-              primary="See What Others Say"
+              primary="Read reviews from other students"
               secondary="Read honest reviews about your best (and worst) professors"
             />
           </ListItem>
@@ -83,7 +69,7 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
               <SmartToyIcon color="primary" />
             </ListItemIcon>
             <ListItemText
-              primary="Ask Our AI Assistant"
+              primary="Ask Our AI Assistant Anything"
               secondary="Get personalized course and professor recommendations"
             />
           </ListItem>
@@ -113,7 +99,7 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
             textTransform: "none",
           }}
         >
-          {disableClose ? "Let's Rate My First Professor!" : "Got It!"}
+          Got It!
         </Button>
       </DialogActions>
     </Dialog>

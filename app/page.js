@@ -16,6 +16,10 @@ import {
   IconButton,
   useMediaQuery,
   useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import SchoolIcon from "@mui/icons-material/School";
@@ -124,6 +128,8 @@ export default function Home() {
   const [openPrivacyModal, setOpenPrivacyModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
+  const [showReviewReminderPopup, setShowReviewReminderPopup] = useState(false);
+  const [reminderTimerId, setReminderTimerId] = useState(null);
   const messagesEndRef = useRef(null);
   const muiTheme = useTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
@@ -135,10 +141,39 @@ export default function Home() {
     if (hasReviewed) {
       setHasSubmittedReview(true);
     } else {
-      // Show How to Use modal first
+      // Show How to Use modal first for new users
       setOpenHowToUseModal(true);
+
+      // Set up review reminder timer (10 minutes = 600000 ms)
+      const timerId = setTimeout(() => {
+        setShowReviewReminderPopup(true);
+      }, 600000);
+
+      setReminderTimerId(timerId);
     }
-  }, []);
+
+    return () => {
+      // Clear the timer when component unmounts or user submits review
+      if (reminderTimerId) {
+        clearTimeout(reminderTimerId);
+      }
+    };
+  }, [reminderTimerId]);
+
+  // Function to setup the recurring review reminder
+  const setupRecurringReminder = () => {
+    // Clear any existing timer
+    if (reminderTimerId) {
+      clearTimeout(reminderTimerId);
+    }
+
+    // Set new timer for 10 minutes
+    const timerId = setTimeout(() => {
+      setShowReviewReminderPopup(true);
+    }, 600000);
+
+    setReminderTimerId(timerId);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -271,24 +306,44 @@ export default function Home() {
       localStorage.setItem("has_submitted_review", "true");
       setOpenRateModal(false);
       setOpenHowToUseModal(false);
+      setShowReviewReminderPopup(false);
+
+      // Clear any reminder timers
+      if (reminderTimerId) {
+        clearTimeout(reminderTimerId);
+        setReminderTimerId(null);
+      }
     } catch (error) {
       console.error("Error submitting review:", error);
       alert("Failed to submit review. Please try again.");
     }
   };
 
-  // Prevent closing the rate modal if user hasn't submitted a review
+  // Prevent closing the rate modal if user hasn't submitted a review and it was triggered by view reviews
   const handleRateModalClose = () => {
-    if (hasSubmittedReview) {
-      setOpenRateModal(false);
-    }
+    setOpenRateModal(false);
   };
 
   // Handle How to Use modal close
   const handleHowToUseClose = () => {
     setOpenHowToUseModal(false);
-    // Show Rate modal after How to Use is closed
-    setOpenRateModal(true);
+    // Don't automatically show rate modal when how to use closes
+  };
+
+  // Handle the review reminder popup close
+  const handleReminderClose = () => {
+    setShowReviewReminderPopup(false);
+    // Setup the next reminder
+    setupRecurringReminder();
+  };
+
+  // Handle attempt to view reviews when not yet reviewed
+  const handleViewReviewsClick = () => {
+    if (hasSubmittedReview) {
+      setOpenViewModal(true);
+    } else {
+      setOpenRateModal(true);
+    }
   };
 
   return (
@@ -300,8 +355,6 @@ export default function Home() {
         bgcolor: theme.background.default,
         overflow: "hidden",
         maxWidth: "100vw",
-        pointerEvents: !hasSubmittedReview ? "none" : "auto",
-        opacity: !hasSubmittedReview ? 0.5 : 1,
       }}
     >
       <Box
@@ -374,7 +427,7 @@ export default function Home() {
           </Typography>
           <ActionButtons
             onRateClick={() => setOpenRateModal(true)}
-            onViewClick={() => setOpenViewModal(true)}
+            onViewClick={handleViewReviewsClick}
             onTipsClick={() => setOpenTipsModal(true)}
           />
         </Container>
@@ -810,28 +863,27 @@ export default function Home() {
         onClose={handleRateModalClose}
         onSubmit={handleReviewSubmit}
         loading={isLoading}
-        disableClose={!hasSubmittedReview}
+        disableClose={false}
       />
       <ViewReviewsModal
         open={openViewModal}
-        onClose={() => hasSubmittedReview && setOpenViewModal(false)}
-        disableClose={!hasSubmittedReview}
+        onClose={() => setOpenViewModal(false)}
         userId={userId}
       />
       <TipsModal
         open={openTipsModal}
-        onClose={() => hasSubmittedReview && setOpenTipsModal(false)}
+        onClose={() => setOpenTipsModal(false)}
         disableClose={!hasSubmittedReview}
       />
       <ImprintModal
         open={openImprintModal}
-        onClose={() => hasSubmittedReview && setOpenImprintModal(false)}
+        onClose={() => setOpenImprintModal(false)}
         disableClose={!hasSubmittedReview}
       />
       <HowToUseModal
         open={openHowToUseModal}
         onClose={handleHowToUseClose}
-        disableClose={!hasSubmittedReview}
+        disableClose={false}
       />
       <PrivacyPolicyModal
         open={openPrivacyModal}
@@ -915,6 +967,61 @@ export default function Home() {
           Imprint
         </Button>
       </Box>
+      {/* Review Reminder Popup */}
+      <Dialog
+        open={showReviewReminderPopup}
+        onClose={handleReminderClose}
+        maxWidth="sm"
+        fullWidth
+        sx={{
+          "& .MuiDialog-paper": {
+            margin: { xs: 1, sm: 2 },
+            width: { xs: "95%", sm: "80%" },
+            borderRadius: { xs: 1, sm: 2 },
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontSize: { xs: "1.2rem", sm: "1.5rem" },
+            pt: { xs: 2, sm: 3 },
+            pb: { xs: 1, sm: 2 },
+            textAlign: "center",
+            fontWeight: 600,
+          }}
+        >
+          🎓 Share Your Experience!
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Typography variant="body1" sx={{ mb: 2, textAlign: "center" }}>
+            Help other students by rating a professor you&apos;ve had. Your
+            insights are valuable to the community!
+          </Typography>
+        </DialogContent>
+        <DialogActions
+          sx={{ p: 2, display: "flex", justifyContent: "space-between" }}
+        >
+          <Button onClick={handleReminderClose} color="primary">
+            Remind me later
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              setOpenRateModal(true);
+              setShowReviewReminderPopup(false);
+            }}
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              py: 1,
+              textTransform: "none",
+            }}
+          >
+            Rate a Professor
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
