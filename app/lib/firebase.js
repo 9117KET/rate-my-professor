@@ -6,7 +6,19 @@ import { getFirestore } from "firebase/firestore";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
-// Check for required environment variables
+// Remove the debugging console log that was checking environment variables
+// console.log("ENV VARS CHECK:", {
+//   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? "Defined" : "Undefined",
+//   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+//     ? "Defined"
+//     : "Undefined",
+//   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+//     ? "Defined"
+//     : "Undefined",
+//   NODE_ENV: process.env.NODE_ENV,
+// });
+
+// List of Firebase config variables
 const requiredEnvVars = [
   "NEXT_PUBLIC_FIREBASE_API_KEY",
   "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
@@ -50,23 +62,21 @@ function logFirebaseError(error, context = "firebase") {
   }
 }
 
-// In development, warn about missing environment variables
-if (process.env.NODE_ENV === "development") {
-  const missingEnvVars = requiredEnvVars.filter(
-    (varName) => !process.env[varName]
-  );
-  if (missingEnvVars.length > 0) {
-    console.error(
-      `Missing required environment variables: ${missingEnvVars.join(", ")}`
-    );
-    console.error("Please check your .env.local file");
-  }
-}
+// Comment out the environment variable check temporarily
+// if (process.env.NODE_ENV === "development") {
+//   const missingEnvVars = requiredEnvVars.filter(
+//     (varName) => !process.env[varName]
+//   );
+//   if (missingEnvVars.length > 0) {
+//     console.error(
+//       `Missing required environment variables: ${missingEnvVars.join(", ")}`
+//     );
+//     console.error("Please check your .env.local file");
+//   }
+// }
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Your web app's Firebase configuration - temporarily hardcoding for debugging
 const firebaseConfig = {
-  // Hardcoded Firebase configuration values
   apiKey: "AIzaSyDSEjW_KrlgT8qHEoaeFYlNbqgvyVETGyY",
   authDomain: "ratemyprofessor-99fb5.firebaseapp.com",
   projectId: "ratemyprofessor-99fb5",
@@ -74,15 +84,6 @@ const firebaseConfig = {
   messagingSenderId: "177122975941",
   appId: "1:177122975941:web:17578a39295416155150ac",
   measurementId: "G-HMGH83WRN5",
-
-  // Commented out environment variables approach
-  // apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  // authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  // projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  // storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  // messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  // appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  // measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase objects with default values

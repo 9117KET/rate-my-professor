@@ -14,7 +14,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <Suspense fallback={<div>Loading...</div>}>
           <ClientLayout>{children}</ClientLayout>
         </Suspense>

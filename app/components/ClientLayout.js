@@ -2,6 +2,7 @@
 
 import { ThemeProvider, createTheme, responsiveFontSizes } from "@mui/material";
 import { memo } from "react";
+import React from "react";
 
 let theme = createTheme({
   breakpoints: {
@@ -201,6 +202,19 @@ theme = responsiveFontSizes(theme);
 
 const ClientLayout = memo(({ children }) => {
   console.log("ClientLayout rendering");
+
+  // Ensure this component only renders on the client side
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Return placeholder on server-side to avoid hydration mismatch
+  if (!mounted) {
+    return <div style={{ visibility: "hidden" }}>{children}</div>;
+  }
+
   return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
 });
 
