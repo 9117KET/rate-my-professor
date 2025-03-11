@@ -50,63 +50,61 @@ export const PrivacyConsentBanner = ({ onPrivacyClick }) => {
           left: 0,
           right: 0,
           zIndex: 1000,
-          p: { xs: 2, sm: 3 },
+          p: { xs: 1.5, sm: 2 },
           m: { xs: 1, sm: 2 },
           borderRadius: 2,
           bgcolor: "rgba(255, 255, 255, 0.95)",
           backdropFilter: "blur(10px)",
           boxShadow: "0 -4px 20px rgba(0, 0, 0, 0.1)",
-          maxWidth: { sm: "600px", md: "800px" },
+          maxWidth: { sm: "500px", md: "600px" },
           mx: "auto",
         }}
       >
-        <Typography variant="h6" gutterBottom>
-          Privacy Notice
-        </Typography>
-        <Typography variant="body2" paragraph>
-          We use cookies and local storage to improve your experience and
-          collect anonymous usage data. We store your reviews, reactions, and
-          replies with an anonymous ID that doesn&apos;t identify you personally.
-        </Typography>
-        <Typography variant="body2" paragraph>
-          By clicking &quot;Accept&quot;, you consent to our data practices as described
-          in our{" "}
-          <Link
-            component="button"
-            variant="body2"
-            onClick={handleViewPrivacy}
-            sx={{ textDecoration: "underline" }}
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
+            Privacy Notice
+          </Typography>
+          <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
+            We use cookies and local storage to improve your experience. By
+            clicking &quot;Accept&quot;, you consent to our{" "}
+            <Link
+              component="button"
+              variant="body2"
+              onClick={handleViewPrivacy}
+              sx={{ textDecoration: "underline", fontSize: "0.8rem" }}
+            >
+              Privacy Policy
+            </Link>
+            .
+          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 1,
+              mt: 1,
+              flexDirection: isMobile ? "column" : "row",
+            }}
           >
-            Privacy Policy
-          </Link>
-          . You can manage or delete your data at any time from the &quot;My Data&quot;
-          section.
-        </Typography>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: 2,
-            mt: 2,
-            flexDirection: isMobile ? "column" : "row",
-          }}
-        >
-          <Button
-            variant="outlined"
-            color="primary"
-            onClick={handleViewPrivacy}
-            fullWidth={isMobile}
-          >
-            View Privacy Policy
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleAccept}
-            fullWidth={isMobile}
-          >
-            Accept
-          </Button>
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={handleViewPrivacy}
+              fullWidth={isMobile}
+              size="small"
+            >
+              View Policy
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleAccept}
+              fullWidth={isMobile}
+              size="small"
+            >
+              Accept
+            </Button>
+          </Box>
         </Box>
       </Paper>
     </Slide>

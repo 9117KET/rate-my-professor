@@ -51,7 +51,12 @@ import { userTrackingService } from "../services/userTrackingService";
 import { contentModerationService } from "../services/contentModerationService";
 import { formatClientError, logClientError } from "../utils/clientErrorHandler";
 
-export const ViewReviewsModal = ({ open, onClose, userId }) => {
+export const ViewReviewsModal = ({
+  open,
+  onClose,
+  onOpenSubmitForm,
+  userId,
+}) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [reviews, setReviews] = useState([]);
@@ -144,18 +149,53 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
 
   useEffect(() => {
     const hasReviewed = localStorage.getItem("has_submitted_review");
-    if (hasReviewed) {
-      setHasSubmittedReview(true);
-    } else {
-      setShowReviewRequiredMessage(true);
-      // Close modal after a short delay to allow message to be seen
-      const closeTimer = setTimeout(() => {
-        onClose();
-      }, 2000);
 
-      return () => clearTimeout(closeTimer);
-    }
-  }, [onClose]);
+    // Check if this specific user has submitted a review
+    const checkUserReviews = async () => {
+      // Skip the check if we already know the user has submitted a review
+      if (hasSubmittedReview) return;
+
+      try {
+        if (userId) {
+          setLoading(true);
+          const userContent = await reviewsService.getUserContent(userId);
+
+          // If user has reviews, they can see other reviews
+          if (
+            userContent &&
+            userContent.reviews &&
+            userContent.reviews.length > 0
+          ) {
+            setHasSubmittedReview(true);
+            setShowReviewRequiredMessage(false);
+            // Store this information to avoid repeated checks
+            localStorage.setItem("has_submitted_review", "true");
+          } else {
+            setShowReviewRequiredMessage(true);
+          }
+        } else if (hasReviewed) {
+          // Fallback to localStorage if userId is not available
+          setHasSubmittedReview(true);
+          setShowReviewRequiredMessage(false);
+        } else {
+          setShowReviewRequiredMessage(true);
+        }
+      } catch (error) {
+        console.error("Error checking user reviews:", error);
+        // Fallback to localStorage in case of error
+        if (hasReviewed) {
+          setHasSubmittedReview(true);
+          setShowReviewRequiredMessage(false);
+        } else {
+          setShowReviewRequiredMessage(true);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkUserReviews();
+  }, [userId, open, hasSubmittedReview]); // Add hasSubmittedReview to dependency array
 
   const handleSnackbarClose = (event, reason) => {
     if (reason === "clickaway") {
@@ -213,32 +253,54 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
 
   // Filtered and searched reviews with department/subject awareness
   const filteredReviews = useMemo(() => {
-    return reviews.filter((review) => {
-      // Basic text search across all fields
-      const searchText = searchTerm.toLowerCase();
-      const matchesSearch =
-        searchTerm === "" ||
-        [review.professor, review.subject, review.review].some((field) =>
-          (field || "").toLowerCase().includes(searchText)
-        );
+    return (
+      reviews
+        .filter((review) => {
+          // Basic text search across all fields
+          const searchText = searchTerm.toLowerCase();
+          const matchesSearch =
+            searchTerm === "" ||
+            [review.professor, review.subject, review.review].some((field) =>
+              (field || "").toLowerCase().includes(searchText)
+            );
 
-      // Department/Subject filter
-      const matchesSubject =
-        filterSubject === "all" || review.subject === filterSubject;
+          // Department/Subject filter
+          const matchesSubject =
+            filterSubject === "all" || review.subject === filterSubject;
 
-      // Rating filter
-      const matchesRating =
-        filterRating === "all" || review.stars === Number(filterRating);
+          // Rating filter
+          const matchesRating =
+            filterRating === "all" || review.stars === Number(filterRating);
 
-      // Professor filter
-      const matchesProfessor =
-        filterProfessor === "all" || review.professor === filterProfessor;
+          // Professor filter
+          const matchesProfessor =
+            filterProfessor === "all" || review.professor === filterProfessor;
 
-      return (
-        matchesSearch && matchesSubject && matchesRating && matchesProfessor
-      );
-    });
-  }, [reviews, searchTerm, filterSubject, filterRating, filterProfessor]);
+          return (
+            matchesSearch && matchesSubject && matchesRating && matchesProfessor
+          );
+        })
+        // Sort reviews - current user's reviews first, then by date (newest first)
+        .sort((a, b) => {
+          // First priority: Current user's reviews come first
+          const aIsCurrentUser = a.userId === userId;
+          const bIsCurrentUser = b.userId === userId;
+
+          if (aIsCurrentUser && !bIsCurrentUser) return -1;
+          if (!aIsCurrentUser && bIsCurrentUser) return 1;
+
+          // Second priority: Sort by date (newest first)
+          return b.createdAt - a.createdAt;
+        })
+    );
+  }, [
+    reviews,
+    searchTerm,
+    filterSubject,
+    filterRating,
+    filterProfessor,
+    userId,
+  ]);
 
   // Group reviews by professor with sorting by average rating
   const groupedReviews = useMemo(() => {
@@ -265,6 +327,21 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
       groups[review.professor].push(review);
     });
 
+    // Sort reviews within each professor group - current user's reviews first
+    Object.keys(groups).forEach((prof) => {
+      groups[prof].sort((a, b) => {
+        // First priority: Current user's reviews come first
+        const aIsCurrentUser = a.userId === userId;
+        const bIsCurrentUser = b.userId === userId;
+
+        if (aIsCurrentUser && !bIsCurrentUser) return -1;
+        if (!aIsCurrentUser && bIsCurrentUser) return 1;
+
+        // Second priority: Sort by date (newest first)
+        return b.createdAt - a.createdAt;
+      });
+    });
+
     // Sort professors by average rating
     return Object.fromEntries(
       Object.entries(groups).sort(([profA, reviewsA], [profB, reviewsB]) => {
@@ -275,7 +352,7 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
         return avgB - avgA; // Sort in descending order
       })
     );
-  }, [filteredReviews]);
+  }, [filteredReviews, userId]);
 
   const hasUserReacted = (reviewId, reactionType) => {
     const review = reviews.find((r) => r.id === reviewId);
@@ -424,6 +501,16 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
     return review.userId === userId;
   };
 
+  // Handle opening the submission form from the prompt
+  const handleSubmitReviewClick = () => {
+    // Close this modal
+    onClose();
+    // Trigger the submission modal (we'll need to pass this as a prop)
+    if (onOpenSubmitForm) {
+      onOpenSubmitForm();
+    }
+  };
+
   return (
     <Dialog
       open={open}
@@ -448,16 +535,47 @@ export const ViewReviewsModal = ({ open, onClose, userId }) => {
               fontWeight: 600,
             }}
           >
-            Submit a Review First
+            Share Your Experience First
           </DialogTitle>
           <DialogContent sx={{ pt: 2, textAlign: "center" }}>
             <Typography variant="body1" sx={{ mb: 3 }}>
-              To see other students&apos; reviews, please share your own
-              experience first.
+              To view other students&apos; reviews, kindly submit a review
+              first! Your insights are valuable to our community.
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              This helps ensure everyone contributes to our community.
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              By sharing your experience, you help other students make informed
+              decisions and contribute to building our supportive academic
+              community.
             </Typography>
+            <Box
+              sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 3 }}
+            >
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSubmitReviewClick}
+                sx={{
+                  px: 3,
+                  borderRadius: 2,
+                  textTransform: "none",
+                  fontWeight: 600,
+                }}
+              >
+                Submit Review
+              </Button>
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={onClose}
+                sx={{
+                  px: 3,
+                  borderRadius: 2,
+                  textTransform: "none",
+                }}
+              >
+                Maybe Later
+              </Button>
+            </Box>
           </DialogContent>
         </>
       ) : (

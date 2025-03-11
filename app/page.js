@@ -129,7 +129,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
   const [showReviewReminderPopup, setShowReviewReminderPopup] = useState(false);
-  const [reminderTimerId, setReminderTimerId] = useState(null);
+  const reminderTimerIdRef = useRef(null);
   const messagesEndRef = useRef(null);
   const muiTheme = useTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
@@ -138,10 +138,14 @@ export default function Home() {
   // Check if user has submitted a review before
   useEffect(() => {
     const hasReviewed = localStorage.getItem("has_submitted_review");
+    const hasSeenWelcome = localStorage.getItem("has_seen_welcome");
+
     if (hasReviewed) {
       setHasSubmittedReview(true);
-    } else {
-      // Show How to Use modal first for new users
+    }
+
+    // Only show welcome modal if user hasn't seen it before
+    if (!hasSeenWelcome) {
       setOpenHowToUseModal(true);
 
       // Set up review reminder timer (10 minutes = 600000 ms)
@@ -149,22 +153,22 @@ export default function Home() {
         setShowReviewReminderPopup(true);
       }, 600000);
 
-      setReminderTimerId(timerId);
+      reminderTimerIdRef.current = timerId;
     }
 
     return () => {
       // Clear the timer when component unmounts or user submits review
-      if (reminderTimerId) {
-        clearTimeout(reminderTimerId);
+      if (reminderTimerIdRef.current) {
+        clearTimeout(reminderTimerIdRef.current);
       }
     };
-  }, [reminderTimerId]);
+  }, []); // Empty dependency array
 
-  // Function to setup the recurring review reminder
+  // Function to setup the recurring reminder
   const setupRecurringReminder = () => {
     // Clear any existing timer
-    if (reminderTimerId) {
-      clearTimeout(reminderTimerId);
+    if (reminderTimerIdRef.current) {
+      clearTimeout(reminderTimerIdRef.current);
     }
 
     // Set new timer for 10 minutes
@@ -172,7 +176,7 @@ export default function Home() {
       setShowReviewReminderPopup(true);
     }, 600000);
 
-    setReminderTimerId(timerId);
+    reminderTimerIdRef.current = timerId;
   };
 
   const scrollToBottom = () => {
@@ -309,9 +313,9 @@ export default function Home() {
       setShowReviewReminderPopup(false);
 
       // Clear any reminder timers
-      if (reminderTimerId) {
-        clearTimeout(reminderTimerId);
-        setReminderTimerId(null);
+      if (reminderTimerIdRef.current) {
+        clearTimeout(reminderTimerIdRef.current);
+        reminderTimerIdRef.current = null;
       }
     } catch (error) {
       console.error("Error submitting review:", error);
@@ -325,9 +329,10 @@ export default function Home() {
   };
 
   // Handle How to Use modal close
-  const handleHowToUseClose = () => {
+  const handleCloseHowToUseModal = () => {
     setOpenHowToUseModal(false);
-    // Don't automatically show rate modal when how to use closes
+    // Set flag in localStorage to indicate the user has seen the welcome modal
+    localStorage.setItem("has_seen_welcome", "true");
   };
 
   // Handle the review reminder popup close
@@ -339,11 +344,8 @@ export default function Home() {
 
   // Handle attempt to view reviews when not yet reviewed
   const handleViewReviewsClick = () => {
-    if (hasSubmittedReview) {
-      setOpenViewModal(true);
-    } else {
-      setOpenRateModal(true);
-    }
+    // Always open the view modal, where we'll show the prompt if needed
+    setOpenViewModal(true);
   };
 
   return (
@@ -873,6 +875,7 @@ export default function Home() {
         open={openViewModal}
         onClose={() => setOpenViewModal(false)}
         userId={userId}
+        onOpenSubmitForm={() => setOpenRateModal(true)}
       />
       <TipsModal
         open={openTipsModal}
@@ -886,7 +889,7 @@ export default function Home() {
       />
       <HowToUseModal
         open={openHowToUseModal}
-        onClose={handleHowToUseClose}
+        onClose={handleCloseHowToUseModal}
         disableClose={false}
       />
       <PrivacyPolicyModal
