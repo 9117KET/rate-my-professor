@@ -99,6 +99,7 @@ let theme = createTheme({
           boxShadow: "none",
           borderRadius: "8px",
           padding: "8px 16px",
+          minHeight: "44px",
           "@media (min-width:600px)": {
             padding: "8px 20px",
           },
@@ -132,6 +133,12 @@ let theme = createTheme({
             "&:hover fieldset": {
               borderColor: "#001B3F",
             },
+            "& input": {
+              padding: "14px 16px",
+              "@media (max-width:600px)": {
+                padding: "16px 14px",
+              },
+            },
           },
           "& .MuiInputLabel-root": {
             fontSize: "0.9rem",
@@ -155,6 +162,8 @@ let theme = createTheme({
           "@media (max-width:600px)": {
             margin: "16px",
             width: "calc(100% - 32px)",
+            maxHeight: "calc(100% - 32px)",
+            overflowY: "auto",
           },
         },
       },
@@ -190,6 +199,61 @@ let theme = createTheme({
           padding: "16px 24px",
           "@media (max-width:600px)": {
             padding: "16px 16px",
+          },
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          padding: "8px",
+          "@media (max-width:600px)": {
+            padding: "12px",
+          },
+        },
+        sizeSmall: {
+          padding: "4px",
+          "@media (max-width:600px)": {
+            padding: "8px",
+          },
+        },
+      },
+    },
+    MuiRating: {
+      styleOverrides: {
+        root: {
+          "@media (max-width:600px)": {
+            fontSize: "1.5rem",
+          },
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          minHeight: "48px",
+          "@media (max-width:600px)": {
+            minHeight: "52px",
+          },
+        },
+      },
+    },
+    MuiListItem: {
+      styleOverrides: {
+        root: {
+          "@media (max-width:600px)": {
+            paddingTop: "12px",
+            paddingBottom: "12px",
+          },
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          height: "32px",
+          "@media (max-width:600px)": {
+            height: "36px",
           },
         },
       },

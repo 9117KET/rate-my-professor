@@ -57,6 +57,7 @@ export const ReviewReply = ({
           alignItems: "flex-start",
           gap: { xs: 0.5, sm: 1 },
           flexDirection: isEditing ? { xs: "column", sm: "row" } : "row",
+          width: "100%",
         }}
       >
         {isEditing ? (
@@ -80,6 +81,9 @@ export const ReviewReply = ({
                 "& .MuiInputBase-root": {
                   fontSize: { xs: "0.85rem", sm: "0.9rem" },
                 },
+                "& .MuiOutlinedInput-root": {
+                  padding: { xs: "10px 12px", sm: "12px 14px" },
+                },
               }}
             />
             <Box sx={{ display: "flex", gap: 1, mt: { xs: 1, sm: 0 } }}>
@@ -89,7 +93,7 @@ export const ReviewReply = ({
                 onClick={handleEditSubmit}
                 sx={{
                   minWidth: { xs: "80px", sm: "60px" },
-                  height: { xs: "30px", sm: "36px" },
+                  height: { xs: "36px", sm: "36px" },
                   fontSize: { xs: "0.75rem", sm: "0.8125rem" },
                 }}
               >
@@ -100,7 +104,7 @@ export const ReviewReply = ({
                 onClick={() => setIsEditing(false)}
                 sx={{
                   minWidth: { xs: "80px", sm: "60px" },
-                  height: { xs: "30px", sm: "36px" },
+                  height: { xs: "36px", sm: "36px" },
                   fontSize: { xs: "0.75rem", sm: "0.8125rem" },
                 }}
               >
@@ -127,7 +131,7 @@ export const ReviewReply = ({
                 onClick={(e) => setAnchorEl(e.currentTarget)}
                 sx={{
                   ml: 0.5,
-                  p: { xs: 0.5, sm: 0.75 },
+                  p: { xs: 0.75, sm: 0.75 },
                   alignSelf: "flex-start",
                 }}
               >
@@ -157,7 +161,7 @@ export const ReviewReply = ({
         onClose={() => setAnchorEl(null)}
         PaperProps={{
           sx: {
-            minWidth: 100,
+            minWidth: 120,
             boxShadow: 2,
             mt: 0.5,
           },
@@ -169,8 +173,9 @@ export const ReviewReply = ({
             setAnchorEl(null);
           }}
           sx={{
-            py: { xs: 0.75, sm: 1 },
+            py: { xs: 1, sm: 1 },
             fontSize: { xs: "0.85rem", sm: "0.9rem" },
+            minHeight: { xs: "48px", sm: "40px" },
           }}
         >
           Edit
@@ -181,8 +186,9 @@ export const ReviewReply = ({
             setAnchorEl(null);
           }}
           sx={{
-            py: { xs: 0.75, sm: 1 },
+            py: { xs: 1, sm: 1 },
             fontSize: { xs: "0.85rem", sm: "0.9rem" },
+            minHeight: { xs: "48px", sm: "40px" },
           }}
         >
           Delete
