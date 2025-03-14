@@ -773,6 +773,7 @@ export const ViewReviewsModal = ({
                                   sx={{
                                     fontSize: { xs: "0.7rem", sm: "0.8rem" },
                                   }}
+                                  suppressHydrationWarning
                                 >
                                   {formatTimestamp(new Date(review.createdAt))}
                                 </Typography>

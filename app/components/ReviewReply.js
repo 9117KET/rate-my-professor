@@ -149,6 +149,7 @@ export const ReviewReply = ({
           mt: 0.5,
           fontSize: { xs: "0.7rem", sm: "0.75rem" },
         }}
+        suppressHydrationWarning
       >
         {formatTimestamp(new Date(reply.createdAt))}
         {reply.lastEdited &&

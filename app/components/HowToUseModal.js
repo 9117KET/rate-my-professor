@@ -51,7 +51,7 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
 
       <DialogContent sx={{ pt: 2 }}>
         <Typography variant="body1" sx={{ mb: 2, textAlign: "center" }}>
-          Here&apos;s how to make the most of our platform:
+          Here&apos;s how to make the most of this platform:
         </Typography>
         <List sx={{ py: 0 }}>
           <ListItem sx={{ py: 1 }}>

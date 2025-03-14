@@ -13,6 +13,7 @@ import {
   Divider,
   useTheme,
   useMediaQuery,
+  Link,
 } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import SecurityIcon from "@mui/icons-material/Security";
@@ -59,7 +60,11 @@ export const ImprintModal = ({ open, onClose }) => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Typography variant="subtitle1" fontWeight={600}>
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={600}
+                  component="div"
+                >
                   Created By
                 </Typography>
               }
@@ -73,10 +78,15 @@ export const ImprintModal = ({ open, onClose }) => {
                       fontWeight: 500,
                       color: "primary.main",
                     }}
+                    component="div"
                   >
                     Kinlo ET
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                  >
                     Constructor University Bremen Student
                   </Typography>
                 </Box>
@@ -93,12 +103,20 @@ export const ImprintModal = ({ open, onClose }) => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Typography variant="subtitle1" fontWeight={600}>
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={600}
+                  component="div"
+                >
                   About This Platform
                 </Typography>
               }
               secondary={
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  component="div"
+                >
                   A student-driven platform for Constructor University Bremen,
                   created to help students make informed decisions about courses
                   and professors.
@@ -116,12 +134,20 @@ export const ImprintModal = ({ open, onClose }) => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Typography variant="subtitle1" fontWeight={600}>
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={600}
+                  component="div"
+                >
                   Privacy & Anonymity
                 </Typography>
               }
               secondary={
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  component="div"
+                >
                   • All reviews are anonymous
                   <br />
                   • No personal data is collected
@@ -141,16 +167,23 @@ export const ImprintModal = ({ open, onClose }) => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Typography variant="subtitle1" fontWeight={600}>
-                  Review Guidelines
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={600}
+                  component="div"
+                >
+                  Guidelines & Community Standards
                 </Typography>
               }
               secondary={
-                <Typography variant="body2" color="text.secondary">
-                  • Focus on teaching style and course content
-                  <br />
-                  • No harassment or personal attacks
-                  <br />• No sharing of private information
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  component="div"
+                >
+                  Please be respectful and constructive in your reviews. Focus
+                  on academic aspects rather than personal characteristics.
+                  Abusive or inappropriate content will be removed.
                 </Typography>
               }
             />
@@ -188,7 +221,7 @@ export const ImprintModal = ({ open, onClose }) => {
             textTransform: "none",
           }}
         >
-          I Understand
+          Got It
         </Button>
       </DialogActions>
     </Dialog>

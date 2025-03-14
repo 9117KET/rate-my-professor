@@ -261,6 +261,7 @@ export const TipsModal = ({ open, onClose }) => {
                   >
                     <Typography
                       variant="body1"
+                      component="div"
                       sx={{
                         mb: 1,
                         fontSize: { xs: "0.9rem", sm: "1rem" },
@@ -292,6 +293,7 @@ export const TipsModal = ({ open, onClose }) => {
                       fontSize: { xs: "0.7rem", sm: "0.75rem" },
                       alignSelf: "flex-end",
                     }}
+                    suppressHydrationWarning
                   >
                     {formatTimestamp(tip.createdAt)}
                     {tip.lastEdited &&

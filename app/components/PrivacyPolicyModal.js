@@ -13,7 +13,14 @@ import {
   Divider,
   useMediaQuery,
   useTheme,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
+import DataUsageIcon from "@mui/icons-material/DataUsage";
+import StorageIcon from "@mui/icons-material/Storage";
+import WebIcon from "@mui/icons-material/Web";
 
 export const PrivacyPolicyModal = ({ open, onClose }) => {
   const theme = useTheme();
@@ -27,109 +34,183 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
       fullWidth
       fullScreen={isMobile}
       scroll="paper"
-      aria-labelledby="privacy-policy-title"
+      sx={{
+        "& .MuiDialog-paper": {
+          margin: { xs: 1, sm: 2 },
+          width: { xs: "95%", sm: "90%" },
+          maxHeight: { xs: "95vh", sm: "90vh" },
+          borderRadius: { xs: 1, sm: 2 },
+        },
+      }}
     >
       <DialogTitle
-        id="privacy-policy-title"
         sx={{
-          bgcolor: theme.palette.primary.main,
-          color: theme.palette.primary.contrastText,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          py: 1.5,
+          fontSize: { xs: "1.2rem", sm: "1.5rem" },
+          pt: { xs: 2, sm: 3 },
+          pb: { xs: 1, sm: 2 },
+          textAlign: "center",
+          fontWeight: 600,
         }}
       >
-        <Typography variant="h6" component="h2">
-          Privacy Policy
-        </Typography>
+        🔒 Privacy Policy
       </DialogTitle>
 
-      <DialogContent dividers sx={{ p: 2 }}>
-        <Typography variant="body2" paragraph>
-          At Rate My Professor, we value your privacy and are committed to
-          protecting your personal information. This summarized policy explains
-          our data practices.
-        </Typography>
+      <DialogContent>
+        <List>
+          {/* Data We Collect Section */}
+          <ListItem sx={{ pt: 1 }}>
+            <ListItemIcon>
+              <DataUsageIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={600}
+                  component="div"
+                >
+                  Data We Collect
+                </Typography>
+              }
+              secondary={
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  component="div"
+                >
+                  • Anonymous user id (stored in local storage)
+                  <br />
+                  • User content (reviews, reactions, replies)
+                  <br />
+                  • Usage data (queries, features accessed)
+                  <br />• Basic technical information (for security)
+                </Typography>
+              }
+            />
+          </ListItem>
 
-        <Divider sx={{ my: 2 }} />
+          <Divider sx={{ my: 1 }} />
 
-        <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
-          Data We Collect
-        </Typography>
-        <Typography variant="body2" component="ul" sx={{ pl: 2, mb: 2 }}>
-          <li>Anonymous user identifier (stored in local storage)</li>
-          <li>User content (reviews, reactions, replies)</li>
-          <li>Usage data (queries, features accessed)</li>
-          <li>Basic technical information (for security)</li>
-        </Typography>
+          {/* How We Use Your Data Section */}
+          <ListItem>
+            <ListItemIcon>
+              <StorageIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={600}
+                  component="div"
+                >
+                  How We Use Your Data
+                </Typography>
+              }
+              secondary={
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  component="div"
+                >
+                  • Provide and improve the services
+                  <br />
+                  • Display professor reviews to other users
+                  <br />
+                  • Power AI assistant features
+                  <br />• Prevent spam and abuse
+                </Typography>
+              }
+            />
+          </ListItem>
 
-        <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
-          How We Use Your Data
-        </Typography>
-        <Typography variant="body2" component="ul" sx={{ pl: 2, mb: 2 }}>
-          <li>Provide and improve our services</li>
-          <li>Display professor reviews to other users</li>
-          <li>Power AI assistant features</li>
-          <li>Prevent spam and abuse</li>
-        </Typography>
+          <Divider sx={{ my: 1 }} />
 
-        <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
-          Your Rights
-        </Typography>
-        <Typography variant="body2" component="ul" sx={{ pl: 2, mb: 2 }}>
-          <li>Access your content via &quot;My Content&quot; section</li>
-          <li>Delete individual items or all your data</li>
-          <li>Export your data</li>
-        </Typography>
+          {/* Third-Party Services Section */}
+          <ListItem>
+            <ListItemIcon>
+              <WebIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={600}
+                  component="div"
+                >
+                  Third-Party Services
+                </Typography>
+              }
+              secondary={
+                <Box sx={{ mt: 0.5 }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                  >
+                    •{" "}
+                    <Link
+                      href="https://firebase.google.com/support/privacy"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      Firebase
+                    </Link>
+                    : Database storage
+                    <br />•{" "}
+                    <Link
+                      href="https://openai.com/policies/privacy-policy"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      OpenAI
+                    </Link>
+                    : AI assistant
+                    <br />•{" "}
+                    <Link
+                      href="https://www.pinecone.io/privacy/"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      Pinecone
+                    </Link>
+                    : Vector database
+                  </Typography>
+                </Box>
+              }
+            />
+          </ListItem>
+        </List>
 
-        <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
-          Third-Party Services
-        </Typography>
-        <Typography variant="body2" component="ul" sx={{ pl: 2, mb: 1 }}>
-          <li>
-            <Link
-              href="https://firebase.google.com/support/privacy"
-              target="_blank"
-              rel="noopener"
-            >
-              Firebase
-            </Link>
-            : Database storage
-          </li>
-          <li>
-            <Link
-              href="https://openai.com/policies/privacy-policy"
-              target="_blank"
-              rel="noopener"
-            >
-              OpenAI
-            </Link>
-            : AI assistant
-          </li>
-          <li>
-            <Link
-              href="https://www.pinecone.io/privacy/"
-              target="_blank"
-              rel="noopener"
-            >
-              Pinecone
-            </Link>
-            : Vector database
-          </li>
-        </Typography>
-
-        <Typography
-          variant="body2"
-          sx={{ fontStyle: "italic", mt: 2, fontSize: "0.75rem" }}
+        <Box
+          sx={{
+            mt: 2,
+            p: 2,
+            bgcolor: "grey.100",
+            borderRadius: 1,
+            border: "1px solid",
+            borderColor: "grey.300",
+          }}
         >
-          Last Updated: {new Date().toLocaleDateString()}
-        </Typography>
+          <Typography variant="caption" color="text.secondary" display="block">
+            Last Updated: {new Date().toLocaleDateString()}
+          </Typography>
+        </Box>
       </DialogContent>
 
-      <DialogActions sx={{ py: 1 }}>
-        <Button onClick={onClose} color="primary" size="small">
-          Close
+      <DialogActions sx={{ px: 3, pb: 3 }}>
+        <Button
+          variant="contained"
+          onClick={onClose}
+          fullWidth
+          size="large"
+          sx={{
+            borderRadius: 2,
+            py: 1.5,
+            fontSize: "1rem",
+            textTransform: "none",
+          }}
+        >
+          Got It
         </Button>
       </DialogActions>
     </Dialog>
