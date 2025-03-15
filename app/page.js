@@ -36,6 +36,10 @@ import { userTrackingService } from "./services/userTrackingService";
 import { reviewsService } from "./services/reviewsService";
 import { PrivacyPolicyModal } from "./components/PrivacyPolicyModal";
 import { PrivacyConsentBanner } from "./components/PrivacyConsentBanner";
+import {
+  FirstTimeVisitModal,
+  isFirstTimeVisit,
+} from "./components/FirstTimeVisitModal";
 
 // Enhanced color palette
 const theme = {
@@ -139,6 +143,7 @@ export default function Home() {
   const [openImprintModal, setOpenImprintModal] = useState(false);
   const [openHowToUseModal, setOpenHowToUseModal] = useState(false);
   const [openPrivacyModal, setOpenPrivacyModal] = useState(false);
+  const [openFirstVisitModal, setOpenFirstVisitModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
   const [showReviewReminderPopup, setShowReviewReminderPopup] = useState(false);
@@ -148,20 +153,24 @@ export default function Home() {
   const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
   const [userId, setUserId] = useState(null);
 
-  // Check if user has submitted a review before
+  // Check for first-time visitor and set up other initial state
   useEffect(() => {
     const hasReviewed = localStorage.getItem("has_submitted_review");
-    const hasSeenWelcome = localStorage.getItem("has_seen_welcome");
 
     if (hasReviewed) {
       setHasSubmittedReview(true);
     }
 
-    // Only show welcome modal if user hasn't seen it before
-    if (!hasSeenWelcome) {
-      setOpenHowToUseModal(true);
+    // First-time visitor flow:
+    // 1. Privacy notice (handled by PrivacyConsentBanner component)
+    // 2. Welcome/how-to-use modal (triggered by privacy consent)
+    // 3. First-time visit modal for rating professors (triggered after welcome modal)
 
-      // Set up review reminder timer (10 minutes = 600000 ms)
+    // Set up review reminder timer if needed (10 minutes = 600000 ms)
+    const hasSeenWelcome = localStorage.getItem("has_seen_welcome");
+    const privacyConsent = userTrackingService.getPrivacyConsent();
+
+    if (hasSeenWelcome && privacyConsent?.consented && !hasReviewed) {
       const timerId = setTimeout(() => {
         setShowReviewReminderPopup(true);
       }, 600000);
@@ -346,6 +355,11 @@ export default function Home() {
     setOpenHowToUseModal(false);
     // Set flag in localStorage to indicate the user has seen the welcome modal
     localStorage.setItem("has_seen_welcome", "true");
+
+    // After welcome modal is closed, check if we should show the first-time visit modal
+    if (isFirstTimeVisit()) {
+      setOpenFirstVisitModal(true);
+    }
   };
 
   // Handle the review reminder popup close
@@ -359,6 +373,20 @@ export default function Home() {
   const handleViewReviewsClick = () => {
     // Always open the view modal, where we'll show the prompt if needed
     setOpenViewModal(true);
+  };
+
+  const handleFirstVisitModalClose = () => {
+    setOpenFirstVisitModal(false);
+    // Now that first visit is handled, see if we should show the welcome modal
+    const hasSeenWelcome = localStorage.getItem("has_seen_welcome");
+    if (!hasSeenWelcome) {
+      setOpenHowToUseModal(true);
+    }
+  };
+
+  const handlePrivacyConsent = () => {
+    // When privacy consent is given, show the welcome/how-to-use modal
+    setOpenHowToUseModal(true);
   };
 
   return (
@@ -910,7 +938,10 @@ export default function Home() {
         open={openPrivacyModal}
         onClose={() => setOpenPrivacyModal(false)}
       />
-      <PrivacyConsentBanner onPrivacyClick={() => setOpenPrivacyModal(true)} />
+      <PrivacyConsentBanner
+        onPrivacyClick={() => setOpenPrivacyModal(true)}
+        onConsent={handlePrivacyConsent}
+      />
       <Box
         component="footer"
         sx={{
@@ -1043,6 +1074,10 @@ export default function Home() {
           </Button>
         </DialogActions>
       </Dialog>
+      <FirstTimeVisitModal
+        open={openFirstVisitModal}
+        onClose={handleFirstVisitModalClose}
+      />
     </Box>
   );
 }

@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { userTrackingService } from "../services/userTrackingService";
 
-export const PrivacyConsentBanner = ({ onPrivacyClick }) => {
+export const PrivacyConsentBanner = ({ onPrivacyClick, onConsent }) => {
   const [open, setOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -30,6 +30,11 @@ export const PrivacyConsentBanner = ({ onPrivacyClick }) => {
   const handleAccept = () => {
     userTrackingService.setPrivacyConsent(true);
     setOpen(false);
+
+    // Trigger callback to notify parent component that consent has been given
+    if (onConsent) {
+      onConsent();
+    }
   };
 
   const handleViewPrivacy = () => {
