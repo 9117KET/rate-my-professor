@@ -60,7 +60,7 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
             </ListItemIcon>
             <ListItemText
               primary="Read reviews from other students"
-              secondary="Read honest reviews about your best (and worst) professors"
+              secondary="Read honest reviews about best & worst professors on campus"
               primaryTypographyProps={{ component: "div" }}
               secondaryTypographyProps={{ component: "div" }}
             />
@@ -84,7 +84,7 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
             </ListItemIcon>
             <ListItemText
               primary="Share Your Experience"
-              secondary="Help other students make informed decisions"
+              secondary="Help other students make informed decisions from your experience"
               primaryTypographyProps={{ component: "div" }}
               secondaryTypographyProps={{ component: "div" }}
             />
