@@ -36,6 +36,7 @@ import { userTrackingService } from "./services/userTrackingService";
 import { reviewsService } from "./services/reviewsService";
 import { PrivacyPolicyModal } from "./components/PrivacyPolicyModal";
 import { PrivacyConsentBanner } from "./components/PrivacyConsentBanner";
+import { ReportBugModal } from "./components/ReportBugModal";
 import {
   FirstTimeVisitModal,
   isFirstTimeVisit,
@@ -81,7 +82,7 @@ const messageStyles = {
       left: "-10px",
       width: "20px",
       height: "20px",
-      backgroundColor: theme.primary.light,
+      //backgroundColor: theme.primary.light,
       borderBottomRightRadius: "50%",
       zIndex: -1,
     },
@@ -144,6 +145,7 @@ export default function Home() {
   const [openHowToUseModal, setOpenHowToUseModal] = useState(false);
   const [openPrivacyModal, setOpenPrivacyModal] = useState(false);
   const [openFirstVisitModal, setOpenFirstVisitModal] = useState(false);
+  const [openReportBugModal, setOpenReportBugModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
   const [showReviewReminderPopup, setShowReviewReminderPopup] = useState(false);
@@ -1007,6 +1009,19 @@ export default function Home() {
         </Button>
         <Button
           variant="text"
+          onClick={() => setOpenReportBugModal(true)}
+          sx={{
+            color: "white",
+            "&:hover": {
+              bgcolor: "rgba(255,255,255,0.1)",
+              transform: "translateY(-2px)",
+            },
+          }}
+        >
+          Report Bug
+        </Button>
+        <Button
+          variant="text"
           onClick={() => setOpenImprintModal(true)}
           sx={{
             color: "white",
@@ -1077,6 +1092,10 @@ export default function Home() {
       <FirstTimeVisitModal
         open={openFirstVisitModal}
         onClose={handleFirstVisitModalClose}
+      />
+      <ReportBugModal
+        open={openReportBugModal}
+        onClose={() => setOpenReportBugModal(false)}
       />
     </Box>
   );
