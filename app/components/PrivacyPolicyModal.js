@@ -141,7 +141,7 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                 </Typography>
               }
               secondary={
-                <Box sx={{ mt: 0.5 }}>
+                <Box component="div" sx={{ mt: 0.5 }}>
                   <Typography
                     variant="body2"
                     color="text.secondary"
@@ -182,6 +182,7 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
         </List>
 
         <Box
+          component="div"
           sx={{
             mt: 2,
             p: 2,
@@ -191,7 +192,12 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
             borderColor: "grey.300",
           }}
         >
-          <Typography variant="caption" color="text.secondary" display="block">
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            component="div"
+            display="block"
+          >
             Last Updated: {new Date().toLocaleDateString()}
           </Typography>
         </Box>

@@ -17,18 +17,19 @@ const inappropriateWords = [
   "sexist",
   "homophobic",
   "retard",
-  // Negative personal attacks
+  // Negative personal attacks - only include strong negative terms
   "stupid",
   "idiot",
   "dumb",
   "moron",
   "incompetent",
-  "useless",
-  "terrible",
-  "horrible",
-  "worst",
-  "sucks",
-  "hate",
+  // Remove overly broad terms that might appear in legitimate reviews
+  // "useless",
+  // "terrible",
+  // "horrible",
+  // "worst",
+  // "sucks",
+  // "hate",
   // Add more words as needed
 ];
 
@@ -50,11 +51,13 @@ class ContentModerationService {
     const issues = [];
     const words = text.toLowerCase().split(/\s+/);
 
-    // Check for inappropriate words
+    // Check for inappropriate words - using word boundary matching instead of substring
     const foundInappropriateWords = words.filter((word) =>
-      this.inappropriateWords.some((inappropriate) =>
-        word.includes(inappropriate)
-      )
+      this.inappropriateWords.some((inappropriate) => {
+        // Create a proper word boundary regex to match only complete words
+        const wordRegex = new RegExp(`\\b${inappropriate}\\b`, "i");
+        return wordRegex.test(word);
+      })
     );
 
     if (foundInappropriateWords.length > 0) {
@@ -87,17 +90,21 @@ class ContentModerationService {
 
     // Additional checks for potentially discriminatory content
     const discriminatoryPhrases = [
-      "go back to",
-      "you people",
-      "these people",
-      "those people",
-      "not qualified",
-      "doesn't belong",
-      "don't belong",
+      "go back to your",
+      "you people should",
+      "these people should",
+      "those people should",
+      // Remove phrases that could appear in legitimate academic contexts
+      // "not qualified",
+      // "doesn't belong",
+      // "don't belong",
     ];
 
+    // Only check for discriminatory phrases in a more contextual way
     for (const phrase of discriminatoryPhrases) {
-      if (text.toLowerCase().includes(phrase)) {
+      // Use a more precise check that includes context
+      const regex = new RegExp(`\\b${phrase}\\b`, "i");
+      if (regex.test(text.toLowerCase())) {
         issues.push("Review contains potentially discriminatory language");
         break;
       }

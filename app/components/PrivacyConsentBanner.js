@@ -69,7 +69,11 @@ export const PrivacyConsentBanner = ({ onPrivacyClick, onConsent }) => {
           <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
             Privacy Notice
           </Typography>
-          <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
+          <Typography
+            variant="body2"
+            component="div"
+            sx={{ fontSize: "0.8rem" }}
+          >
             We use cookies and local storage to improve your experience. By
             clicking &quot;Accept&quot;, you consent to our{" "}
             <Link
