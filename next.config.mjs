@@ -29,6 +29,21 @@ const nextConfig = {
       process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
   },
 
+  // Configure Image component to allow data URLs
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+    ],
+    dangerouslyAllowSVG: true,
+    contentDispositionType: "attachment",
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    formats: ["image/webp"],
+    domains: [],
+  },
+
   // Force HTTPS in production
   async headers() {
     return [

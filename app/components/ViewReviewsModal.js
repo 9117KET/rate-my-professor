@@ -51,6 +51,15 @@ import { userTrackingService } from "../services/userTrackingService";
 import { contentModerationService } from "../services/contentModerationService";
 import { formatClientError, logClientError } from "../utils/clientErrorHandler";
 
+/**
+ * Modal component for viewing, filtering, and interacting with professor reviews
+ * Provides search, filtering, reactions (thumbs up/down), and reply functionality
+ *
+ * @param {boolean} open - Whether the modal is open
+ * @param {function} onClose - Handler for closing the modal
+ * @param {function} onOpenSubmitForm - Handler to open the review submission form
+ * @param {string} userId - Current user's ID for tracking reactions and permissions
+ */
 export const ViewReviewsModal = ({
   open,
   onClose,
@@ -83,6 +92,7 @@ export const ViewReviewsModal = ({
   const [showReviewRequiredMessage, setShowReviewRequiredMessage] =
     useState(false);
 
+  // Load reviews from Firestore with real-time updates
   useEffect(() => {
     const reviewsRef = collection(db, "reviews");
     // Create a query that orders reviews by timestamp
@@ -125,9 +135,11 @@ export const ViewReviewsModal = ({
 
     migrateReactions();
 
+    // Clean up subscription when component unmounts
     return () => unsubscribe();
   }, []);
 
+  // Load user's previous reactions from localStorage
   useEffect(() => {
     const storedReactions = localStorage.getItem("userReactions");
     if (storedReactions) {
@@ -140,6 +152,7 @@ export const ViewReviewsModal = ({
     }
   }, []);
 
+  // Show notification when reaction migration completes
   useEffect(() => {
     // When migration status changes and is done with count > 0, show the snackbar
     if (migrationStatus.done && migrationStatus.count > 0) {
@@ -147,6 +160,7 @@ export const ViewReviewsModal = ({
     }
   }, [migrationStatus]);
 
+  // Check if user has submitted a review before
   useEffect(() => {
     const hasReviewed = localStorage.getItem("has_submitted_review");
 
@@ -354,6 +368,14 @@ export const ViewReviewsModal = ({
     );
   }, [filteredReviews, userId]);
 
+  /**
+   * Determines if a user has already reacted to a review
+   * Used to highlight reaction buttons and prevent duplicate reactions
+   *
+   * @param {string} reviewId - ID of the review to check
+   * @param {string} reactionType - Type of reaction (thumbsUp or thumbsDown)
+   * @returns {boolean} Whether the user has already made this reaction
+   */
   const hasUserReacted = (reviewId, reactionType) => {
     const review = reviews.find((r) => r.id === reviewId);
     // Ensure reactions and the specific reaction type exist and are arrays
@@ -363,6 +385,13 @@ export const ViewReviewsModal = ({
     );
   };
 
+  /**
+   * Handles user reactions (thumbs up/down) on reviews
+   * Adds or removes reactions based on current state
+   *
+   * @param {string} reviewId - ID of the review to add reaction to
+   * @param {string} reactionType - Type of reaction (thumbsUp or thumbsDown)
+   */
   const handleReaction = async (reviewId, reactionType) => {
     try {
       const reviewRef = doc(db, "reviews", reviewId);
@@ -394,10 +423,23 @@ export const ViewReviewsModal = ({
     }
   };
 
+  /**
+   * Checks if the current user has permission to modify a review
+   * Used to show/hide edit and delete options
+   *
+   * @param {Object} review - The review object to check permissions for
+   * @returns {boolean} Whether the user can modify this review
+   */
   const canModifyReview = (review) => {
     return review.userId === userId;
   };
 
+  /**
+   * Handles the deletion of a review
+   * Only available to the review author or administrators
+   *
+   * @param {string} reviewId - ID of the review to delete
+   */
   const handleDeleteReview = async (reviewId) => {
     if (window.confirm("Are you sure you want to delete this review?")) {
       try {

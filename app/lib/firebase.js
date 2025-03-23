@@ -18,7 +18,8 @@ import { getFirestore } from "firebase/firestore";
 //   NODE_ENV: process.env.NODE_ENV,
 // });
 
-// List of Firebase config variables
+// Required environment variables for Firebase configuration
+// These should be defined in .env.local for local development
 const requiredEnvVars = [
   "NEXT_PUBLIC_FIREBASE_API_KEY",
   "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
@@ -29,7 +30,10 @@ const requiredEnvVars = [
   "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID",
 ];
 
-// Create custom error for configuration issues
+/**
+ * Custom error class for Firebase configuration issues
+ * Used to distinguish configuration errors from runtime errors
+ */
 class FirebaseConfigError extends Error {
   constructor(message) {
     super(message);
@@ -37,7 +41,13 @@ class FirebaseConfigError extends Error {
   }
 }
 
-// Function to safely log errors without exposing sensitive information
+/**
+ * Safely logs Firebase errors without exposing sensitive information
+ * Redacts potentially sensitive data in production environments
+ *
+ * @param {Error} error - The error object to log
+ * @param {string} context - Context information to help identify where the error occurred
+ */
 function logFirebaseError(error, context = "firebase") {
   const sensitiveInfoPattern = /(key|token|secret|password|credential|auth)/i;
 
@@ -62,7 +72,7 @@ function logFirebaseError(error, context = "firebase") {
   }
 }
 
-// Comment out the environment variable check temporarily
+// Environment variable check temporarily commented out
 // if (process.env.NODE_ENV === "development") {
 //   const missingEnvVars = requiredEnvVars.filter(
 //     (varName) => !process.env[varName]
@@ -75,7 +85,8 @@ function logFirebaseError(error, context = "firebase") {
 //   }
 // }
 
-// Your web app's Firebase configuration - temporarily hardcoding for debugging
+// Firebase configuration object with project settings
+// NOTE: In production, these values should come from environment variables
 const firebaseConfig = {
   apiKey: "AIzaSyDSEjW_KrlgT8qHEoaeFYlNbqgvyVETGyY",
   authDomain: "ratemyprofessor-99fb5.firebaseapp.com",
@@ -91,21 +102,22 @@ let app;
 let db = null;
 let analytics = null;
 
-// Add error handling to prevent app crashes if environment variables are missing
+// Initialize Firebase with error handling to prevent app crashes
 try {
-  // Make sure we have the minimum required config
+  // Validate minimum required configuration
   if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
     throw new FirebaseConfigError(
       "Missing required Firebase configuration. Check your environment variables."
     );
   }
 
+  // Initialize Firebase app and Firestore database
   app = initializeApp(firebaseConfig);
   db = getFirestore(app);
 } catch (error) {
   logFirebaseError(error, "initialization");
 
-  // In development, show a more specific error
+  // Show more detailed error information in development
   if (process.env.NODE_ENV === "development") {
     console.error(
       "Firebase initialization failed. The app will continue with limited functionality."
@@ -113,10 +125,15 @@ try {
   }
 }
 
-// Export Firestore instance
+// Export Firestore database instance for use in other modules
 export { db };
 
-// Export function to initialize analytics on client side only
+/**
+ * Lazy-loads Firebase Analytics only on the client side
+ * This prevents SSR issues and reduces initial bundle size
+ *
+ * @returns {object|null} The Analytics instance or null if initialization failed
+ */
 export const initAnalytics = () => {
   if (typeof window !== "undefined" && !analytics && app) {
     try {

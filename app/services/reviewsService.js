@@ -18,9 +18,13 @@ import { embeddingService } from "./embeddingService";
 import { rateLimiterService } from "./rateLimiterService";
 import { logError } from "../utils/errorHandler";
 
+// Collection name in Firestore database
 const COLLECTION_NAME = "reviews";
 
-// Custom error classes to standardize error types
+/**
+ * Base error class for review-related errors
+ * Provides a common type for catching and handling review errors
+ */
 class ReviewError extends Error {
   constructor(message) {
     super(message);
@@ -28,6 +32,10 @@ class ReviewError extends Error {
   }
 }
 
+/**
+ * Error thrown when a user attempts to perform an action they aren't authorized for
+ * Examples: editing someone else's review, deleting another user's content
+ */
 class ReviewPermissionError extends ReviewError {
   constructor(message = "You don't have permission to perform this action") {
     super(message);
@@ -35,6 +43,10 @@ class ReviewPermissionError extends ReviewError {
   }
 }
 
+/**
+ * Error thrown when attempting to access a review that doesn't exist
+ * Used when fetching, updating, or deleting a non-existent review
+ */
 class ReviewNotFoundError extends ReviewError {
   constructor(message = "Review not found") {
     super(message);
@@ -42,6 +54,10 @@ class ReviewNotFoundError extends ReviewError {
   }
 }
 
+/**
+ * Error thrown when a time-based restriction prevents an action
+ * Example: editing a review after the allowed edit window has passed
+ */
 class ReviewTimeWindowError extends ReviewError {
   constructor(message) {
     super(message);
@@ -50,6 +66,12 @@ class ReviewTimeWindowError extends ReviewError {
 }
 
 export const reviewsService = {
+  /**
+   * Retrieves all reviews from the database, ordered by creation date (newest first)
+   * Formats dates and ensures reaction fields exist even if not in the database
+   *
+   * @returns {Array} Array of review objects with consistent structure
+   */
   async getAllReviews() {
     try {
       const reviewsRef = collection(db, COLLECTION_NAME);
@@ -73,6 +95,14 @@ export const reviewsService = {
     }
   },
 
+  /**
+   * Adds a new review to the database
+   * Performs rate limiting to prevent spam
+   * After saving, syncs the review with Pinecone for vector search
+   *
+   * @param {Object} reviewData - Review content and metadata
+   * @returns {Object} The newly created review with ID and server timestamp
+   */
   async addReview(reviewData) {
     try {
       // Check rate limit for review submissions
@@ -119,6 +149,7 @@ export const reviewsService = {
       };
 
       // Sync with Pinecone in the background
+      // Using setTimeout with 0ms to make this non-blocking
       setTimeout(async () => {
         try {
           console.log("Starting Pinecone sync for new review...");
@@ -150,15 +181,10 @@ export const reviewsService = {
         subject: reviewData?.subject,
         contentLength: reviewData?.review?.length,
       });
-
-      // Preserve rate limit error messages as they contain useful information
-      if (error.message.includes("Rate limit exceeded")) {
-        throw error;
-      } else {
-        throw new ReviewError(
-          "Failed to submit review. Please try again later."
-        );
-      }
+      // Re-throw as a standardized error
+      throw new ReviewError(
+        error.message || "Failed to add review. Please try again later."
+      );
     }
   },
 

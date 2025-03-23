@@ -2,7 +2,16 @@ import { reviewsService } from "./reviewsService";
 import { OpenAI } from "openai";
 import { Pinecone } from "@pinecone-database/pinecone";
 
+/**
+ * Service for managing vector embeddings of reviews and other content
+ * Handles synchronization between Firestore and Pinecone vector database
+ * Enables semantic search and AI-powered retrieval of relevant reviews
+ */
 export const embeddingService = {
+  /**
+   * Initialize and return OpenAI and Pinecone clients
+   * @returns {Object} Object containing initialized clients
+   */
   async getClients() {
     console.log(
       "OPENAI_API_KEY:",
@@ -21,6 +30,12 @@ export const embeddingService = {
     return { openai, pc };
   },
 
+  /**
+   * Main synchronization method between Firestore and Pinecone
+   * Gets all reviews from Firestore, creates embeddings, and updates Pinecone
+   * Also removes vectors from Pinecone that no longer exist in Firestore
+   * @returns {boolean} Success status of synchronization
+   */
   async syncFirestoreWithPinecone() {
     try {
       console.log("Starting Pinecone sync...");
@@ -81,6 +96,7 @@ export const embeddingService = {
       const processedData = await Promise.all(
         reviews.map(async (review) => {
           try {
+            // Create embeddings using OpenAI's embedding model
             const response = await openai.embeddings.create({
               input: review.review,
               model: "text-embedding-3-small",
@@ -134,7 +150,11 @@ export const embeddingService = {
     }
   },
 
-  // Alternative implementation if listVectors is not available
+  /**
+   * Alternative synchronization method that deletes all vectors and recreates them
+   * Used as a fallback when the primary sync method fails
+   * @returns {boolean} Success status of synchronization
+   */
   async syncFirestoreWithPineconeFallback() {
     try {
       const { openai, pc } = await this.getClients();
@@ -149,7 +169,7 @@ export const embeddingService = {
         console.log("Cleared all vectors from Pinecone index");
       } catch (deleteError) {
         console.error("Error clearing Pinecone index:", deleteError);
-        // Continue with the upsert even if deletion fails
+        // Continue anyway since we're trying to recover
       }
 
       // Create embeddings for each review
