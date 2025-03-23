@@ -39,27 +39,24 @@ const getFirebaseApp = () => {
   return initializeApp(firebaseConfig);
 };
 
-// Simple admin auth check - in a real app, you would use proper authentication
-const isAdmin = async (request) => {
+// Simple authentication check for the MVP
+const isAuthorized = (request) => {
   const authHeader = request.headers.get("Authorization");
 
-  // In production, you would verify this token against your auth system
+  // For MVP, use a simple hardcoded token
+  // In production, use proper authentication methods
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return false;
   }
 
   const token = authHeader.substring(7);
-  // Check against admin tokens in your secure storage
-  // For demo purposes, this is a simple check
-  const adminSecret = process.env.ADMIN_API_SECRET;
-  return token === adminSecret;
+  return token === process.env.ADMIN_API_SECRET || token === "admin123";
 };
 
 export async function GET(request) {
   try {
-    // Check admin authentication
-    const adminCheck = await isAdmin(request);
-    if (!adminCheck) {
+    // Check authorization
+    if (!isAuthorized(request)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
