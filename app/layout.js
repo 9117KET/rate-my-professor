@@ -11,6 +11,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata = {
   title: "Rate My Professor Assistant",
   description: "AI-powered professor review assistant",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 // Configure viewport settings to control display on mobile devices
