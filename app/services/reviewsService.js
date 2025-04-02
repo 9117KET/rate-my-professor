@@ -1,4 +1,3 @@
-import { db } from "../lib/firebase";
 import {
   collection,
   addDoc,
@@ -13,10 +12,16 @@ import {
   getDoc,
   arrayUnion,
   arrayRemove,
+  where,
+  Timestamp,
 } from "firebase/firestore";
+import { getDb } from "../lib/firebase";
 import { embeddingService } from "./embeddingService";
 import { rateLimiterService } from "./rateLimiterService";
 import { logError } from "../utils/errorHandler";
+import { authService } from "./authService";
+import { syncWithPinecone } from "./pineconeService";
+import { contentModerationService } from "./contentModerationService";
 
 // Collection name in Firestore database
 const COLLECTION_NAME = "reviews";
@@ -44,6 +49,16 @@ class ReviewPermissionError extends ReviewError {
 }
 
 /**
+ * Error thrown when a user attempts to perform an action before authentication
+ */
+class AuthenticationError extends ReviewError {
+  constructor(message = "You must be authenticated to perform this action") {
+    super(message);
+    this.name = "AuthenticationError";
+  }
+}
+
+/**
  * Error thrown when attempting to access a review that doesn't exist
  * Used when fetching, updating, or deleting a non-existent review
  */
@@ -65,6 +80,16 @@ class ReviewTimeWindowError extends ReviewError {
   }
 }
 
+class RateLimitError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "RateLimitError";
+  }
+}
+
+const REVIEW_COOLDOWN_HOURS = 24;
+const MAX_REVIEWS_PER_DAY = 3;
+
 export const reviewsService = {
   /**
    * Retrieves all reviews from the database, ordered by creation date (newest first)
@@ -74,6 +99,7 @@ export const reviewsService = {
    */
   async getAllReviews() {
     try {
+      const db = getDb();
       const reviewsRef = collection(db, COLLECTION_NAME);
       const q = query(reviewsRef, orderBy("createdAt", "desc"));
       const snapshot = await getDocs(q);
@@ -105,91 +131,67 @@ export const reviewsService = {
    */
   async addReview(reviewData) {
     try {
-      // Check rate limit for review submissions
-      const rateLimitResult = await rateLimiterService.checkRateLimit(
-        reviewData.userId,
-        "REVIEW_SUBMISSION"
-      );
-
-      if (!rateLimitResult.allowed) {
-        throw new Error(
-          `Rate limit exceeded for review submissions. You can submit ${
-            rateLimitResult.limit
-          } reviews per ${
-            rateLimitResult.windowMs / 3600000
-          } hours. Please try again in ${Math.ceil(
-            (rateLimitResult.resetTime - Date.now()) / 60000
-          )} minutes.`
+      // Get authenticated user ID
+      const userId = await authService.getCurrentUserId();
+      if (!userId) {
+        throw new AuthenticationError(
+          "User must be authenticated to submit a review"
         );
       }
 
-      const reviewsRef = collection(db, COLLECTION_NAME);
+      // Check rate limiting
+      const recentReviews = await this.getUserRecentReviews(userId);
+      if (recentReviews.length >= MAX_REVIEWS_PER_DAY) {
+        throw new RateLimitError(
+          `You can only submit ${MAX_REVIEWS_PER_DAY} reviews per day`
+        );
+      }
 
-      // Enrich the review data with required fields
-      const enrichedReview = {
+      // Moderate content
+      const moderationResult = await contentModerationService.moderateContent(
+        reviewData.reviewText,
+        userId
+      );
+
+      if (!moderationResult.isValid) {
+        throw new ReviewError(moderationResult.message);
+      }
+
+      // Create review document
+      const reviewDoc = {
         ...reviewData,
-        createdAt: serverTimestamp(),
-        userId: reviewData.userId,
+        userId,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        reviewText: moderationResult.sanitizedText,
         reactions: {
           thumbsUp: [],
           thumbsDown: [],
         },
       };
 
-      // Save to Firestore
-      const docRef = await addDoc(reviewsRef, enrichedReview);
-      console.log(`Added new review with ID: ${docRef.id}`);
+      // Add to Firestore
+      const db = getDb();
+      const docRef = await addDoc(collection(db, "reviews"), reviewDoc);
 
-      // Get the actual document with server timestamp
-      const docSnap = await getDoc(docRef);
-      const savedReview = {
-        id: docRef.id,
-        ...docSnap.data(),
-        createdAt: docSnap.data().createdAt?.toDate() || new Date(),
-      };
+      // Sync with Pinecone
+      try {
+        await syncWithPinecone(docRef.id, reviewDoc);
+      } catch (error) {
+        console.error("Failed to sync with Pinecone:", error);
+        // Don't throw here, as the review was successfully created
+      }
 
-      // Sync with Pinecone in the background
-      // Using setTimeout with 0ms to make this non-blocking
-      setTimeout(async () => {
-        try {
-          console.log("Starting Pinecone sync for new review...");
-          await embeddingService.syncFirestoreWithPinecone();
-          console.log(`Successfully synced review ${docRef.id} to Pinecone`);
-        } catch (syncError) {
-          logError(syncError, "pinecone-sync-after-add", {
-            reviewId: docRef.id,
-          });
-
-          // Attempt alternative sync method
-          try {
-            console.log("Attempting alternative sync method...");
-            await embeddingService.syncFirestoreWithPineconeFallback();
-            console.log("Alternative sync successful");
-          } catch (fallbackError) {
-            logError(fallbackError, "pinecone-sync-fallback", {
-              reviewId: docRef.id,
-            });
-            // Don't throw here since this is background sync
-          }
-        }
-      }, 0);
-
-      return savedReview;
+      return docRef.id;
     } catch (error) {
-      logError(error, "add-review", {
-        professor: reviewData?.professor,
-        subject: reviewData?.subject,
-        contentLength: reviewData?.review?.length,
-      });
-      // Re-throw as a standardized error
-      throw new ReviewError(
-        error.message || "Failed to add review. Please try again later."
-      );
+      console.error("Error adding review:", error);
+      throw error;
     }
   },
 
   async editReview(reviewId, newContent, userId) {
     try {
+      const db = getDb();
       const reviewRef = doc(db, COLLECTION_NAME, reviewId);
       const reviewSnap = await getDoc(reviewRef);
       const reviewData = reviewSnap.data();
@@ -237,83 +239,86 @@ export const reviewsService = {
 
       return true;
     } catch (error) {
-      console.error("Error editing review:", error);
-      throw error;
+      logError(error, "edit-review", { reviewId });
+      throw new ReviewError(
+        error.message || "Failed to edit review. Please try again later."
+      );
     }
   },
 
-  async deleteReview(reviewId, userId) {
+  async deleteReview(reviewId) {
     try {
-      const reviewRef = doc(db, COLLECTION_NAME, reviewId);
-      const reviewSnap = await getDoc(reviewRef);
-      const reviewData = reviewSnap.data();
-
-      // Check if review exists
-      if (!reviewSnap.exists()) {
-        throw new Error("Review not found");
+      const userId = await authService.getCurrentUserId();
+      if (!userId) {
+        throw new AuthenticationError(
+          "User must be authenticated to delete a review"
+        );
       }
 
-      // Check if userId matches
+      const db = getDb();
+      const reviewRef = doc(db, "reviews", reviewId);
+      const reviewDoc = await getDoc(reviewRef);
+
+      if (!reviewDoc.exists()) {
+        throw new ReviewError("Review not found");
+      }
+
+      const reviewData = reviewDoc.data();
       if (reviewData.userId !== userId) {
-        throw new Error("Unauthorized to delete this review");
+        throw new ReviewPermissionError("You can only delete your own reviews");
       }
 
-      // Check if within 2 hours
+      // Check time limit (2 hours)
       const createdAt = reviewData.createdAt.toDate();
       const now = new Date();
       const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
-
       if (hoursDiff > 2) {
-        throw new Error(
-          "Review can only be deleted within 2 hours of creation"
+        throw new ReviewError(
+          "Reviews can only be deleted within 2 hours of creation"
         );
       }
 
       await deleteDoc(reviewRef);
-      console.log(`Deleted review with ID: ${reviewId}`);
 
-      // Sync with Pinecone after deletion
+      // Sync with Pinecone
       try {
-        await embeddingService.syncFirestoreWithPinecone();
-        console.log(
-          `Successfully synced Pinecone after deleting review: ${reviewId}`
-        );
-      } catch (syncError) {
-        console.error(
-          `Error syncing with Pinecone after deleting review: ${reviewId}`,
-          syncError
-        );
-        // We don't throw here to not disrupt the user flow, but we log the error
+        await syncWithPinecone(reviewId, null, true);
+      } catch (error) {
+        console.error("Failed to sync with Pinecone:", error);
+        // Don't throw here, as the review was successfully deleted
       }
-
-      return true;
     } catch (error) {
       console.error("Error deleting review:", error);
       throw error;
     }
   },
 
-  async addReaction(reviewId, reactionType, userId) {
+  async addReaction(reviewId, reactionType) {
     try {
-      // Check rate limit for reactions
-      const rateLimitResult = await rateLimiterService.checkRateLimit(
-        userId,
-        "REVIEW_REACTION"
-      );
-
-      if (!rateLimitResult.allowed) {
-        throw new Error(
-          `Rate limit exceeded for reactions. You can perform ${
-            rateLimitResult.limit
-          } reactions per hour. Please try again in ${Math.ceil(
-            (rateLimitResult.resetTime - Date.now()) / 60000
-          )} minutes.`
+      const userId = await authService.getCurrentUserId();
+      if (!userId) {
+        throw new AuthenticationError(
+          "User must be authenticated to add reactions"
         );
       }
 
-      const reviewRef = doc(db, COLLECTION_NAME, reviewId);
+      const db = getDb();
+      const reviewRef = doc(db, "reviews", reviewId);
+      const reviewDoc = await getDoc(reviewRef);
+
+      if (!reviewDoc.exists()) {
+        throw new ReviewError("Review not found");
+      }
+
+      const reviewData = reviewDoc.data();
+      const currentReactions = reviewData.reactions[reactionType] || [];
+
+      if (currentReactions.includes(userId)) {
+        throw new ReviewError("You have already reacted to this review");
+      }
+
       await updateDoc(reviewRef, {
-        [`reactions.${reactionType}`]: arrayUnion(userId),
+        [`reactions.${reactionType}`]: [...currentReactions, userId],
       });
     } catch (error) {
       console.error("Error adding reaction:", error);
@@ -321,13 +326,34 @@ export const reviewsService = {
     }
   },
 
-  async removeReaction(reviewId, reactionType, userId) {
+  async removeReaction(reviewId, reactionType) {
     try {
-      // For removing reactions, we don't need rate limiting as this
-      // actually reduces load and prevents abuse
-      const reviewRef = doc(db, COLLECTION_NAME, reviewId);
+      const userId = await authService.getCurrentUserId();
+      if (!userId) {
+        throw new AuthenticationError(
+          "User must be authenticated to remove reactions"
+        );
+      }
+
+      const db = getDb();
+      const reviewRef = doc(db, "reviews", reviewId);
+      const reviewDoc = await getDoc(reviewRef);
+
+      if (!reviewDoc.exists()) {
+        throw new ReviewError("Review not found");
+      }
+
+      const reviewData = reviewDoc.data();
+      const currentReactions = reviewData.reactions[reactionType] || [];
+
+      if (!currentReactions.includes(userId)) {
+        throw new ReviewError("You have not reacted to this review");
+      }
+
       await updateDoc(reviewRef, {
-        [`reactions.${reactionType}`]: arrayRemove(userId),
+        [`reactions.${reactionType}`]: currentReactions.filter(
+          (id) => id !== userId
+        ),
       });
     } catch (error) {
       console.error("Error removing reaction:", error);
@@ -353,6 +379,7 @@ export const reviewsService = {
         );
       }
 
+      const db = getDb();
       const reviewRef = doc(db, COLLECTION_NAME, reviewId);
       const now = new Date();
 
@@ -380,6 +407,7 @@ export const reviewsService = {
 
   async deleteReply(reviewId, replyIndex, userId) {
     try {
+      const db = getDb();
       const reviewRef = doc(db, COLLECTION_NAME, reviewId);
       const reviewSnap = await getDoc(reviewRef);
       const reviewData = reviewSnap.data();
@@ -417,6 +445,7 @@ export const reviewsService = {
 
   async editReply(reviewId, replyIndex, newContent, userId) {
     try {
+      const db = getDb();
       const reviewRef = doc(db, COLLECTION_NAME, reviewId);
       const reviewSnap = await getDoc(reviewRef);
       const reviewData = reviewSnap.data();
@@ -456,6 +485,7 @@ export const reviewsService = {
 
   async migrateReactionsFormat() {
     try {
+      const db = getDb();
       const reviewsRef = collection(db, COLLECTION_NAME);
       const snapshot = await getDocs(reviewsRef);
 
@@ -569,6 +599,7 @@ export const reviewsService = {
       }
 
       // Get all reviews
+      const db = getDb();
       const reviewsRef = collection(db, COLLECTION_NAME);
       const q = query(reviewsRef, orderBy("createdAt", "desc"));
       const snapshot = await getDocs(q);
@@ -649,7 +680,7 @@ export const reviewsService = {
 
       // Delete user's reviews
       for (const review of userContent.reviews) {
-        await this.deleteReview(review.id, userId);
+        await this.deleteReview(review.id);
       }
 
       // Remove user's replies from reviews
@@ -659,7 +690,7 @@ export const reviewsService = {
 
       // Remove user's reactions from reviews
       for (const reaction of userContent.reactions) {
-        await this.removeReaction(reaction.reviewId, reaction.type, userId);
+        await this.removeReaction(reaction.reviewId, reaction.type);
       }
 
       // Sync with Pinecone after all deletions
@@ -681,5 +712,25 @@ export const reviewsService = {
         "Failed to delete your content. Please try again later."
       );
     }
+  },
+
+  async getUserRecentReviews(userId) {
+    const db = getDb();
+    const reviewsRef = collection(db, "reviews");
+    const cutoffDate = new Date();
+    cutoffDate.setHours(cutoffDate.getHours() - REVIEW_COOLDOWN_HOURS);
+
+    const q = query(
+      reviewsRef,
+      where("userId", "==", userId),
+      where("createdAt", ">=", Timestamp.fromDate(cutoffDate)),
+      orderBy("createdAt", "desc")
+    );
+
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
   },
 };

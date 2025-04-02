@@ -29,7 +29,7 @@ import {
   Alert,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import { db } from "../lib/firebase";
+import { getDb } from "../lib/firebase";
 import {
   collection,
   onSnapshot,
@@ -50,6 +50,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { userTrackingService } from "../services/userTrackingService";
 import { contentModerationService } from "../services/contentModerationService";
 import { formatClientError, logClientError } from "../utils/clientErrorHandler";
+import { authService } from "../services/authService";
 
 /**
  * Modal component for viewing, filtering, and interacting with professor reviews
@@ -58,14 +59,8 @@ import { formatClientError, logClientError } from "../utils/clientErrorHandler";
  * @param {boolean} open - Whether the modal is open
  * @param {function} onClose - Handler for closing the modal
  * @param {function} onOpenSubmitForm - Handler to open the review submission form
- * @param {string} userId - Current user's ID for tracking reactions and permissions
  */
-export const ViewReviewsModal = ({
-  open,
-  onClose,
-  onOpenSubmitForm,
-  userId,
-}) => {
+export const ViewReviewsModal = ({ open, onClose, onOpenSubmitForm }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [reviews, setReviews] = useState([]);
@@ -91,9 +86,30 @@ export const ViewReviewsModal = ({
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
   const [showReviewRequiredMessage, setShowReviewRequiredMessage] =
     useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
+
+  // Initialize authentication when the modal opens
+  useEffect(() => {
+    if (open) {
+      initializeAuth();
+    }
+  }, [open]);
+
+  const initializeAuth = async () => {
+    try {
+      const userId = await authService.getCurrentUserId();
+      if (!userId) {
+        await authService.initializeAuth();
+      }
+      setCurrentUserId(await authService.getCurrentUserId());
+    } catch (error) {
+      console.error("Failed to initialize authentication:", error);
+    }
+  };
 
   // Load reviews from Firestore with real-time updates
   useEffect(() => {
+    const db = getDb();
     const reviewsRef = collection(db, "reviews");
     // Create a query that orders reviews by timestamp
     const q = query(reviewsRef, orderBy("createdAt", "desc"));
@@ -170,9 +186,11 @@ export const ViewReviewsModal = ({
       if (hasSubmittedReview) return;
 
       try {
-        if (userId) {
+        if (currentUserId) {
           setLoading(true);
-          const userContent = await reviewsService.getUserContent(userId);
+          const userContent = await reviewsService.getUserContent(
+            currentUserId
+          );
 
           // If user has reviews, they can see other reviews
           if (
@@ -209,7 +227,7 @@ export const ViewReviewsModal = ({
     };
 
     checkUserReviews();
-  }, [userId, open, hasSubmittedReview]); // Add hasSubmittedReview to dependency array
+  }, [currentUserId, open, hasSubmittedReview]); // Add hasSubmittedReview to dependency array
 
   const handleSnackbarClose = (event, reason) => {
     if (reason === "clickaway") {
@@ -297,8 +315,8 @@ export const ViewReviewsModal = ({
         // Sort reviews - current user's reviews first, then by date (newest first)
         .sort((a, b) => {
           // First priority: Current user's reviews come first
-          const aIsCurrentUser = a.userId === userId;
-          const bIsCurrentUser = b.userId === userId;
+          const aIsCurrentUser = a.userId === currentUserId;
+          const bIsCurrentUser = b.userId === currentUserId;
 
           if (aIsCurrentUser && !bIsCurrentUser) return -1;
           if (!aIsCurrentUser && bIsCurrentUser) return 1;
@@ -313,7 +331,7 @@ export const ViewReviewsModal = ({
     filterSubject,
     filterRating,
     filterProfessor,
-    userId,
+    currentUserId,
   ]);
 
   // Group reviews by professor with sorting by average rating
@@ -345,8 +363,8 @@ export const ViewReviewsModal = ({
     Object.keys(groups).forEach((prof) => {
       groups[prof].sort((a, b) => {
         // First priority: Current user's reviews come first
-        const aIsCurrentUser = a.userId === userId;
-        const bIsCurrentUser = b.userId === userId;
+        const aIsCurrentUser = a.userId === currentUserId;
+        const bIsCurrentUser = b.userId === currentUserId;
 
         if (aIsCurrentUser && !bIsCurrentUser) return -1;
         if (!aIsCurrentUser && bIsCurrentUser) return 1;
@@ -366,7 +384,7 @@ export const ViewReviewsModal = ({
         return avgB - avgA; // Sort in descending order
       })
     );
-  }, [filteredReviews, userId]);
+  }, [filteredReviews, currentUserId]);
 
   /**
    * Determines if a user has already reacted to a review
@@ -381,7 +399,7 @@ export const ViewReviewsModal = ({
     // Ensure reactions and the specific reaction type exist and are arrays
     return (
       Array.isArray(review?.reactions?.[reactionType]) &&
-      review.reactions[reactionType].includes(userId)
+      review.reactions[reactionType].includes(currentUserId)
     );
   };
 
@@ -394,6 +412,7 @@ export const ViewReviewsModal = ({
    */
   const handleReaction = async (reviewId, reactionType) => {
     try {
+      const db = getDb();
       const reviewRef = doc(db, "reviews", reviewId);
       const review = reviews.find((r) => r.id === reviewId);
 
@@ -405,12 +424,16 @@ export const ViewReviewsModal = ({
         currentReactions[reactionType] = [];
       }
 
-      const hasReacted = currentReactions[reactionType].includes(userId);
+      const hasReacted = currentReactions[reactionType].includes(currentUserId);
 
       if (hasReacted) {
-        await reviewsService.removeReaction(reviewId, reactionType, userId);
+        await reviewsService.removeReaction(
+          reviewId,
+          reactionType,
+          currentUserId
+        );
       } else {
-        await reviewsService.addReaction(reviewId, reactionType, userId);
+        await reviewsService.addReaction(reviewId, reactionType, currentUserId);
       }
     } catch (error) {
       // Log the error with context
@@ -431,7 +454,7 @@ export const ViewReviewsModal = ({
    * @returns {boolean} Whether the user can modify this review
    */
   const canModifyReview = (review) => {
-    return review.userId === userId;
+    return review.userId === currentUserId;
   };
 
   /**
@@ -443,7 +466,7 @@ export const ViewReviewsModal = ({
   const handleDeleteReview = async (reviewId) => {
     if (window.confirm("Are you sure you want to delete this review?")) {
       try {
-        await reviewsService.deleteReview(reviewId, userId);
+        await reviewsService.deleteReview(reviewId);
         // The reviews will update automatically through the onSnapshot listener
       } catch (error) {
         // Log the error with context
@@ -460,7 +483,8 @@ export const ViewReviewsModal = ({
   const handleDeleteReply = async (reviewId, replyIndex) => {
     if (window.confirm("Are you sure you want to delete this reply?")) {
       try {
-        await reviewsService.deleteReply(reviewId, replyIndex, userId);
+        const db = getDb();
+        await reviewsService.deleteReply(reviewId, replyIndex, currentUserId);
         // The replies will update automatically through the onSnapshot listener
       } catch (error) {
         // Log the error with context
@@ -478,10 +502,11 @@ export const ViewReviewsModal = ({
     if (!replyContent[reviewId]?.trim()) return;
 
     try {
+      const db = getDb();
       // Content moderation check
       const moderationResult = await contentModerationService.moderateContent(
         replyContent[reviewId],
-        userId
+        currentUserId
       );
       if (!moderationResult.isValid) {
         setSnackbarMessage(moderationResult.issues.join(". "));
@@ -494,7 +519,7 @@ export const ViewReviewsModal = ({
         {
           content: moderationResult.sanitizedText,
         },
-        userId
+        currentUserId
       );
 
       // Clear the reply input
@@ -518,6 +543,7 @@ export const ViewReviewsModal = ({
 
   const handleEditReply = async (reviewId, replyIndex, newContent) => {
     try {
+      const db = getDb();
       // Content moderation check
       const moderationResult = await contentModerationService.moderateContent(
         newContent
@@ -531,7 +557,7 @@ export const ViewReviewsModal = ({
         reviewId,
         replyIndex,
         moderationResult.sanitizedText,
-        userId
+        currentUserId
       );
     } catch (error) {
       console.error("Error editing reply:", error);
@@ -540,7 +566,7 @@ export const ViewReviewsModal = ({
   };
 
   const canDeleteReview = (review) => {
-    return review.userId === userId;
+    return review.userId === currentUserId;
   };
 
   // Handle opening the submission form from the prompt
@@ -842,7 +868,7 @@ export const ViewReviewsModal = ({
                                     review={review}
                                     reply={reply}
                                     index={replyIndex}
-                                    userId={userId}
+                                    userId={currentUserId}
                                     onDelete={handleDeleteReply}
                                     onEdit={handleEditReply}
                                   />

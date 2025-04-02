@@ -1,4 +1,4 @@
-import { db } from "../lib/firebase";
+import { getDb } from "../lib/firebase";
 import {
   collection,
   addDoc,
@@ -19,6 +19,7 @@ const COLLECTION_NAME = "tips";
 export const tipsService = {
   async getAllTips() {
     try {
+      const db = getDb();
       const tipsRef = collection(db, COLLECTION_NAME);
       const q = query(tipsRef, orderBy("createdAt", "desc"));
       const snapshot = await getDocs(q);
@@ -44,6 +45,7 @@ export const tipsService = {
         throw new Error("User ID is required");
       }
 
+      const db = getDb();
       const tipsRef = collection(db, COLLECTION_NAME);
       const q = query(
         tipsRef,
@@ -73,6 +75,7 @@ export const tipsService = {
         return false;
       }
 
+      const db = getDb();
       const tipRef = doc(db, COLLECTION_NAME, tipId);
       const tipSnap = await getDoc(tipRef);
 
@@ -90,6 +93,7 @@ export const tipsService = {
 
   async addTip(tip) {
     try {
+      const db = getDb();
       const tipsRef = collection(db, COLLECTION_NAME);
       const userId = tip.userId || generateId();
 
@@ -124,6 +128,7 @@ export const tipsService = {
 
   async updateTip(tipId, newContent) {
     try {
+      const db = getDb();
       const tipRef = doc(db, COLLECTION_NAME, tipId);
       await updateDoc(tipRef, {
         content: newContent,
@@ -141,6 +146,7 @@ export const tipsService = {
         throw new Error("User ID is required to delete a tip");
       }
 
+      const db = getDb();
       const tipRef = doc(db, COLLECTION_NAME, tipId);
       const tipSnap = await getDoc(tipRef);
 

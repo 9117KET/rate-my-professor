@@ -22,6 +22,7 @@ import { PROFESSORS, getProfessorSuggestions } from "../utils/professorNames";
 import { userTrackingService } from "../services/userTrackingService";
 import { contentModerationService } from "../services/contentModerationService";
 import { formatClientError, logClientError } from "../utils/clientErrorHandler";
+import { authService } from "../services/authService";
 
 export const SubmitReviewModal = ({
   open,
@@ -43,6 +44,24 @@ export const SubmitReviewModal = ({
   const [subjectError, setSubjectError] = useState("");
   const [professorSuggestions, setProfessorSuggestions] = useState([]);
   const [availableSubjects, setAvailableSubjects] = useState([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Initialize authentication when the modal opens
+  useEffect(() => {
+    if (open) {
+      initializeAuth();
+    }
+  }, [open]);
+
+  const initializeAuth = async () => {
+    try {
+      await authService.initializeAuth();
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error("Failed to initialize authentication:", error);
+      setReviewError("Failed to initialize authentication. Please try again.");
+    }
+  };
 
   const handleReviewChange = (e) => {
     const newReview = e.target.value;
@@ -118,11 +137,9 @@ export const SubmitReviewModal = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const userId = userTrackingService.getOrCreateUserId();
-    if (!userId) {
-      setReviewError(
-        "Unable to identify user. Please try again or refresh the page."
-      );
+
+    if (!isAuthenticated) {
+      setReviewError("Please wait while we initialize authentication...");
       return;
     }
 
@@ -173,8 +190,7 @@ export const SubmitReviewModal = ({
     // Content moderation check
     try {
       const moderationResult = await contentModerationService.moderateContent(
-        formData.review,
-        userId
+        formData.review
       );
 
       if (!moderationResult.isValid) {
@@ -185,7 +201,6 @@ export const SubmitReviewModal = ({
       // Add userId to the review data
       const reviewWithUserId = {
         ...formData,
-        userId: userId,
         review: moderationResult.sanitizedText, // Use the sanitized text
       };
 

@@ -1,0 +1,69 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isWithinTimeLimit(createdAt, hours) {
+      let now = request.time;
+      let created = createdAt;
+      return now.toMillis() - created.toMillis() <= hours * 60 * 60 * 1000;
+    }
+
+    function hasValidContent() {
+      let review = request.resource.data;
+      return review.professorName is string
+        && review.professorName.size() >= 2
+        && review.professorName.size() <= 100
+        && review.subject is string
+        && review.subject.size() >= 2
+        && review.subject.size() <= 100
+        && review.reviewText is string
+        && review.reviewText.size() >= 10
+        && review.reviewText.size() <= 1000
+        && review.rating is number
+        && review.rating >= 1
+        && review.rating <= 5;
+    }
+
+    // Reviews collection rules
+    match /reviews/{reviewId} {
+      // Allow reading reviews
+      allow read: if true;
+      
+      // Allow creating reviews if authenticated and content is valid
+      allow create: if isAuthenticated() 
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.createdAt is timestamp
+        && hasValidContent();
+      
+      // Allow updating reviews if owner and within 24 hours
+      allow update: if isOwner(resource.data.userId)
+        && isWithinTimeLimit(resource.data.createdAt, 24)
+        && request.resource.data.userId == resource.data.userId
+        && hasValidContent();
+      
+      // Allow deleting reviews if owner and within 2 hours
+      allow delete: if isOwner(resource.data.userId)
+        && isWithinTimeLimit(resource.data.createdAt, 2);
+      
+      // Allow adding/removing reactions if authenticated
+      allow update: if isAuthenticated() 
+        && (
+          // Only allow updating reactions field
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['reactions'])
+          // Ensure user can only add/remove their own reactions
+          && request.resource.data.reactions.thumbsUp.hasOnly([request.auth.uid])
+          && request.resource.data.reactions.thumbsDown.hasOnly([request.auth.uid])
+        );
+    }
+  }
+} 

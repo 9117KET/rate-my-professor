@@ -1,8 +1,9 @@
 "use client";
 
 import { ThemeProvider, createTheme, responsiveFontSizes } from "@mui/material";
-import { memo } from "react";
+import { memo, useEffect } from "react";
 import React from "react";
+import { initializeFirebase } from "../lib/firebase";
 
 let theme = createTheme({
   breakpoints: {
@@ -264,14 +265,22 @@ let theme = createTheme({
 // Apply responsive font sizes to the theme
 theme = responsiveFontSizes(theme);
 
-const ClientLayout = memo(({ children }) => {
+const ClientLayout = memo(function ClientLayout({ children }) {
   console.log("ClientLayout rendering");
 
   // Ensure this component only renders on the client side
   const [mounted, setMounted] = React.useState(false);
+  const [firebaseError, setFirebaseError] = React.useState(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setMounted(true);
+    // Initialize Firebase when the component mounts
+    try {
+      initializeFirebase();
+    } catch (error) {
+      console.error("Failed to initialize Firebase:", error);
+      setFirebaseError(error.message);
+    }
   }, []);
 
   // Return placeholder on server-side to avoid hydration mismatch
@@ -279,7 +288,29 @@ const ClientLayout = memo(({ children }) => {
     return <div style={{ visibility: "hidden" }}>{children}</div>;
   }
 
-  return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
+  return (
+    <ThemeProvider theme={theme}>
+      {firebaseError && process.env.NODE_ENV === "development" && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: "#ff5252",
+            color: "white",
+            padding: "8px 16px",
+            zIndex: 9999,
+            fontSize: "14px",
+            textAlign: "center",
+          }}
+        >
+          Firebase initialization failed: {firebaseError}
+        </div>
+      )}
+      {children}
+    </ThemeProvider>
+  );
 });
 
 ClientLayout.displayName = "ClientLayout";

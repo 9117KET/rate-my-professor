@@ -46,14 +46,13 @@ export const ReportBugModal = ({ open, onClose }) => {
   const [error, setError] = useState("");
   const [reportId, setReportId] = useState("");
   const [screenshotData, setScreenshotData] = useState(null);
+  const [remainingSubmissions, setRemainingSubmissions] = useState(null);
   const fileInputRef = useRef(null);
 
   // Get issue types from the service
   const issueTypes = bugReportService.getIssueTypes();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  const handleSubmit = async () => {
     if (!description.trim()) {
       setError("Please provide a description of the issue");
       return;
@@ -63,55 +62,25 @@ export const ReportBugModal = ({ open, onClose }) => {
     setError("");
 
     try {
-      // Prepare the report data
-      const reportData = {
+      const result = await bugReportService.submitBugReport({
         issueType,
         description,
-        stepsToReproduce: stepsToReproduce.trim() || null,
-        expectedBehavior: expectedBehavior.trim() || null,
-        email: email.trim() || null,
-        includeSystemInfo: true, // Always include system info
-        userAgent: navigator.userAgent,
-        screenSize: {
-          width: window.innerWidth,
-          height: window.innerHeight,
-        },
-        url: window.location.href,
-        timestamp: new Date().toISOString(),
-        screenshot: screenshotData,
-      };
-
-      // Send the bug report to our API endpoint
-      const response = await fetch("/api/report-bug", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(reportData),
+        stepsToReproduce,
+        expectedBehavior,
+        email,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        const errorMessage = errorData.details
-          ? `${errorData.error}: ${errorData.details}`
-          : errorData.error || "Failed to submit report";
-        throw new Error(errorMessage);
+      if (result.success) {
+        setSubmitted(true);
+        setReportId(result.reportId);
+        setRemainingSubmissions(result.remaining);
+      } else {
+        setError(result.error);
+        setRemainingSubmissions(result.remaining);
       }
-
-      const result = await response.json();
-      setReportId(result.reportId || "");
-      setSubmitted(true);
-
-      // Reset form after successful submission
-      setIssueType("bug");
-      setDescription("");
-      setStepsToReproduce("");
-      setExpectedBehavior("");
-      setEmail("");
-      setScreenshotData(null);
     } catch (err) {
       console.error("Error submitting bug report:", err);
-      setError(
-        err.message || "Failed to submit report. Please try again later."
-      );
+      setError("Failed to submit bug report. Please try again later.");
     } finally {
       setIsSubmitting(false);
     }
@@ -164,6 +133,7 @@ export const ReportBugModal = ({ open, onClose }) => {
       onClose={handleClose}
       maxWidth="md"
       fullWidth
+      fullScreen={isMobile}
       PaperProps={{
         sx: {
           borderRadius: 2,
@@ -203,6 +173,13 @@ export const ReportBugModal = ({ open, onClose }) => {
                 Report ID: {reportId}
               </Typography>
             )}
+            {remainingSubmissions !== null && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                You have {remainingSubmissions} submission
+                {remainingSubmissions !== 1 ? "s" : ""} remaining in the next 24
+                hours
+              </Typography>
+            )}
             <Button variant="contained" onClick={handleClose} sx={{ mt: 3 }}>
               Close
             </Button>
@@ -212,6 +189,13 @@ export const ReportBugModal = ({ open, onClose }) => {
             {error && (
               <Alert severity="error" sx={{ mb: 2 }}>
                 {error}
+              </Alert>
+            )}
+            {remainingSubmissions !== null && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                You have {remainingSubmissions} submission
+                {remainingSubmissions !== 1 ? "s" : ""} remaining in the next 24
+                hours
               </Alert>
             )}
 
@@ -363,10 +347,17 @@ export const ReportBugModal = ({ open, onClose }) => {
           <Button
             variant="contained"
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !description.trim()}
             startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
           >
-            {isSubmitting ? "Submitting..." : "Submit Report"}
+            {isSubmitting ? (
+              <>
+                <CircularProgress size={20} sx={{ mr: 1 }} />
+                Submitting...
+              </>
+            ) : (
+              "Submit Report"
+            )}
           </Button>
         </DialogActions>
       )}

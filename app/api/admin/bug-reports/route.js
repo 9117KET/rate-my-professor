@@ -1,43 +1,6 @@
 import { NextResponse } from "next/server";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
-import { getFirestore } from "firebase/firestore";
-import { getApp, initializeApp, getApps } from "firebase/app";
-
-// Initialize Firebase if not already initialized
-const getFirebaseApp = () => {
-  if (getApps().length > 0) {
-    return getApp();
-  }
-
-  // Make sure we have the required environment variables
-  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-  const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-  const messagingSenderId =
-    process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
-  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
-  const measurementId = process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID;
-
-  // Check if any required values are missing
-  if (!apiKey || !projectId) {
-    throw new Error(
-      "Missing required Firebase configuration environment variables"
-    );
-  }
-
-  const firebaseConfig = {
-    apiKey,
-    authDomain,
-    projectId,
-    storageBucket,
-    messagingSenderId,
-    appId,
-    measurementId,
-  };
-
-  return initializeApp(firebaseConfig);
-};
+import { getDb } from "../../../lib/firebase";
 
 // Simple authentication check for the MVP
 const isAuthorized = (request) => {
@@ -49,48 +12,63 @@ const isAuthorized = (request) => {
     return false;
   }
 
-  const token = authHeader.substring(7);
-  return token === process.env.ADMIN_API_SECRET || token === "admin123";
+  const token = authHeader.split(" ")[1];
+  return token === "admin123"; // This should be replaced with proper auth in production
 };
 
 export async function GET(request) {
   try {
     // Check authorization
     if (!isAuthorized(request)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return new NextResponse(
+        JSON.stringify({
+          error: "Unauthorized",
+        }),
+        {
+          status: 401,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
-    const maxResults = parseInt(
-      request.nextUrl.searchParams.get("limit") || "100"
-    );
+    const db = getDb();
+    const reportsRef = collection(db, "bugReports");
+    const q = query(reportsRef, orderBy("timestamp", "desc"), limit(100));
+    const querySnapshot = await getDocs(q);
 
-    // Get bug reports from Firestore
-    const app = getFirebaseApp();
-    const db = getFirestore(app);
-
-    const reportsQuery = query(
-      collection(db, "bug_reports"),
-      orderBy("timestamp", "desc"),
-      limit(maxResults)
-    );
-
-    const snapshot = await getDocs(reportsQuery);
     const reports = [];
-
-    snapshot.forEach((doc) => {
+    querySnapshot.forEach((doc) => {
       reports.push({
         id: doc.id,
         ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate()?.toISOString() || null,
       });
     });
 
-    return NextResponse.json({ reports });
+    return new NextResponse(
+      JSON.stringify({
+        reports,
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching bug reports:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch bug reports" },
-      { status: 500 }
+    return new NextResponse(
+      JSON.stringify({
+        error: "Failed to fetch bug reports",
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
     );
   }
 }
