@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Allow users to read and write their own data
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
+    }
+    
+    // Allow authenticated users to read and create professor reviews
+    match /professors/{professorId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+    
+    // Allow authenticated users to read and write reviews with ownership checks
+    match /reviews/{reviewId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (
+        isOwner(resource.data.userId) || 
+        // Allow updates for reactions
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']))
+      );
+    }
+    
+    // Allow authenticated users to read and write their own chats
+    match /chats/{chatId} {
+      allow read: if isSignedIn() && isOwner(resource.data.userId);
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+    
+    // Allow authenticated users to read and write tips with ownership checks
+    match /tips/{tipId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+
+    // Allow authenticated users to create bug reports
+    match /bug_reports/{reportId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false; // Only admins can modify bug reports
+    }
+  }
+}
