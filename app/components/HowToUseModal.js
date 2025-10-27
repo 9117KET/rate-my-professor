@@ -59,10 +59,16 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
               <VisibilityOutlinedIcon color="primary" />
             </ListItemIcon>
             <ListItemText
-              primary="Read reviews from other students"
-              secondary="Read honest reviews about best & worst professors on campus"
-              primaryTypographyProps={{ component: "div" }}
-              secondaryTypographyProps={{ component: "div" }}
+              primary={
+                <Typography variant="body1" component="div" fontWeight={500}>
+                  Read reviews from other students
+                </Typography>
+              }
+              secondary={
+                <Typography variant="body2" component="div" color="text.secondary">
+                  Read honest reviews about best & worst professors on campus
+                </Typography>
+              }
             />
           </ListItem>
 
@@ -71,10 +77,16 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
               <SmartToyIcon color="primary" />
             </ListItemIcon>
             <ListItemText
-              primary="Ask Our AI Assistant Anything"
-              secondary="Get personalized course and professor recommendations"
-              primaryTypographyProps={{ component: "div" }}
-              secondaryTypographyProps={{ component: "div" }}
+              primary={
+                <Typography variant="body1" component="div" fontWeight={500}>
+                  Ask Our AI Assistant Anything
+                </Typography>
+              }
+              secondary={
+                <Typography variant="body2" component="div" color="text.secondary">
+                  Get personalized course and professor recommendations
+                </Typography>
+              }
             />
           </ListItem>
 
@@ -83,10 +95,16 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
               <RateReviewOutlinedIcon color="primary" />
             </ListItemIcon>
             <ListItemText
-              primary="Share Your Experience"
-              secondary="Help other students make informed decisions from your experience"
-              primaryTypographyProps={{ component: "div" }}
-              secondaryTypographyProps={{ component: "div" }}
+              primary={
+                <Typography variant="body1" component="div" fontWeight={500}>
+                  Share Your Experience
+                </Typography>
+              }
+              secondary={
+                <Typography variant="body2" component="div" color="text.secondary">
+                  Help other students make informed decisions from your experience
+                </Typography>
+              }
             />
           </ListItem>
         </List>

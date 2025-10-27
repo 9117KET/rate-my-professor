@@ -58,8 +58,8 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
       <DialogContent>
         <List>
           {/* Data We Collect Section */}
-          <ListItem sx={{ pt: 1 }}>
-            <ListItemIcon>
+          <ListItem sx={{ pt: 1, flexDirection: 'column', alignItems: 'flex-start' }}>
+            <ListItemIcon sx={{ minWidth: 40 }}>
               <DataUsageIcon color="primary" />
             </ListItemIcon>
             <ListItemText
@@ -73,18 +73,40 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                 </Typography>
               }
               secondary={
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  component="div"
-                >
-                  • Anonymous user id (stored in local storage)
-                  <br />
-                  • User content (reviews, reactions, replies)
-                  <br />
-                  • Usage data (queries, features accessed)
-                  <br />• Basic technical information (for security)
-                </Typography>
+                <Box component="div">
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                    sx={{ display: 'block' }}
+                  >
+                    • Anonymous user id (stored in local storage)
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                    sx={{ display: 'block' }}
+                  >
+                    • User content (reviews, reactions, replies)
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                    sx={{ display: 'block' }}
+                  >
+                    • Usage data (queries, features accessed)
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                    sx={{ display: 'block' }}
+                  >
+                    • Basic technical information (for security)
+                  </Typography>
+                </Box>
               }
             />
           </ListItem>
@@ -92,8 +114,8 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
           <Divider sx={{ my: 1 }} />
 
           {/* How We Use Your Data Section */}
-          <ListItem>
-            <ListItemIcon>
+          <ListItem sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+            <ListItemIcon sx={{ minWidth: 40 }}>
               <StorageIcon color="primary" />
             </ListItemIcon>
             <ListItemText
@@ -107,18 +129,40 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                 </Typography>
               }
               secondary={
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  component="div"
-                >
-                  • Provide and improve the services
-                  <br />
-                  • Display professor reviews to other users
-                  <br />
-                  • Power AI assistant features
-                  <br />• Prevent spam and abuse
-                </Typography>
+                <Box component="div">
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                    sx={{ display: 'block' }}
+                  >
+                    • Provide and improve the services
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                    sx={{ display: 'block' }}
+                  >
+                    • Display professor reviews to other users
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                    sx={{ display: 'block' }}
+                  >
+                    • Power AI assistant features
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                    sx={{ display: 'block' }}
+                  >
+                    • Prevent spam and abuse
+                  </Typography>
+                </Box>
               }
             />
           </ListItem>
@@ -126,8 +170,8 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
           <Divider sx={{ my: 1 }} />
 
           {/* Third-Party Services Section */}
-          <ListItem>
-            <ListItemIcon>
+          <ListItem sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+            <ListItemIcon sx={{ minWidth: 40 }}>
               <WebIcon color="primary" />
             </ListItemIcon>
             <ListItemText
@@ -146,6 +190,7 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
+                    sx={{ display: 'block' }}
                   >
                     •{" "}
                     <Link
@@ -156,7 +201,14 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                       Firebase
                     </Link>
                     : Database storage
-                    <br />•{" "}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                    sx={{ display: 'block' }}
+                  >
+                    •{" "}
                     <Link
                       href="https://openai.com/policies/privacy-policy"
                       target="_blank"
@@ -165,7 +217,14 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                       OpenAI
                     </Link>
                     : AI assistant
-                    <br />•{" "}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                    sx={{ display: 'block' }}
+                  >
+                    •{" "}
                     <Link
                       href="https://www.pinecone.io/privacy/"
                       target="_blank"

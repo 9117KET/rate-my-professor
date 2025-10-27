@@ -143,17 +143,40 @@ export const ImprintModal = ({ open, onClose }) => {
                 </Typography>
               }
               secondary={
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  component="div"
-                >
-                  • All reviews are anonymous
-                  <br />
-                  • No personal data is collected
-                  <br />• Reviews are stored securely
-                  <br />• Everyone can view submitted reviews
-                </Typography>
+                <Box component="div">
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                    sx={{ display: 'block' }}
+                  >
+                    • All reviews are anonymous
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                    sx={{ display: 'block' }}
+                  >
+                    • No personal data is collected
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                    sx={{ display: 'block' }}
+                  >
+                    • Reviews are stored securely
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component="div"
+                    sx={{ display: 'block' }}
+                  >
+                    • Everyone can view submitted reviews
+                  </Typography>
+                </Box>
               }
             />
           </ListItem>
