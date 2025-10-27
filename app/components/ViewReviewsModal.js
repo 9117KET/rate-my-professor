@@ -29,7 +29,7 @@ import {
   Alert,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import { db } from "../lib/firebase";
+import { db, ensureAuthenticated } from "../lib/firebase";
 import {
   collection,
   onSnapshot,
@@ -94,49 +94,85 @@ export const ViewReviewsModal = ({
 
   // Load reviews from Firestore with real-time updates
   useEffect(() => {
-    const reviewsRef = collection(db, "reviews");
-    // Create a query that orders reviews by timestamp
-    const q = query(reviewsRef, orderBy("createdAt", "desc"));
+    let unsubscribe;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const reviewsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-      }));
-      setReviews(reviewsData);
-      setLoading(false);
-    });
-
-    // Migrate any old reaction formats to new format, but only once
-    const migrateReactions = async () => {
-      // Check if migration already ran in this session
-      const migrationRan = sessionStorage.getItem("reactionsMigrated");
-      if (migrationRan === "true") {
-        console.log(
-          "Reactions migration already ran in this session, skipping"
-        );
-        return;
-      }
-
+    const setupListener = async () => {
       try {
-        setLoading(true); // Keep loading state while migration runs
-        console.log("Starting reactions migration...");
-        const count = await reviewsService.migrateReactionsFormat();
-        setMigrationStatus({ done: true, count });
-        // Mark migration as complete for this session
-        sessionStorage.setItem("reactionsMigrated", "true");
+        // Ensure user is authenticated before setting up listener
+        await ensureAuthenticated();
+
+        const reviewsRef = collection(db, "reviews");
+        // Create a query that orders reviews by timestamp
+        const q = query(reviewsRef, orderBy("createdAt", "desc"));
+
+        unsubscribe = onSnapshot(
+          q,
+          (snapshot) => {
+            const reviewsData = snapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+              createdAt: doc.data().createdAt?.toDate?.() || new Date(),
+            }));
+            setReviews(reviewsData);
+            setLoading(false);
+          },
+          (error) => {
+            console.error("Firestore listener error:", error);
+            if (error.code === "permission-denied") {
+              setSnackbarMessage(
+                "Permission denied. Please refresh the page to reload reviews."
+              );
+              setSnackbarOpen(true);
+            } else {
+              setSnackbarMessage("Failed to load reviews. Please try again.");
+              setSnackbarOpen(true);
+            }
+            setLoading(false);
+          }
+        );
+
+        // Migrate any old reaction formats to new format, but only once
+        const migrateReactions = async () => {
+          // Check if migration already ran in this session
+          const migrationRan = sessionStorage.getItem("reactionsMigrated");
+          if (migrationRan === "true") {
+            console.log(
+              "Reactions migration already ran in this session, skipping"
+            );
+            return;
+          }
+
+          try {
+            setLoading(true); // Keep loading state while migration runs
+            console.log("Starting reactions migration...");
+            const count = await reviewsService.migrateReactionsFormat();
+            setMigrationStatus({ done: true, count });
+            // Mark migration as complete for this session
+            sessionStorage.setItem("reactionsMigrated", "true");
+          } catch (error) {
+            console.error("Error migrating reactions:", error);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        migrateReactions();
       } catch (error) {
-        console.error("Error migrating reactions:", error);
-      } finally {
+        console.error("Error setting up Firestore listener:", error);
+        setSnackbarMessage("Failed to initialize. Please refresh the page.");
+        setSnackbarOpen(true);
         setLoading(false);
       }
     };
 
-    migrateReactions();
+    setupListener();
 
     // Clean up subscription when component unmounts
-    return () => unsubscribe();
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   // Load user's previous reactions from localStorage

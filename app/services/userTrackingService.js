@@ -15,6 +15,34 @@ export const userTrackingService = {
   },
 
   /**
+   * Syncs local user ID with Firebase Auth user ID
+   * Prefers Firebase UID but maintains localStorage for backward compatibility
+   * @param {Object|null} firebaseUser - The Firebase user object from auth.currentUser
+   * @returns {string} The user ID to use (Firebase UID if available, localStorage otherwise)
+   */
+  syncWithFirebaseAuth(firebaseUser) {
+    // Check if we're in a browser environment
+    if (typeof window === "undefined") {
+      throw new Error("This function must be called from the client side");
+    }
+
+    // If no Firebase user, use localStorage ID as fallback
+    if (!firebaseUser) {
+      return this.getOrCreateUserId();
+    }
+
+    // Use Firebase UID as primary identifier
+    const firebaseUid = firebaseUser.uid;
+    const localId = localStorage.getItem(USER_ID_KEY);
+
+    // Update localStorage with Firebase UID
+    // This ensures consistency between Firebase Auth and local storage
+    localStorage.setItem(USER_ID_KEY, firebaseUid);
+
+    return firebaseUid;
+  },
+
+  /**
    * Gets the existing user ID or creates a new one
    * @returns {string} The user ID
    */

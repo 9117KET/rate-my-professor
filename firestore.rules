@@ -2,6 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Helper functions
+    
+    /**
+     * Checks if a user is signed in (authentication is required)
+     * Works with both anonymous and regular authentication
+     * Anonymous users satisfy this condition via Firebase Anonymous Auth
+     */
     function isSignedIn() {
       return request.auth != null;
     }
@@ -24,6 +30,7 @@ service cloud.firestore {
     }
     
     // Allow authenticated users to read and write reviews with ownership checks
+    // Anonymous authenticated users can read and create reviews
     match /reviews/{reviewId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();

@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getAuth, signInAnonymously } from "firebase/auth";
 // Import getAnalytics dynamically on the client side only
 // import { getAnalytics } from "firebase/analytics";
 // TODO: Add SDKs for Firebase products that you want to use
@@ -102,6 +102,7 @@ const firebaseConfig = {
 let app;
 let db = null;
 let auth = null;
+let analytics = null;
 
 // Initialize Firebase with error handling to prevent app crashes
 try {
@@ -139,8 +140,8 @@ try {
   }
 }
 
-// Export Firestore database instance for use in other modules
-export { db };
+// Export Firestore database instance and auth for use in other modules
+export { db, auth };
 
 /**
  * Lazy-loads Firebase Analytics only on the client side
@@ -163,4 +164,41 @@ export const initAnalytics = () => {
     }
   }
   return analytics;
+};
+
+/**
+ * Ensures the user is authenticated anonymously
+ * This is critical for Firestore security rules that require authentication
+ * Uses Firebase Anonymous Authentication for seamless user experience
+ *
+ * @returns {Promise<object|null>} The authenticated user or null if authentication failed
+ */
+export const ensureAuthenticated = async () => {
+  // Check if auth is available
+  if (!auth) {
+    console.warn("Firebase auth is not initialized");
+    return null;
+  }
+
+  // If user is already authenticated, return the current user
+  if (auth.currentUser) {
+    return auth.currentUser;
+  }
+
+  try {
+    // Sign in anonymously - this creates a temporary user session
+    // that satisfies Firestore security rules without requiring user sign-up
+    const result = await signInAnonymously(auth);
+    console.log("Anonymous authentication successful");
+    return result.user;
+  } catch (error) {
+    logFirebaseError(error, "anonymous-auth");
+
+    // Show error in development
+    if (process.env.NODE_ENV === "development") {
+      console.error("Failed to authenticate anonymously:", error);
+    }
+
+    return null;
+  }
 };

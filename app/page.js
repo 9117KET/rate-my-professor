@@ -34,6 +34,7 @@ import { chatService } from "./services/chatService";
 import { HowToUseModal } from "./components/HowToUseModal";
 import { userTrackingService } from "./services/userTrackingService";
 import { reviewsService } from "./services/reviewsService";
+import { ensureAuthenticated } from "./lib/firebase";
 import { PrivacyPolicyModal } from "./components/PrivacyPolicyModal";
 import { PrivacyConsentBanner } from "./components/PrivacyConsentBanner";
 import { ReportBugModal } from "./components/ReportBugModal";
@@ -213,12 +214,27 @@ export default function Home() {
 
   // Initialize user ID on component mount
   useEffect(() => {
-    try {
-      const id = userTrackingService.getOrCreateUserId();
-      setUserId(id);
-    } catch (error) {
-      console.error("Error initializing user ID:", error);
-    }
+    const initAuth = async () => {
+      try {
+        // First, ensure Firebase authentication
+        await ensureAuthenticated();
+
+        // Then get/create user ID
+        const id = userTrackingService.getOrCreateUserId();
+        setUserId(id);
+      } catch (error) {
+        console.error("Error initializing authentication:", error);
+        // Fallback to localStorage-only mode if authentication fails
+        try {
+          const id = userTrackingService.getOrCreateUserId();
+          setUserId(id);
+        } catch (localError) {
+          console.error("Error initializing user ID:", localError);
+        }
+      }
+    };
+
+    initAuth();
   }, []);
 
   const sendMessage = async () => {

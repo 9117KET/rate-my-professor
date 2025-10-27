@@ -647,19 +647,55 @@ export const reviewsService = {
       // Get user content first
       const userContent = await this.getUserContent(userId);
 
-      // Delete user's reviews
+      // Delete user's reviews directly (bypassing time window check for bulk deletion)
       for (const review of userContent.reviews) {
-        await this.deleteReview(review.id, userId);
+        try {
+          const reviewRef = doc(db, COLLECTION_NAME, review.id);
+          const reviewSnap = await getDoc(reviewRef);
+          const reviewData = reviewSnap.data();
+
+          // Verify the review belongs to the user
+          if (reviewSnap.exists() && reviewData.userId === userId) {
+            await deleteDoc(reviewRef);
+            console.log(`Deleted review with ID: ${review.id}`);
+          }
+        } catch (error) {
+          console.error(`Error deleting review ${review.id}:`, error);
+          // Continue with other deletions even if one fails
+        }
       }
 
-      // Remove user's replies from reviews
+      // Remove user's replies from reviews (bypassing time window check)
       for (const reply of userContent.replies) {
-        await this.deleteReply(reply.reviewId, reply.index, userId);
+        try {
+          const reviewRef = doc(db, COLLECTION_NAME, reply.reviewId);
+          const reviewSnap = await getDoc(reviewRef);
+          const reviewData = reviewSnap.data();
+
+          if (!reviewSnap.exists()) continue;
+
+          const replies = reviewData.replies || [];
+          const replyItem = replies[reply.index];
+
+          // Verify ownership before deletion
+          if (replyItem && replyItem.userId === userId) {
+            replies.splice(reply.index, 1);
+            await updateDoc(reviewRef, { replies });
+          }
+        } catch (error) {
+          console.error(`Error deleting reply:`, error);
+          // Continue with other deletions
+        }
       }
 
       // Remove user's reactions from reviews
       for (const reaction of userContent.reactions) {
-        await this.removeReaction(reaction.reviewId, reaction.type, userId);
+        try {
+          await this.removeReaction(reaction.reviewId, reaction.type, userId);
+        } catch (error) {
+          console.error(`Error removing reaction:`, error);
+          // Continue with other operations
+        }
       }
 
       // Sync with Pinecone after all deletions
