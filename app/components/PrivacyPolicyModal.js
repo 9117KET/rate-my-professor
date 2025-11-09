@@ -58,7 +58,9 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
       <DialogContent>
         <List>
           {/* Data We Collect Section */}
-          <ListItem sx={{ pt: 1, flexDirection: 'column', alignItems: 'flex-start' }}>
+          <ListItem
+            sx={{ pt: 1, flexDirection: "column", alignItems: "flex-start" }}
+          >
             <ListItemIcon sx={{ minWidth: 40 }}>
               <DataUsageIcon color="primary" />
             </ListItemIcon>
@@ -78,7 +80,7 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
-                    sx={{ display: 'block' }}
+                    sx={{ display: "block" }}
                   >
                     • Anonymous user id (stored in local storage)
                   </Typography>
@@ -86,7 +88,7 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
-                    sx={{ display: 'block' }}
+                    sx={{ display: "block" }}
                   >
                     • User content (reviews, reactions, replies)
                   </Typography>
@@ -94,7 +96,7 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
-                    sx={{ display: 'block' }}
+                    sx={{ display: "block" }}
                   >
                     • Usage data (queries, features accessed)
                   </Typography>
@@ -102,19 +104,20 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
-                    sx={{ display: 'block' }}
+                    sx={{ display: "block" }}
                   >
                     • Basic technical information (for security)
                   </Typography>
                 </Box>
               }
+              secondaryTypographyProps={{ component: "div" }}
             />
           </ListItem>
 
           <Divider sx={{ my: 1 }} />
 
           {/* How We Use Your Data Section */}
-          <ListItem sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+          <ListItem sx={{ flexDirection: "column", alignItems: "flex-start" }}>
             <ListItemIcon sx={{ minWidth: 40 }}>
               <StorageIcon color="primary" />
             </ListItemIcon>
@@ -134,7 +137,7 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
-                    sx={{ display: 'block' }}
+                    sx={{ display: "block" }}
                   >
                     • Provide and improve the services
                   </Typography>
@@ -142,7 +145,7 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
-                    sx={{ display: 'block' }}
+                    sx={{ display: "block" }}
                   >
                     • Display professor reviews to other users
                   </Typography>
@@ -150,7 +153,7 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
-                    sx={{ display: 'block' }}
+                    sx={{ display: "block" }}
                   >
                     • Power AI assistant features
                   </Typography>
@@ -158,19 +161,20 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
-                    sx={{ display: 'block' }}
+                    sx={{ display: "block" }}
                   >
                     • Prevent spam and abuse
                   </Typography>
                 </Box>
               }
+              secondaryTypographyProps={{ component: "div" }}
             />
           </ListItem>
 
           <Divider sx={{ my: 1 }} />
 
           {/* Third-Party Services Section */}
-          <ListItem sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+          <ListItem sx={{ flexDirection: "column", alignItems: "flex-start" }}>
             <ListItemIcon sx={{ minWidth: 40 }}>
               <WebIcon color="primary" />
             </ListItemIcon>
@@ -190,7 +194,7 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
-                    sx={{ display: 'block' }}
+                    sx={{ display: "block" }}
                   >
                     •{" "}
                     <Link
@@ -206,7 +210,7 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
-                    sx={{ display: 'block' }}
+                    sx={{ display: "block" }}
                   >
                     •{" "}
                     <Link
@@ -222,7 +226,7 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
-                    sx={{ display: 'block' }}
+                    sx={{ display: "block" }}
                   >
                     •{" "}
                     <Link
@@ -236,6 +240,7 @@ export const PrivacyPolicyModal = ({ open, onClose }) => {
                   </Typography>
                 </Box>
               }
+              secondaryTypographyProps={{ component: "div" }}
             />
           </ListItem>
         </List>

@@ -91,6 +91,7 @@ export const ImprintModal = ({ open, onClose }) => {
                   </Typography>
                 </Box>
               }
+              secondaryTypographyProps={{ component: "div" }}
             />
           </ListItem>
 
@@ -148,7 +149,7 @@ export const ImprintModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
-                    sx={{ display: 'block' }}
+                    sx={{ display: "block" }}
                   >
                     • All reviews are anonymous
                   </Typography>
@@ -156,7 +157,7 @@ export const ImprintModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
-                    sx={{ display: 'block' }}
+                    sx={{ display: "block" }}
                   >
                     • No personal data is collected
                   </Typography>
@@ -164,7 +165,7 @@ export const ImprintModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
-                    sx={{ display: 'block' }}
+                    sx={{ display: "block" }}
                   >
                     • Reviews are stored securely
                   </Typography>
@@ -172,12 +173,13 @@ export const ImprintModal = ({ open, onClose }) => {
                     variant="body2"
                     color="text.secondary"
                     component="div"
-                    sx={{ display: 'block' }}
+                    sx={{ display: "block" }}
                   >
                     • Everyone can view submitted reviews
                   </Typography>
                 </Box>
               }
+              secondaryTypographyProps={{ component: "div" }}
             />
           </ListItem>
 
