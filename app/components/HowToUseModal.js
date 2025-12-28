@@ -13,7 +13,7 @@ import {
   useTheme,
   useMediaQuery,
 } from "@mui/material";
-import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
+import RateReviewIcon from "@mui/icons-material/RateReview";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 
@@ -65,7 +65,11 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
                 </Typography>
               }
               secondary={
-                <Typography variant="body2" component="div" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  component="div"
+                  color="text.secondary"
+                >
                   Read honest reviews about best & worst professors on campus
                 </Typography>
               }
@@ -83,7 +87,11 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
                 </Typography>
               }
               secondary={
-                <Typography variant="body2" component="div" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  component="div"
+                  color="text.secondary"
+                >
                   Get personalized course and professor recommendations
                 </Typography>
               }
@@ -92,7 +100,7 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
 
           <ListItem sx={{ py: 1 }}>
             <ListItemIcon>
-              <RateReviewOutlinedIcon color="primary" />
+              <RateReviewIcon color="primary" />
             </ListItemIcon>
             <ListItemText
               primary={
@@ -101,8 +109,13 @@ export const HowToUseModal = ({ open, onClose, disableClose }) => {
                 </Typography>
               }
               secondary={
-                <Typography variant="body2" component="div" color="text.secondary">
-                  Help other students make informed decisions from your experience
+                <Typography
+                  variant="body2"
+                  component="div"
+                  color="text.secondary"
+                >
+                  Help other students make informed decisions from your
+                  experience
                 </Typography>
               }
             />

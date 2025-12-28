@@ -206,26 +206,221 @@ export const embeddingService = {
   },
 
   async queryReviews(userMessage) {
+    // #region agent log
+    fetch("http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: "embeddingService.js:208",
+        message: "queryReviews entry",
+        data: { userMessageLength: userMessage?.length || 0 },
+        timestamp: Date.now(),
+        sessionId: "debug-session",
+        runId: "run1",
+        hypothesisId: "H2",
+      }),
+    }).catch(() => {});
+    // #endregion
     try {
+      // Validate API keys before proceeding
+      if (!process.env.OPENAI_API_KEY) {
+        // #region agent log
+        fetch(
+          "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              location: "embeddingService.js:211",
+              message: "OPENAI_API_KEY missing in queryReviews",
+              data: {},
+              timestamp: Date.now(),
+              sessionId: "debug-session",
+              runId: "run1",
+              hypothesisId: "H1",
+            }),
+          }
+        ).catch(() => {});
+        // #endregion
+        throw new Error("OPENAI_API_KEY is not configured");
+      }
+      if (!process.env.PINECONE_API_KEY) {
+        // #region agent log
+        fetch(
+          "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              location: "embeddingService.js:214",
+              message: "PINECONE_API_KEY missing in queryReviews",
+              data: {},
+              timestamp: Date.now(),
+              sessionId: "debug-session",
+              runId: "run1",
+              hypothesisId: "H1",
+            }),
+          }
+        ).catch(() => {});
+        // #endregion
+        throw new Error("PINECONE_API_KEY is not configured");
+      }
+
       const { openai, pc } = await this.getClients();
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "embeddingService.js:218",
+            message: "After getClients",
+            data: { hasOpenAI: !!openai, hasPc: !!pc },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run1",
+            hypothesisId: "H2",
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       const index = pc.Index("rag");
 
       // Get embedding for user message
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "embeddingService.js:222",
+            message: "Before OpenAI embedding call",
+            data: {},
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run1",
+            hypothesisId: "H2",
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       const embeddingResponse = await openai.embeddings.create({
         input: userMessage,
         model: "text-embedding-3-small",
       });
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "embeddingService.js:227",
+            message: "After OpenAI embedding call",
+            data: {
+              hasEmbedding: !!embeddingResponse?.data?.[0]?.embedding,
+              embeddingLength:
+                embeddingResponse?.data?.[0]?.embedding?.length || 0,
+            },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run1",
+            hypothesisId: "H2",
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
+
+      if (!embeddingResponse?.data?.[0]?.embedding) {
+        throw new Error("Failed to generate embedding for user message");
+      }
 
       // Query Pinecone
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "embeddingService.js:232",
+            message: "Before Pinecone query",
+            data: {},
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run1",
+            hypothesisId: "H2",
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       const queryResponse = await index.query({
         vector: embeddingResponse.data[0].embedding,
         topK: 3,
         includeMetadata: true,
       });
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "embeddingService.js:257",
+            message: "After Pinecone query",
+            data: {
+              matchesCount: queryResponse?.matches?.length || 0,
+              hasMatches: !!queryResponse?.matches,
+            },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run1",
+            hypothesisId: "H2",
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
 
-      return queryResponse.matches;
+      // Return matches or empty array if no matches found
+      return queryResponse.matches || [];
     } catch (error) {
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "embeddingService.js:261",
+            message: "Error in queryReviews catch",
+            data: {
+              errorName: error?.name,
+              errorMessage: error?.message,
+              errorStack: error?.stack?.substring(0, 500),
+            },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run1",
+            hypothesisId: "H2",
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       console.error("Error querying reviews:", error);
+
+      // Provide more specific error messages
+      if (error.message?.includes("API key")) {
+        throw new Error("API key configuration error: " + error.message);
+      }
+      if (
+        error.message?.includes("Pinecone") ||
+        error.message?.includes("index")
+      ) {
+        throw new Error("Vector database connection error: " + error.message);
+      }
+
       throw error;
     }
   },

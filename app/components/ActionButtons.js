@@ -1,9 +1,30 @@
 import { Button, Stack, useMediaQuery, useTheme } from "@mui/material";
-import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
+// #region agent log - Testing with known working icon
+import RateReviewIcon from "@mui/icons-material/RateReview";
+// #endregion
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import TipsAndUpdatesOutlinedIcon from "@mui/icons-material/TipsAndUpdatesOutlined";
 
 export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
+  // #region agent log
+  fetch("http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      location: "ActionButtons.js:6",
+      message: "ActionButtons component rendered",
+      data: {
+        hasOnRateClick: !!onRateClick,
+        hasOnViewClick: !!onViewClick,
+        hasOnTipsClick: !!onTipsClick,
+      },
+      timestamp: Date.now(),
+      sessionId: "debug-session",
+      runId: "run1",
+      hypothesisId: "D",
+    }),
+  }).catch(() => {});
+  // #endregion
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -37,7 +58,7 @@ export const ActionButtons = ({ onRateClick, onViewClick, onTipsClick }) => {
       <Button
         variant="contained"
         startIcon={
-          <RateReviewOutlinedIcon
+          <RateReviewIcon
             sx={{ fontSize: { xs: "0.9rem", sm: "1rem", md: "1.2rem" } }}
           />
         }
