@@ -30,8 +30,12 @@ async function chatHandler(req) {
   }).catch(() => {});
   // #endregion
   try {
+    // Try both OPENAI_API_KEY and OPENAI_API_KEY_NEW (workaround for Vercel caching)
+    const openAIKeyRaw =
+      process.env.OPENAI_API_KEY_NEW || process.env.OPENAI_API_KEY;
+
     // Validate required environment variables
-    if (!process.env.OPENAI_API_KEY) {
+    if (!openAIKeyRaw) {
       // #region agent log
       fetch(
         "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
@@ -59,7 +63,7 @@ async function chatHandler(req) {
     }
 
     // Validate API key format (basic check)
-    const openAIKey = process.env.OPENAI_API_KEY?.trim();
+    const openAIKey = openAIKeyRaw?.trim();
 
     // #region agent log - Log key info safely (first 10 chars + last 4 chars + length)
     const keyPreview = openAIKey

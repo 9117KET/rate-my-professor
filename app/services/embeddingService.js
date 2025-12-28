@@ -13,7 +13,10 @@ export const embeddingService = {
    * @returns {Object} Object containing initialized clients
    */
   async getClients() {
-    const apiKey = process.env.OPENAI_API_KEY?.trim() || "";
+    // Try both OPENAI_API_KEY and OPENAI_API_KEY_NEW (workaround for Vercel caching)
+    const apiKey =
+      (process.env.OPENAI_API_KEY_NEW || process.env.OPENAI_API_KEY)?.trim() ||
+      "";
     const keyPreview = apiKey
       ? `${apiKey.substring(0, 10)}...${apiKey.substring(
           apiKey.length - 4
