@@ -9,26 +9,6 @@ import {
 } from "../../utils/errorHandler";
 
 async function chatHandler(req) {
-  // #region agent log
-  fetch("http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      location: "route.js:11",
-      message: "chatHandler entry",
-      data: {
-        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
-        hasPineconeKey: !!process.env.PINECONE_API_KEY,
-        openAIKeyLength: process.env.OPENAI_API_KEY?.length || 0,
-        pineconeKeyLength: process.env.PINECONE_API_KEY?.length || 0,
-      },
-      timestamp: Date.now(),
-      sessionId: "debug-session",
-      runId: "run1",
-      hypothesisId: "H1",
-    }),
-  }).catch(() => {});
-  // #endregion
   try {
     // Try both OPENAI_API_KEY and OPENAI_API_KEY_NEW (workaround for Vercel caching)
     let openAIKeyRaw =
@@ -36,24 +16,6 @@ async function chatHandler(req) {
 
     // Validate required environment variables
     if (!openAIKeyRaw) {
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "route.js:14",
-            message: "OPENAI_API_KEY missing",
-            data: {},
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "H1",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
       logError(new Error("OPENAI_API_KEY is not configured"), "chat-api");
       return createErrorResponse(
         new Error("OpenAI API key is not configured"),
@@ -109,31 +71,6 @@ async function chatHandler(req) {
     // Extract a valid key (handles concatenated/corrupted keys)
     const openAIKey = extractValidOpenAIKey(openAIKeyRaw) || "";
 
-    // #region agent log - Log key info safely (first 10 chars + last 4 chars + length)
-    const keyPreview = openAIKey
-      ? `${openAIKey.substring(0, 10)}...${openAIKey.substring(
-          openAIKey.length - 4
-        )} (length: ${openAIKey.length})`
-      : "MISSING";
-    fetch("http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "route.js:62",
-        message: "API key validation",
-        data: {
-          keyPreview: keyPreview,
-          keyLength: openAIKey?.length || 0,
-          startsWithSk: openAIKey?.startsWith("sk-") || false,
-        },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "H1",
-      }),
-    }).catch(() => {});
-    // #endregion
-
     // Validate API key format - accept both sk- and sk-proj- formats
     const isValidFormat =
       openAIKey &&
@@ -150,6 +87,11 @@ async function chatHandler(req) {
       const expectedFormat = openAIKey?.startsWith("sk-proj-")
         ? "sk-proj- format (100-200 characters)"
         : "sk- format (40-60 characters) or sk-proj- format (100-200 characters)";
+      const keyPreview = openAIKey
+        ? `${openAIKey.substring(0, 10)}...${openAIKey.substring(
+            openAIKey.length - 4
+          )} (length: ${openAIKey.length})`
+        : "MISSING";
       logError(
         new Error(
           `OPENAI_API_KEY appears to be invalid. Preview: ${keyPreview}, Length: ${
@@ -178,24 +120,6 @@ async function chatHandler(req) {
     }
 
     if (!process.env.PINECONE_API_KEY) {
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "route.js:23",
-            message: "PINECONE_API_KEY missing",
-            data: {},
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "H1",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
       logError(new Error("PINECONE_API_KEY is not configured"), "chat-api");
       return createErrorResponse(
         new Error("Pinecone API key is not configured"),
@@ -284,37 +208,7 @@ async function chatHandler(req) {
     });
 
     // Get similar reviews using RAG
-    // #region agent log
-    fetch("http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "route.js:112",
-        message: "Before queryReviews call",
-        data: { userMessageLength: userMessage.length },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "H2",
-      }),
-    }).catch(() => {});
-    // #endregion
     const matches = await embeddingService.queryReviews(userMessage);
-    // #region agent log
-    fetch("http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "route.js:113",
-        message: "After queryReviews call",
-        data: { matchesCount: matches?.length || 0, hasMatches: !!matches },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "H2",
-      }),
-    }).catch(() => {});
-    // #endregion
 
     // Format context from similar reviews
     // Handle empty matches gracefully
@@ -334,21 +228,6 @@ async function chatHandler(req) {
         : "No matching professor reviews found in the database.";
 
     // Create chat completion
-    // #region agent log
-    fetch("http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "route.js:132",
-        message: "Before OpenAI chat completion",
-        data: { contextLength: context.length, messagesCount: messages.length },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "H3",
-      }),
-    }).catch(() => {});
-    // #endregion
     const response = await openai.chat.completions.create({
       model: "gpt-4-turbo-preview",
       messages: [
@@ -381,21 +260,6 @@ Here are relevant professor reviews to inform your responses:\n\n${context}`,
       presence_penalty: 0.1,
       frequency_penalty: 0.1,
     });
-    // #region agent log
-    fetch("http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "route.js:163",
-        message: "After OpenAI chat completion created",
-        data: { hasResponse: !!response },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "H3",
-      }),
-    }).catch(() => {});
-    // #endregion
 
     // Create and return the stream
     const stream = new ReadableStream({
@@ -427,25 +291,6 @@ Here are relevant professor reviews to inform your responses:\n\n${context}`,
       },
     });
   } catch (error) {
-    // #region agent log
-    fetch("http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "route.js:194",
-        message: "Catch block - error occurred",
-        data: {
-          errorName: error?.name,
-          errorMessage: error?.message,
-          errorStack: error?.stack?.substring(0, 500),
-        },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "H4",
-      }),
-    }).catch(() => {});
-    // #endregion
     // Log the error with full details for debugging
     logError(error, "chat-api", {
       userId: req.headers.get("x-anonymous-user-id"),

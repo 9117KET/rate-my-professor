@@ -85,37 +85,6 @@ export const embeddingService = {
     const cleanedLength = apiKey.length;
     const hadHiddenChars = originalLength !== cleanedLength;
 
-    // #region agent log
-    fetch("http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "embeddingService.js:15",
-        message: "getClients - API key check",
-        data: {
-          keyPreview: keyPreview,
-          keyLength: apiKey.length,
-          hasKey: !!apiKey,
-          startsWithSk:
-            apiKey.startsWith("sk-") || apiKey.startsWith("sk-proj-"),
-          startsWithSkProj: apiKey.startsWith("sk-proj-"),
-        },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "H1",
-      }),
-    }).catch(() => {});
-    // #endregion
-
-    console.log(
-      "OPENAI_API_KEY:",
-      apiKey ? `Present (${keyPreview})` : "Missing",
-      hadHiddenChars
-        ? `[WARNING: Key had hidden characters - original length: ${originalLength}, cleaned length: ${cleanedLength}]`
-        : ""
-    );
-
     // Validate API key format before creating client
     // Accept both sk- (40-60 chars) and sk-proj- (100-200 chars) formats
     const isValidFormat =
@@ -332,21 +301,6 @@ export const embeddingService = {
   },
 
   async queryReviews(userMessage) {
-    // #region agent log
-    fetch("http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "embeddingService.js:208",
-        message: "queryReviews entry",
-        data: { userMessageLength: userMessage?.length || 0 },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "H2",
-      }),
-    }).catch(() => {});
-    // #endregion
     try {
       // Validate API keys before proceeding - use same fallback logic as getClients()
       let openAIKeyRaw =
@@ -356,24 +310,6 @@ export const embeddingService = {
       const openAIKey = extractValidOpenAIKey(openAIKeyRaw) || "";
 
       if (!openAIKey) {
-        // #region agent log
-        fetch(
-          "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              location: "embeddingService.js:211",
-              message: "OPENAI_API_KEY missing in queryReviews",
-              data: {},
-              timestamp: Date.now(),
-              sessionId: "debug-session",
-              runId: "run1",
-              hypothesisId: "H1",
-            }),
-          }
-        ).catch(() => {});
-        // #endregion
         throw new Error("OPENAI_API_KEY is not configured");
       }
 
@@ -410,169 +346,32 @@ export const embeddingService = {
       }
 
       if (!process.env.PINECONE_API_KEY) {
-        // #region agent log
-        fetch(
-          "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              location: "embeddingService.js:214",
-              message: "PINECONE_API_KEY missing in queryReviews",
-              data: {},
-              timestamp: Date.now(),
-              sessionId: "debug-session",
-              runId: "run1",
-              hypothesisId: "H1",
-            }),
-          }
-        ).catch(() => {});
-        // #endregion
         throw new Error("PINECONE_API_KEY is not configured");
       }
 
       const { openai, pc } = await this.getClients();
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "embeddingService.js:218",
-            message: "After getClients",
-            data: { hasOpenAI: !!openai, hasPc: !!pc },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "H2",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
       const index = pc.Index("rag");
 
       // Get embedding for user message
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "embeddingService.js:222",
-            message: "Before OpenAI embedding call",
-            data: {},
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "H2",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
       const embeddingResponse = await openai.embeddings.create({
         input: userMessage,
         model: "text-embedding-3-small",
       });
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "embeddingService.js:227",
-            message: "After OpenAI embedding call",
-            data: {
-              hasEmbedding: !!embeddingResponse?.data?.[0]?.embedding,
-              embeddingLength:
-                embeddingResponse?.data?.[0]?.embedding?.length || 0,
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "H2",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
 
       if (!embeddingResponse?.data?.[0]?.embedding) {
         throw new Error("Failed to generate embedding for user message");
       }
 
       // Query Pinecone
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "embeddingService.js:232",
-            message: "Before Pinecone query",
-            data: {},
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "H2",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
       const queryResponse = await index.query({
         vector: embeddingResponse.data[0].embedding,
         topK: 3,
         includeMetadata: true,
       });
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "embeddingService.js:257",
-            message: "After Pinecone query",
-            data: {
-              matchesCount: queryResponse?.matches?.length || 0,
-              hasMatches: !!queryResponse?.matches,
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "H2",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
 
       // Return matches or empty array if no matches found
       return queryResponse.matches || [];
     } catch (error) {
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "embeddingService.js:261",
-            message: "Error in queryReviews catch",
-            data: {
-              errorName: error?.name,
-              errorMessage: error?.message,
-              errorStack: error?.stack?.substring(0, 500),
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "H2",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
       console.error("Error querying reviews:", error);
 
       // Provide more specific error messages
