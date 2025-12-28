@@ -19,17 +19,17 @@
     "firebase": "^11.3.0",
     "firebase-admin": "^13.2.0",
     "fuse.js": "^7.1.0",
-    "next": "15.1.2",
+    "next": "^15.1.9",
     "node-cache": "^5.1.2",
     "openai": "^4.86.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
     "react-markdown": "^9.0.3",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "eslint": "^9",
-    "eslint-config-next": "15.1.2"
+    "eslint-config-next": "^15.1.9"
   }
 }

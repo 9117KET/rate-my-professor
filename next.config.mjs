@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    optimizePackageImports: ["@mui/icons-material"],
+  },
   env: {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     PINECONE_API_KEY: process.env.PINECONE_API_KEY,
@@ -74,29 +77,6 @@ const nextConfig = {
         ],
       },
     ];
-  },
-
-  // Redirect HTTP to HTTPS in production
-  async redirects() {
-    const redirects = [];
-
-    // Only add the HTTP to HTTPS redirect in production
-    if (process.env.NODE_ENV === "production") {
-      redirects.push({
-        source: "/:path*",
-        destination: "https://:host/:path*",
-        permanent: true,
-        has: [
-          {
-            type: "header",
-            key: "x-forwarded-proto",
-            value: "http",
-          },
-        ],
-      });
-    }
-
-    return redirects;
   },
 };
 
