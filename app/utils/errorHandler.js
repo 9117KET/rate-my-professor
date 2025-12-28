@@ -164,6 +164,16 @@ export function identifyErrorType(error) {
     return "API_ERROR";
   }
 
+  // OpenAI API key errors (401 Unauthorized)
+  if (
+    message.includes("401") ||
+    message.includes("incorrect api key") ||
+    message.includes("invalid api key") ||
+    message.includes("authentication")
+  ) {
+    return "EXTERNAL_SERVICE_ERROR";
+  }
+
   // Input validation
   if (message.includes("invalid") || message.includes("validation")) {
     return "INVALID_INPUT";

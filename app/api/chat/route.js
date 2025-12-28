@@ -58,6 +58,22 @@ async function chatHandler(req) {
       );
     }
 
+    // Validate API key format (basic check)
+    const openAIKey = process.env.OPENAI_API_KEY.trim();
+    if (!openAIKey.startsWith("sk-") || openAIKey.length < 20) {
+      logError(
+        new Error("OPENAI_API_KEY appears to be invalid (wrong format)"),
+        "chat-api"
+      );
+      return createErrorResponse(
+        new Error(
+          "OpenAI API key format is invalid. Please check your environment variables."
+        ),
+        "EXTERNAL_SERVICE_ERROR",
+        503
+      );
+    }
+
     if (!process.env.PINECONE_API_KEY) {
       // #region agent log
       fetch(
@@ -159,9 +175,9 @@ async function chatHandler(req) {
       );
     }
 
-    // Initialize OpenAI
+    // Initialize OpenAI (use trimmed key)
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: openAIKey,
     });
 
     // Get similar reviews using RAG
