@@ -7,6 +7,59 @@ import { Pinecone } from "@pinecone-database/pinecone";
  * Handles synchronization between Firestore and Pinecone vector database
  * Enables semantic search and AI-powered retrieval of relevant reviews
  */
+/**
+ * Extract a valid OpenAI API key from a potentially corrupted/concatenated string
+ * Supports both sk- (40-60 chars) and sk-proj- (100-200 chars) formats
+ * @param {string} keyRaw - The raw API key string
+ * @returns {string|null} - The extracted valid key or null if none found
+ */
+function extractValidOpenAIKey(keyRaw) {
+  if (!keyRaw) return null;
+
+  // Clean the key: remove quotes, trim whitespace, and remove any non-printable characters
+  let cleaned = keyRaw
+    .replace(/^["']|["']$/g, "")
+    .trim()
+    .replace(/[^\x20-\x7E]/g, "");
+
+  // Check for sk-proj- format (project keys, typically 100-200 chars)
+  if (cleaned.startsWith("sk-proj-")) {
+    // Project keys are longer, typically 100-200 characters
+    if (cleaned.length >= 100 && cleaned.length <= 200) {
+      return cleaned;
+    }
+    // If too long, might be duplicated - try to extract the first valid one
+    if (cleaned.length > 200) {
+      const keyPattern = /sk-proj-[a-zA-Z0-9_-]{90,190}/;
+      const match = cleaned.match(keyPattern);
+      if (match && match[0].length >= 100 && match[0].length <= 200) {
+        return match[0];
+      }
+    }
+    // Return as-is if it starts with sk-proj- (might be slightly off length)
+    return cleaned;
+  }
+
+  // Check for standard sk- format (40-60 chars)
+  if (cleaned.startsWith("sk-")) {
+    if (cleaned.length >= 40 && cleaned.length <= 60) {
+      return cleaned;
+    }
+    // If too long, might be duplicated - try to extract the first valid one
+    if (cleaned.length > 60) {
+      const keyPattern = /sk-[a-zA-Z0-9]{37,57}/;
+      const match = cleaned.match(keyPattern);
+      if (match && match[0].length >= 40 && match[0].length <= 60) {
+        return match[0];
+      }
+    }
+    // Return as-is if it starts with sk- (might be slightly off length)
+    return cleaned;
+  }
+
+  return null;
+}
+
 export const embeddingService = {
   /**
    * Initialize and return OpenAI and Pinecone clients
@@ -17,17 +70,8 @@ export const embeddingService = {
     let apiKeyRaw =
       process.env.OPENAI_API_KEY_NEW || process.env.OPENAI_API_KEY;
 
-    // Clean the key: remove quotes, trim whitespace, and remove any non-printable characters
-    if (apiKeyRaw) {
-      // Remove surrounding quotes if present
-      apiKeyRaw = apiKeyRaw.replace(/^["']|["']$/g, "");
-      // Trim whitespace and newlines
-      apiKeyRaw = apiKeyRaw.trim();
-      // Remove any non-printable characters except standard alphanumeric and hyphens/underscores
-      apiKeyRaw = apiKeyRaw.replace(/[^\x20-\x7E]/g, "");
-    }
-
-    const apiKey = apiKeyRaw || "";
+    // Extract a valid key (handles concatenated/corrupted keys)
+    const apiKey = extractValidOpenAIKey(apiKeyRaw) || "";
     const keyPreview = apiKey
       ? `${apiKey.substring(0, 10)}...${apiKey.substring(
           apiKey.length - 4
@@ -52,7 +96,9 @@ export const embeddingService = {
           keyPreview: keyPreview,
           keyLength: apiKey.length,
           hasKey: !!apiKey,
-          startsWithSk: apiKey.startsWith("sk-"),
+          startsWithSk:
+            apiKey.startsWith("sk-") || apiKey.startsWith("sk-proj-"),
+          startsWithSkProj: apiKey.startsWith("sk-proj-"),
         },
         timestamp: Date.now(),
         sessionId: "debug-session",
@@ -71,20 +117,30 @@ export const embeddingService = {
     );
 
     // Validate API key format before creating client
-    if (apiKey && (!apiKey.startsWith("sk-") || apiKey.length < 20)) {
-      throw new Error(
-        `Invalid OpenAI API key format. Key preview: ${keyPreview}. OpenAI API keys should start with "sk-" and be at least 20 characters long. Please check your environment variables in Vercel.${
-          hadHiddenChars
-            ? ` [Original length: ${originalLength}, cleaned length: ${cleanedLength} - key may have had hidden characters]`
-            : ""
-        }`
-      );
-    }
+    // Accept both sk- (40-60 chars) and sk-proj- (100-200 chars) formats
+    const isValidFormat =
+      apiKey &&
+      (apiKey.startsWith("sk-proj-") || apiKey.startsWith("sk-")) &&
+      ((apiKey.startsWith("sk-proj-") &&
+        apiKey.length >= 100 &&
+        apiKey.length <= 200) ||
+        (apiKey.startsWith("sk-") &&
+          apiKey.length >= 40 &&
+          apiKey.length <= 60));
 
-    // Warn if key seems too long (might indicate hidden characters weren't fully removed)
-    if (apiKey.length > 100) {
-      console.warn(
-        `WARNING: OpenAI API key is unusually long (${apiKey.length} chars). Valid keys are typically 40-60 characters. This may indicate hidden characters or corruption.`
+    if (!isValidFormat) {
+      const originalLength = apiKeyRaw?.length || 0;
+      const expectedFormat = apiKey?.startsWith("sk-proj-")
+        ? "sk-proj- format (100-200 characters)"
+        : "sk- format (40-60 characters) or sk-proj- format (100-200 characters)";
+      throw new Error(
+        `Invalid OpenAI API key format. Key preview: ${keyPreview}. OpenAI API keys should start with "sk-" or "sk-proj-" and be the correct length for their format (found: ${
+          apiKey.length
+        } chars, expected: ${expectedFormat}).${
+          originalLength > 200
+            ? ` The original key was ${originalLength} characters, which suggests it may be duplicated or concatenated. Please check your Vercel environment variable and ensure it contains only a single valid API key.`
+            : ""
+        } Please verify your OPENAI_API_KEY in Vercel Settings → Environment Variables.`
       );
     }
 
@@ -296,17 +352,8 @@ export const embeddingService = {
       let openAIKeyRaw =
         process.env.OPENAI_API_KEY_NEW || process.env.OPENAI_API_KEY;
 
-      // Clean the key: remove quotes, trim whitespace, and remove any non-printable characters
-      if (openAIKeyRaw) {
-        // Remove surrounding quotes if present
-        openAIKeyRaw = openAIKeyRaw.replace(/^["']|["']$/g, "");
-        // Trim whitespace and newlines
-        openAIKeyRaw = openAIKeyRaw.trim();
-        // Remove any non-printable characters except standard alphanumeric and hyphens/underscores
-        openAIKeyRaw = openAIKeyRaw.replace(/[^\x20-\x7E]/g, "");
-      }
-
-      const openAIKey = openAIKeyRaw || "";
+      // Extract a valid key (handles concatenated/corrupted keys)
+      const openAIKey = extractValidOpenAIKey(openAIKeyRaw) || "";
 
       if (!openAIKey) {
         // #region agent log
@@ -330,16 +377,35 @@ export const embeddingService = {
         throw new Error("OPENAI_API_KEY is not configured");
       }
 
-      // Validate API key format
-      if (!openAIKey.startsWith("sk-") || openAIKey.length < 20) {
-        const keyPreview = `${openAIKey.substring(
-          0,
-          10
-        )}...${openAIKey.substring(openAIKey.length - 4)} (length: ${
-          openAIKey.length
-        })`;
+      // Validate API key format - accept both sk- and sk-proj- formats
+      const isValidFormat =
+        openAIKey &&
+        (openAIKey.startsWith("sk-proj-") || openAIKey.startsWith("sk-")) &&
+        ((openAIKey.startsWith("sk-proj-") &&
+          openAIKey.length >= 100 &&
+          openAIKey.length <= 200) ||
+          (openAIKey.startsWith("sk-") &&
+            openAIKey.length >= 40 &&
+            openAIKey.length <= 60));
+
+      if (!isValidFormat) {
+        const keyPreview = openAIKey
+          ? `${openAIKey.substring(0, 10)}...${openAIKey.substring(
+              openAIKey.length - 4
+            )} (length: ${openAIKey.length})`
+          : "MISSING";
+        const originalLength = openAIKeyRaw?.length || 0;
+        const expectedFormat = openAIKey?.startsWith("sk-proj-")
+          ? "sk-proj- format (100-200 characters)"
+          : "sk- format (40-60 characters) or sk-proj- format (100-200 characters)";
         throw new Error(
-          `API key configuration error: Invalid OpenAI API key format. Key preview: ${keyPreview}. OpenAI API keys should start with "sk-" and be at least 20 characters long.`
+          `API key configuration error: Invalid OpenAI API key format. Key preview: ${keyPreview}. OpenAI API keys should start with "sk-" or "sk-proj-" and be the correct length (found: ${
+            openAIKey.length
+          } chars, expected: ${expectedFormat}).${
+            originalLength > 200
+              ? ` The original key was ${originalLength} characters, which suggests it may be duplicated or concatenated. Please check your Vercel environment variable.`
+              : ""
+          }`
         );
       }
 

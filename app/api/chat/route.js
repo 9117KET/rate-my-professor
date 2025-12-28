@@ -62,18 +62,52 @@ async function chatHandler(req) {
       );
     }
 
-    // Clean the key: remove quotes, trim whitespace, and remove any non-printable characters
-    if (openAIKeyRaw) {
-      // Remove surrounding quotes if present
-      openAIKeyRaw = openAIKeyRaw.replace(/^["']|["']$/g, "");
-      // Trim whitespace and newlines
-      openAIKeyRaw = openAIKeyRaw.trim();
-      // Remove any non-printable characters except standard alphanumeric and hyphens/underscores
-      openAIKeyRaw = openAIKeyRaw.replace(/[^\x20-\x7E]/g, "");
+    // Import the key extraction function (we'll define it here for now)
+    // Supports both sk- (40-60 chars) and sk-proj- (100-200 chars) formats
+    function extractValidOpenAIKey(keyRaw) {
+      if (!keyRaw) return null;
+      let cleaned = keyRaw
+        .replace(/^["']|["']$/g, "")
+        .trim()
+        .replace(/[^\x20-\x7E]/g, "");
+
+      // Check for sk-proj- format (project keys, typically 100-200 chars)
+      if (cleaned.startsWith("sk-proj-")) {
+        if (cleaned.length >= 100 && cleaned.length <= 200) {
+          return cleaned;
+        }
+        // If too long, might be duplicated - try to extract the first valid one
+        if (cleaned.length > 200) {
+          const keyPattern = /sk-proj-[a-zA-Z0-9_-]{90,190}/;
+          const match = cleaned.match(keyPattern);
+          if (match && match[0].length >= 100 && match[0].length <= 200) {
+            return match[0];
+          }
+        }
+        return cleaned;
+      }
+
+      // Check for standard sk- format (40-60 chars)
+      if (cleaned.startsWith("sk-")) {
+        if (cleaned.length >= 40 && cleaned.length <= 60) {
+          return cleaned;
+        }
+        // If too long, might be duplicated - try to extract the first valid one
+        if (cleaned.length > 60) {
+          const keyPattern = /sk-[a-zA-Z0-9]{37,57}/;
+          const match = cleaned.match(keyPattern);
+          if (match && match[0].length >= 40 && match[0].length <= 60) {
+            return match[0];
+          }
+        }
+        return cleaned;
+      }
+
+      return null;
     }
 
-    // Validate API key format (basic check)
-    const openAIKey = openAIKeyRaw || "";
+    // Extract a valid key (handles concatenated/corrupted keys)
+    const openAIKey = extractValidOpenAIKey(openAIKeyRaw) || "";
 
     // #region agent log - Log key info safely (first 10 chars + last 4 chars + length)
     const keyPreview = openAIKey
@@ -100,16 +134,43 @@ async function chatHandler(req) {
     }).catch(() => {});
     // #endregion
 
-    if (!openAIKey || !openAIKey.startsWith("sk-") || openAIKey.length < 20) {
+    // Validate API key format - accept both sk- and sk-proj- formats
+    const isValidFormat =
+      openAIKey &&
+      (openAIKey.startsWith("sk-proj-") || openAIKey.startsWith("sk-")) &&
+      ((openAIKey.startsWith("sk-proj-") &&
+        openAIKey.length >= 100 &&
+        openAIKey.length <= 200) ||
+        (openAIKey.startsWith("sk-") &&
+          openAIKey.length >= 40 &&
+          openAIKey.length <= 60));
+
+    if (!isValidFormat) {
+      const originalLength = openAIKeyRaw?.length || 0;
+      const expectedFormat = openAIKey?.startsWith("sk-proj-")
+        ? "sk-proj- format (100-200 characters)"
+        : "sk- format (40-60 characters) or sk-proj- format (100-200 characters)";
       logError(
         new Error(
-          `OPENAI_API_KEY appears to be invalid. Preview: ${keyPreview}`
+          `OPENAI_API_KEY appears to be invalid. Preview: ${keyPreview}, Length: ${
+            openAIKey.length
+          }${
+            originalLength > 200
+              ? ` (Original was ${originalLength} chars - may be duplicated/concatenated)`
+              : ""
+          }`
         ),
         "chat-api"
       );
       return createErrorResponse(
         new Error(
-          "OpenAI API key format is invalid. Please check your environment variables."
+          `OpenAI API key format is invalid. Keys should be ${expectedFormat} (found: ${
+            openAIKey.length || 0
+          } chars).${
+            originalLength > 200
+              ? ` The key appears to be duplicated or concatenated (${originalLength} chars). Please check your Vercel environment variable.`
+              : ""
+          }`
         ),
         "EXTERNAL_SERVICE_ERROR",
         503
