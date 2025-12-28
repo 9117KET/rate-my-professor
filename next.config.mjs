@@ -4,20 +4,11 @@ const nextConfig = {
     optimizePackageImports: ["@mui/icons-material"],
   },
   env: {
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-    PINECONE_API_KEY: process.env.PINECONE_API_KEY,
-    API_SECRET_KEY: process.env.API_SECRET_KEY,
-    CRON_SECRET_KEY: process.env.CRON_SECRET_KEY,
+    // Only expose client-side environment variables here
+    // Server-side secrets (OPENAI_API_KEY, PINECONE_API_KEY, etc.) should NOT be here
+    // They are accessed directly via process.env in server-side code
 
-    // Firebase Admin SDK variables
-    FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
-    FIREBASE_PRIVATE_KEY_ID: process.env.FIREBASE_PRIVATE_KEY_ID,
-    FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
-    FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
-    FIREBASE_CLIENT_ID: process.env.FIREBASE_CLIENT_ID,
-    FIREBASE_CLIENT_CERT_URL: process.env.FIREBASE_CLIENT_CERT_URL,
-
-    // Firebase Web SDK variables (for client-side)
+    // Firebase Web SDK variables (for client-side - these are safe to expose)
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
       process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,

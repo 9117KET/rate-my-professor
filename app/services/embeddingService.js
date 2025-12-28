@@ -13,13 +13,40 @@ export const embeddingService = {
    * @returns {Object} Object containing initialized clients
    */
   async getClients() {
+    const apiKey = process.env.OPENAI_API_KEY?.trim() || "";
+    const keyPreview = apiKey
+      ? `${apiKey.substring(0, 10)}...${apiKey.substring(
+          apiKey.length - 4
+        )} (length: ${apiKey.length})`
+      : "MISSING";
+
+    // #region agent log
+    fetch("http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: "embeddingService.js:15",
+        message: "getClients - API key check",
+        data: {
+          keyPreview: keyPreview,
+          keyLength: apiKey.length,
+          hasKey: !!apiKey,
+        },
+        timestamp: Date.now(),
+        sessionId: "debug-session",
+        runId: "run1",
+        hypothesisId: "H1",
+      }),
+    }).catch(() => {});
+    // #endregion
+
     console.log(
       "OPENAI_API_KEY:",
-      process.env.OPENAI_API_KEY ? "Present" : "Missing"
+      apiKey ? `Present (${keyPreview})` : "Missing"
     );
 
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY || "",
+      apiKey: apiKey,
       dangerouslyAllowBrowser: true,
     });
 

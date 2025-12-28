@@ -59,10 +59,38 @@ async function chatHandler(req) {
     }
 
     // Validate API key format (basic check)
-    const openAIKey = process.env.OPENAI_API_KEY.trim();
-    if (!openAIKey.startsWith("sk-") || openAIKey.length < 20) {
+    const openAIKey = process.env.OPENAI_API_KEY?.trim();
+
+    // #region agent log - Log key info safely (first 10 chars + last 4 chars + length)
+    const keyPreview = openAIKey
+      ? `${openAIKey.substring(0, 10)}...${openAIKey.substring(
+          openAIKey.length - 4
+        )} (length: ${openAIKey.length})`
+      : "MISSING";
+    fetch("http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: "route.js:62",
+        message: "API key validation",
+        data: {
+          keyPreview: keyPreview,
+          keyLength: openAIKey?.length || 0,
+          startsWithSk: openAIKey?.startsWith("sk-") || false,
+        },
+        timestamp: Date.now(),
+        sessionId: "debug-session",
+        runId: "run1",
+        hypothesisId: "H1",
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    if (!openAIKey || !openAIKey.startsWith("sk-") || openAIKey.length < 20) {
       logError(
-        new Error("OPENAI_API_KEY appears to be invalid (wrong format)"),
+        new Error(
+          `OPENAI_API_KEY appears to be invalid. Preview: ${keyPreview}`
+        ),
         "chat-api"
       );
       return createErrorResponse(
