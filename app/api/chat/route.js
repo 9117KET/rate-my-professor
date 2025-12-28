@@ -31,7 +31,7 @@ async function chatHandler(req) {
   // #endregion
   try {
     // Try both OPENAI_API_KEY and OPENAI_API_KEY_NEW (workaround for Vercel caching)
-    const openAIKeyRaw =
+    let openAIKeyRaw =
       process.env.OPENAI_API_KEY_NEW || process.env.OPENAI_API_KEY;
 
     // Validate required environment variables
@@ -62,8 +62,18 @@ async function chatHandler(req) {
       );
     }
 
+    // Clean the key: remove quotes, trim whitespace, and remove any non-printable characters
+    if (openAIKeyRaw) {
+      // Remove surrounding quotes if present
+      openAIKeyRaw = openAIKeyRaw.replace(/^["']|["']$/g, "");
+      // Trim whitespace and newlines
+      openAIKeyRaw = openAIKeyRaw.trim();
+      // Remove any non-printable characters except standard alphanumeric and hyphens/underscores
+      openAIKeyRaw = openAIKeyRaw.replace(/[^\x20-\x7E]/g, "");
+    }
+
     // Validate API key format (basic check)
-    const openAIKey = openAIKeyRaw?.trim();
+    const openAIKey = openAIKeyRaw || "";
 
     // #region agent log - Log key info safely (first 10 chars + last 4 chars + length)
     const keyPreview = openAIKey

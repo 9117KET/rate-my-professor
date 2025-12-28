@@ -14,14 +14,32 @@ export const embeddingService = {
    */
   async getClients() {
     // Try both OPENAI_API_KEY and OPENAI_API_KEY_NEW (workaround for Vercel caching)
-    const apiKey =
-      (process.env.OPENAI_API_KEY_NEW || process.env.OPENAI_API_KEY)?.trim() ||
-      "";
+    let apiKeyRaw =
+      process.env.OPENAI_API_KEY_NEW || process.env.OPENAI_API_KEY;
+
+    // Clean the key: remove quotes, trim whitespace, and remove any non-printable characters
+    if (apiKeyRaw) {
+      // Remove surrounding quotes if present
+      apiKeyRaw = apiKeyRaw.replace(/^["']|["']$/g, "");
+      // Trim whitespace and newlines
+      apiKeyRaw = apiKeyRaw.trim();
+      // Remove any non-printable characters except standard alphanumeric and hyphens/underscores
+      apiKeyRaw = apiKeyRaw.replace(/[^\x20-\x7E]/g, "");
+    }
+
+    const apiKey = apiKeyRaw || "";
     const keyPreview = apiKey
       ? `${apiKey.substring(0, 10)}...${apiKey.substring(
           apiKey.length - 4
         )} (length: ${apiKey.length})`
       : "MISSING";
+
+    // Detect if there were any issues with the key
+    const originalLength =
+      (process.env.OPENAI_API_KEY_NEW || process.env.OPENAI_API_KEY)?.length ||
+      0;
+    const cleanedLength = apiKey.length;
+    const hadHiddenChars = originalLength !== cleanedLength;
 
     // #region agent log
     fetch("http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251", {
@@ -34,6 +52,7 @@ export const embeddingService = {
           keyPreview: keyPreview,
           keyLength: apiKey.length,
           hasKey: !!apiKey,
+          startsWithSk: apiKey.startsWith("sk-"),
         },
         timestamp: Date.now(),
         sessionId: "debug-session",
@@ -45,8 +64,29 @@ export const embeddingService = {
 
     console.log(
       "OPENAI_API_KEY:",
-      apiKey ? `Present (${keyPreview})` : "Missing"
+      apiKey ? `Present (${keyPreview})` : "Missing",
+      hadHiddenChars
+        ? `[WARNING: Key had hidden characters - original length: ${originalLength}, cleaned length: ${cleanedLength}]`
+        : ""
     );
+
+    // Validate API key format before creating client
+    if (apiKey && (!apiKey.startsWith("sk-") || apiKey.length < 20)) {
+      throw new Error(
+        `Invalid OpenAI API key format. Key preview: ${keyPreview}. OpenAI API keys should start with "sk-" and be at least 20 characters long. Please check your environment variables in Vercel.${
+          hadHiddenChars
+            ? ` [Original length: ${originalLength}, cleaned length: ${cleanedLength} - key may have had hidden characters]`
+            : ""
+        }`
+      );
+    }
+
+    // Warn if key seems too long (might indicate hidden characters weren't fully removed)
+    if (apiKey.length > 100) {
+      console.warn(
+        `WARNING: OpenAI API key is unusually long (${apiKey.length} chars). Valid keys are typically 40-60 characters. This may indicate hidden characters or corruption.`
+      );
+    }
 
     const openai = new OpenAI({
       apiKey: apiKey,
@@ -252,8 +292,23 @@ export const embeddingService = {
     }).catch(() => {});
     // #endregion
     try {
-      // Validate API keys before proceeding
-      if (!process.env.OPENAI_API_KEY) {
+      // Validate API keys before proceeding - use same fallback logic as getClients()
+      let openAIKeyRaw =
+        process.env.OPENAI_API_KEY_NEW || process.env.OPENAI_API_KEY;
+
+      // Clean the key: remove quotes, trim whitespace, and remove any non-printable characters
+      if (openAIKeyRaw) {
+        // Remove surrounding quotes if present
+        openAIKeyRaw = openAIKeyRaw.replace(/^["']|["']$/g, "");
+        // Trim whitespace and newlines
+        openAIKeyRaw = openAIKeyRaw.trim();
+        // Remove any non-printable characters except standard alphanumeric and hyphens/underscores
+        openAIKeyRaw = openAIKeyRaw.replace(/[^\x20-\x7E]/g, "");
+      }
+
+      const openAIKey = openAIKeyRaw || "";
+
+      if (!openAIKey) {
         // #region agent log
         fetch(
           "http://127.0.0.1:7244/ingest/294ab762-d38f-4683-b888-d3bab9ca5251",
@@ -274,6 +329,20 @@ export const embeddingService = {
         // #endregion
         throw new Error("OPENAI_API_KEY is not configured");
       }
+
+      // Validate API key format
+      if (!openAIKey.startsWith("sk-") || openAIKey.length < 20) {
+        const keyPreview = `${openAIKey.substring(
+          0,
+          10
+        )}...${openAIKey.substring(openAIKey.length - 4)} (length: ${
+          openAIKey.length
+        })`;
+        throw new Error(
+          `API key configuration error: Invalid OpenAI API key format. Key preview: ${keyPreview}. OpenAI API keys should start with "sk-" and be at least 20 characters long.`
+        );
+      }
+
       if (!process.env.PINECONE_API_KEY) {
         // #region agent log
         fetch(
@@ -441,8 +510,48 @@ export const embeddingService = {
       console.error("Error querying reviews:", error);
 
       // Provide more specific error messages
-      if (error.message?.includes("API key")) {
-        throw new Error("API key configuration error: " + error.message);
+      if (
+        error.message?.includes("API key") ||
+        error.message?.includes("401") ||
+        error.code === "invalid_api_key" ||
+        error.status === 401
+      ) {
+        let openAIKeyRaw =
+          process.env.OPENAI_API_KEY_NEW || process.env.OPENAI_API_KEY;
+        const originalLength = openAIKeyRaw?.length || 0;
+
+        // Clean the key to check for hidden characters
+        if (openAIKeyRaw) {
+          openAIKeyRaw = openAIKeyRaw
+            .replace(/^["']|["']$/g, "")
+            .trim()
+            .replace(/[^\x20-\x7E]/g, "");
+        }
+
+        const keyPreview = openAIKeyRaw
+          ? `${openAIKeyRaw.substring(0, 10)}...${openAIKeyRaw.substring(
+              openAIKeyRaw.length - 4
+            )} (length: ${openAIKeyRaw.length})`
+          : "MISSING";
+
+        const troubleshooting = [
+          "1. Verify the key is correct in Vercel Settings → Environment Variables",
+          "2. Check that the key starts with 'sk-' and is 40-60 characters long",
+          "3. Ensure there are no extra spaces, quotes, or hidden characters",
+          "4. Verify the key is active in your OpenAI account dashboard",
+          "5. Try regenerating the API key in OpenAI and updating it in Vercel",
+          "6. Make sure to redeploy after updating environment variables",
+        ].join("\n");
+
+        throw new Error(
+          `API key configuration error: ${
+            error.message
+          }\nKey preview: ${keyPreview}${
+            originalLength !== openAIKeyRaw?.length
+              ? ` [Original length: ${originalLength}, cleaned length: ${openAIKeyRaw?.length} - key may have hidden characters]`
+              : ""
+          }\n\nTroubleshooting:\n${troubleshooting}`
+        );
       }
       if (
         error.message?.includes("Pinecone") ||
