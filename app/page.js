@@ -237,15 +237,17 @@ export default function Home() {
     initAuth();
   }, []);
 
-  const sendMessage = async () => {
-    if (!message.trim() || !userId) return;
+  const sendMessage = async (overrideMessage) => {
+    const messageToSend = overrideMessage ?? message;
+
+    if (!messageToSend.trim() || !userId) return;
 
     setIsLoading(true);
     const newMessages = [
       ...messages,
       {
         role: "user",
-        content: message,
+        content: messageToSend,
         timestamp: new Date(),
       },
       {
@@ -269,7 +271,7 @@ export default function Home() {
           ...messages,
           {
             role: "user",
-            content: message,
+            content: messageToSend,
             timestamp: new Date().toISOString(),
           },
         ]),
@@ -713,8 +715,7 @@ export default function Home() {
                   variant="outlined"
                   size="small"
                   onClick={async () => {
-                    setMessage("Who are the highest rated professors?");
-                    await sendMessage();
+                    await sendMessage("Who are the highest rated professors?");
                   }}
                   disabled={isLoading}
                   sx={{
@@ -742,8 +743,7 @@ export default function Home() {
                   variant="outlined"
                   size="small"
                   onClick={async () => {
-                    setMessage("How do I submit a review?");
-                    await sendMessage();
+                    await sendMessage("How do I submit a review?");
                   }}
                   disabled={isLoading}
                   sx={{
@@ -771,8 +771,9 @@ export default function Home() {
                   variant="outlined"
                   size="small"
                   onClick={async () => {
-                    setMessage("What are the tips for succeeding in courses?");
-                    await sendMessage();
+                    await sendMessage(
+                      "What are the tips for succeeding in courses?"
+                    );
                   }}
                   disabled={isLoading}
                   sx={{

@@ -187,39 +187,82 @@ export const embeddingService = {
       }
 
       // Step 5: Create or update embeddings for current reviews
+      // Enhanced embedding input includes professor name, subject, and review text
+      // This improves semantic matching by providing more context for vector search
       console.log("Generating embeddings for reviews...");
-      const processedData = await Promise.all(
-        reviews.map(async (review) => {
-          try {
-            // Create embeddings using OpenAI's embedding model
-            const response = await openai.embeddings.create({
-              input: review.review,
-              model: "text-embedding-3-small",
-            });
+      
+      // Process reviews in batches to avoid rate limits and timeouts
+      const BATCH_SIZE = 50;
+      const processedData = [];
+      
+      for (let i = 0; i < reviews.length; i += BATCH_SIZE) {
+        const batch = reviews.slice(i, i + BATCH_SIZE);
+        console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(reviews.length / BATCH_SIZE)} (${batch.length} reviews)`);
+        
+        const batchResults = await Promise.all(
+          batch.map(async (review) => {
+            try {
+              // Create enhanced embedding input that includes all relevant context
+              // Format: "Professor [name] teaches [subject]. [review text]"
+              // This helps the vector search match queries about professors, subjects, or review content
+              const professorName = (review.professor || "").trim();
+              const subject = (review.subject || "").trim();
+              const reviewText = (review.review || "").trim();
+              
+              // Build comprehensive embedding input
+              const embeddingInput = [
+                professorName && `Professor ${professorName}`,
+                subject && `teaches ${subject}`,
+                reviewText,
+              ]
+                .filter(Boolean)
+                .join(". ");
+              
+              // Fallback to review text if no other context available
+              const finalInput = embeddingInput || reviewText || "Review";
+              
+              // Create embeddings using OpenAI's embedding model
+              const response = await openai.embeddings.create({
+                input: finalInput,
+                model: "text-embedding-3-small",
+              });
 
-            return {
-              values: response.data[0].embedding,
-              id: review.id,
-              metadata: {
-                review: review.review,
-                subject: review.subject,
-                stars: review.stars,
-                professor: review.professor,
-                createdAt:
-                  review.createdAt instanceof Date
-                    ? review.createdAt.toISOString()
-                    : new Date(review.createdAt).toISOString(),
-              },
-            };
-          } catch (error) {
-            console.error(
-              `Failed to generate embedding for review ${review.id}:`,
-              error
-            );
-            throw error;
-          }
-        })
-      );
+              return {
+                values: response.data[0].embedding,
+                id: review.id,
+                metadata: {
+                  review: review.review,
+                  subject: review.subject,
+                  stars: review.stars,
+                  professor: review.professor,
+                  createdAt:
+                    review.createdAt instanceof Date
+                      ? review.createdAt.toISOString()
+                      : new Date(review.createdAt).toISOString(),
+                },
+              };
+            } catch (error) {
+              console.error(
+                `Failed to generate embedding for review ${review.id}:`,
+                error
+              );
+              // Don't throw - continue with other reviews
+              return null;
+            }
+          })
+        );
+        
+        // Filter out failed embeddings and add to processed data
+        const successfulResults = batchResults.filter((result) => result !== null);
+        processedData.push(...successfulResults);
+        
+        // Small delay between batches to avoid rate limits
+        if (i + BATCH_SIZE < reviews.length) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+      
+      console.log(`Successfully generated ${processedData.length} embeddings out of ${reviews.length} reviews`);
 
       // Step 6: Upsert to Pinecone
       if (processedData.length > 0) {
@@ -267,26 +310,62 @@ export const embeddingService = {
         // Continue anyway since we're trying to recover
       }
 
-      // Create embeddings for each review
-      const processedData = await Promise.all(
-        reviews.map(async (review) => {
-          const response = await openai.embeddings.create({
-            input: review.review,
-            model: "text-embedding-3-small",
-          });
+      // Create embeddings for each review with enhanced context
+      // Process in batches to avoid rate limits
+      const BATCH_SIZE = 50;
+      const processedData = [];
+      
+      for (let i = 0; i < reviews.length; i += BATCH_SIZE) {
+        const batch = reviews.slice(i, i + BATCH_SIZE);
+        console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(reviews.length / BATCH_SIZE)}`);
+        
+        const batchResults = await Promise.all(
+          batch.map(async (review) => {
+            try {
+              // Enhanced embedding input with professor name, subject, and review
+              const professorName = (review.professor || "").trim();
+              const subject = (review.subject || "").trim();
+              const reviewText = (review.review || "").trim();
+              
+              const embeddingInput = [
+                professorName && `Professor ${professorName}`,
+                subject && `teaches ${subject}`,
+                reviewText,
+              ]
+                .filter(Boolean)
+                .join(". ");
+              
+              const finalInput = embeddingInput || reviewText || "Review";
+              
+              const response = await openai.embeddings.create({
+                input: finalInput,
+                model: "text-embedding-3-small",
+              });
 
-          return {
-            values: response.data[0].embedding,
-            id: review.id,
-            metadata: {
-              review: review.review,
-              subject: review.subject,
-              stars: review.stars,
-              professor: review.professor,
-            },
-          };
-        })
-      );
+              return {
+                values: response.data[0].embedding,
+                id: review.id,
+                metadata: {
+                  review: review.review,
+                  subject: review.subject,
+                  stars: review.stars,
+                  professor: review.professor,
+                },
+              };
+            } catch (error) {
+              console.error(`Failed to generate embedding for review ${review.id}:`, error);
+              return null;
+            }
+          })
+        );
+        
+        const successfulResults = batchResults.filter((result) => result !== null);
+        processedData.push(...successfulResults);
+        
+        if (i + BATCH_SIZE < reviews.length) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
 
       // Upsert to Pinecone
       if (processedData.length > 0) {
@@ -362,10 +441,11 @@ export const embeddingService = {
         throw new Error("Failed to generate embedding for user message");
       }
 
-      // Query Pinecone
+      // Query Pinecone with increased topK for better result diversity
+      // Higher topK helps when users ask about professors, subjects, or specific topics
       const queryResponse = await index.query({
         vector: embeddingResponse.data[0].embedding,
-        topK: 3,
+        topK: 10, // Increased from 3 to 10 for better coverage
         includeMetadata: true,
       });
 

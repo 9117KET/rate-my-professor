@@ -8,57 +8,104 @@
  *   --help: Show help
  */
 
-require("dotenv").config();
+// Load environment variables first
+// Try .env.local first (Next.js convention), then .env
+console.log("Loading environment variables...");
+const dotenv = require("dotenv");
 const path = require("path");
+const fs = require("fs");
+
+// Try .env.local first (Next.js convention)
+const envLocalPath = path.resolve(process.cwd(), ".env.local");
+const envPath = path.resolve(process.cwd(), ".env");
+
+if (fs.existsSync(envLocalPath)) {
+  console.log("Loading from .env.local...");
+  dotenv.config({ path: envLocalPath });
+} else if (fs.existsSync(envPath)) {
+  console.log("Loading from .env...");
+  dotenv.config({ path: envPath });
+} else {
+  console.log(
+    "No .env or .env.local file found, using system environment variables"
+  );
+  dotenv.config(); // This will use system env vars
+}
+
+console.log("Environment variables loaded");
+
+// Check if required env vars are present
+if (!process.env.OPENAI_API_KEY) {
+  console.error("ERROR: OPENAI_API_KEY is not set in .env file");
+  process.exit(1);
+}
+if (!process.env.PINECONE_API_KEY) {
+  console.error("ERROR: PINECONE_API_KEY is not set in .env file");
+  process.exit(1);
+}
+
+console.log("Loading dependencies...");
 const { OpenAI } = require("openai");
 const { Pinecone } = require("@pinecone-database/pinecone");
-const firebaseAdmin = require("firebase-admin");
-const fs = require("fs");
+const { initializeApp } = require("firebase/app");
+const {
+  getFirestore,
+  collection,
+  query,
+  orderBy,
+  getDocs,
+} = require("firebase/firestore");
+const { getAuth, signInAnonymously } = require("firebase/auth");
+console.log("Dependencies loaded");
 
 const args = process.argv.slice(2);
 const useAltMethod = args.includes("--alt-method");
 const showHelp = args.includes("--help");
 
-// Load Firebase credentials from a JSON file
-let serviceAccount;
-try {
-  const credentialsPath = path.resolve(
-    process.cwd(),
-    "firebase-credentials.json"
-  );
-  if (fs.existsSync(credentialsPath)) {
-    serviceAccount = require(credentialsPath);
-  } else {
-    // Try to create from environment variables
-    serviceAccount = {
-      type: "service_account",
-      project_id: process.env.FIREBASE_PROJECT_ID,
-      private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-      private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-      client_email: process.env.FIREBASE_CLIENT_EMAIL,
-      client_id: process.env.FIREBASE_CLIENT_ID,
-      auth_uri: "https://accounts.google.com/o/oauth2/auth",
-      token_uri: "https://oauth2.googleapis.com/token",
-      auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-      client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL,
-    };
-  }
-} catch (error) {
-  console.error("Error loading Firebase credentials:", error);
-  process.exit(1);
-}
-
-// Initialize Firebase
+// Initialize Firebase using client SDK (same as the app)
+// This will be initialized in the main function
 let db;
-try {
-  const app = firebaseAdmin.initializeApp({
-    credential: firebaseAdmin.credential.cert(serviceAccount),
-  });
-  db = firebaseAdmin.firestore(app);
-} catch (error) {
-  console.error("Error initializing Firebase:", error);
-  process.exit(1);
-}
+let firebaseApp;
+
+const initializeFirebase = async () => {
+  try {
+    console.log("Initializing Firebase...");
+
+    // Check for required Firebase config
+    if (
+      !process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
+      !process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    ) {
+      console.error(
+        "ERROR: Firebase configuration is missing. Please set NEXT_PUBLIC_FIREBASE_* variables in .env.local"
+      );
+      process.exit(1);
+    }
+
+    const firebaseConfig = {
+      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+    };
+
+    firebaseApp = initializeApp(firebaseConfig);
+    db = getFirestore(firebaseApp);
+    const auth = getAuth(firebaseApp);
+
+    // Authenticate anonymously to access Firestore
+    console.log("Authenticating anonymously...");
+    await signInAnonymously(auth);
+    console.log("Firebase initialized and authenticated successfully");
+  } catch (error) {
+    console.error("Error initializing Firebase:", error);
+    console.error("Error details:", error.message);
+    throw error;
+  }
+};
 
 if (showHelp) {
   console.log(`
@@ -103,23 +150,26 @@ const getClients = async () => {
 
 const getAllReviews = async () => {
   try {
-    const snapshot = await db
-      .collection(COLLECTION_NAME)
-      .orderBy("createdAt", "desc")
-      .get();
+    console.log("Fetching reviews from Firestore...");
+    const reviewsRef = collection(db, COLLECTION_NAME);
+    const q = query(reviewsRef, orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
 
-    return snapshot.docs.map((doc) => ({
+    const reviews = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate() || new Date(),
       reactions: doc.data().reactions || {
-        thumbsUp: 0,
-        thumbsDown: 0,
-        love: 0,
+        thumbsUp: [],
+        thumbsDown: [],
       },
     }));
+
+    console.log(`Found ${reviews.length} reviews in Firestore`);
+    return reviews;
   } catch (error) {
     console.error("Error getting reviews:", error);
+    console.error("Error details:", error.message);
     throw error;
   }
 };
@@ -166,26 +216,82 @@ const syncWithStandardMethod = async () => {
       return syncWithAlternativeMethod();
     }
 
-    // Step 5: Create or update embeddings for current reviews
+    // Step 5: Create or update embeddings for current reviews with enhanced context
+    // Enhanced embedding includes professor name, subject, and review text for better semantic matching
     console.log("Creating embeddings for reviews...");
-    const processedData = await Promise.all(
-      reviews.map(async (review) => {
-        const response = await openai.embeddings.create({
-          input: review.review,
-          model: "text-embedding-3-small",
-        });
 
-        return {
-          values: response.data[0].embedding,
-          id: review.id,
-          metadata: {
-            review: review.review,
-            subject: review.subject,
-            stars: review.stars,
-            professor: review.professor,
-          },
-        };
-      })
+    // Process in batches to avoid rate limits
+    const BATCH_SIZE = 50;
+    const processedData = [];
+
+    for (let i = 0; i < reviews.length; i += BATCH_SIZE) {
+      const batch = reviews.slice(i, i + BATCH_SIZE);
+      console.log(
+        `Processing batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(
+          reviews.length / BATCH_SIZE
+        )} (${batch.length} reviews)`
+      );
+
+      const batchResults = await Promise.all(
+        batch.map(async (review) => {
+          try {
+            // Create enhanced embedding input: "Professor [name] teaches [subject]. [review text]"
+            const professorName = (review.professor || "").trim();
+            const subject = (review.subject || "").trim();
+            const reviewText = (review.review || "").trim();
+
+            const embeddingInput = [
+              professorName && `Professor ${professorName}`,
+              subject && `teaches ${subject}`,
+              reviewText,
+            ]
+              .filter(Boolean)
+              .join(". ");
+
+            const finalInput = embeddingInput || reviewText || "Review";
+
+            const response = await openai.embeddings.create({
+              input: finalInput,
+              model: "text-embedding-3-small",
+            });
+
+            return {
+              values: response.data[0].embedding,
+              id: review.id,
+              metadata: {
+                review: review.review,
+                subject: review.subject,
+                stars: review.stars,
+                professor: review.professor,
+                createdAt:
+                  review.createdAt instanceof Date
+                    ? review.createdAt.toISOString()
+                    : new Date(review.createdAt).toISOString(),
+              },
+            };
+          } catch (error) {
+            console.error(
+              `Failed to generate embedding for review ${review.id}:`,
+              error.message
+            );
+            return null;
+          }
+        })
+      );
+
+      const successfulResults = batchResults.filter(
+        (result) => result !== null
+      );
+      processedData.push(...successfulResults);
+
+      // Small delay between batches
+      if (i + BATCH_SIZE < reviews.length) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
+
+    console.log(
+      `Successfully generated ${processedData.length} embeddings out of ${reviews.length} reviews`
     );
 
     // Step 6: Upsert to Pinecone
@@ -213,33 +319,107 @@ const syncWithAlternativeMethod = async () => {
     // First, delete all vectors in the index to ensure clean state
     try {
       console.log("Deleting all vectors from Pinecone index...");
-      await index.deleteAll();
+      console.log(
+        "This may take a moment depending on the number of vectors..."
+      );
+
+      // Add timeout wrapper for deleteAll operation
+      const deletePromise = index.deleteAll();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () =>
+            reject(new Error("Delete operation timed out after 60 seconds")),
+          60000
+        )
+      );
+
+      await Promise.race([deletePromise, timeoutPromise]);
       console.log("Cleared all vectors from Pinecone index");
     } catch (deleteError) {
-      console.error("Error clearing Pinecone index:", deleteError);
+      console.warn(
+        "Error or timeout clearing Pinecone index:",
+        deleteError.message
+      );
+      console.log(
+        "Continuing with upsert anyway - new vectors will overwrite old ones"
+      );
       // Continue with the upsert even if deletion fails
     }
 
-    // Create embeddings for each review
+    // Create embeddings for each review with enhanced context
     console.log("Creating embeddings for reviews...");
-    const processedData = await Promise.all(
-      reviews.map(async (review) => {
-        const response = await openai.embeddings.create({
-          input: review.review,
-          model: "text-embedding-3-small",
-        });
 
-        return {
-          values: response.data[0].embedding,
-          id: review.id,
-          metadata: {
-            review: review.review,
-            subject: review.subject,
-            stars: review.stars,
-            professor: review.professor,
-          },
-        };
-      })
+    // Process in batches to avoid rate limits
+    const BATCH_SIZE = 50;
+    const processedData = [];
+
+    for (let i = 0; i < reviews.length; i += BATCH_SIZE) {
+      const batch = reviews.slice(i, i + BATCH_SIZE);
+      console.log(
+        `Processing batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(
+          reviews.length / BATCH_SIZE
+        )}`
+      );
+
+      const batchResults = await Promise.all(
+        batch.map(async (review) => {
+          try {
+            // Enhanced embedding input: "Professor [name] teaches [subject]. [review text]"
+            const professorName = (review.professor || "").trim();
+            const subject = (review.subject || "").trim();
+            const reviewText = (review.review || "").trim();
+
+            const embeddingInput = [
+              professorName && `Professor ${professorName}`,
+              subject && `teaches ${subject}`,
+              reviewText,
+            ]
+              .filter(Boolean)
+              .join(". ");
+
+            const finalInput = embeddingInput || reviewText || "Review";
+
+            const response = await openai.embeddings.create({
+              input: finalInput,
+              model: "text-embedding-3-small",
+            });
+
+            return {
+              values: response.data[0].embedding,
+              id: review.id,
+              metadata: {
+                review: review.review,
+                subject: review.subject,
+                stars: review.stars,
+                professor: review.professor,
+                createdAt:
+                  review.createdAt instanceof Date
+                    ? review.createdAt.toISOString()
+                    : new Date(review.createdAt).toISOString(),
+              },
+            };
+          } catch (error) {
+            console.error(
+              `Failed to generate embedding for review ${review.id}:`,
+              error.message
+            );
+            return null;
+          }
+        })
+      );
+
+      const successfulResults = batchResults.filter(
+        (result) => result !== null
+      );
+      processedData.push(...successfulResults);
+
+      if (i + BATCH_SIZE < reviews.length) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
+
+    console.log(
+      `Successfully generated ${processedData.length} embeddings out of ${reviews.length} reviews`
     );
 
     // Upsert to Pinecone
@@ -257,21 +437,44 @@ const syncWithAlternativeMethod = async () => {
 
 async function main() {
   console.log("Starting Pinecone synchronization...");
+  console.log("Checking environment variables...");
+  console.log(
+    "OPENAI_API_KEY:",
+    process.env.OPENAI_API_KEY ? "Set" : "Missing"
+  );
+  console.log(
+    "PINECONE_API_KEY:",
+    process.env.PINECONE_API_KEY ? "Set" : "Missing"
+  );
+  console.log(
+    "NEXT_PUBLIC_FIREBASE_PROJECT_ID:",
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? "Set" : "Missing"
+  );
 
   try {
+    // Initialize Firebase first
+    await initializeFirebase();
+
     console.log(
       `Using ${useAltMethod ? "alternative" : "standard"} sync method`
     );
 
     if (useAltMethod) {
+      console.log("Calling syncWithAlternativeMethod...");
       await syncWithAlternativeMethod();
     } else {
+      console.log("Calling syncWithStandardMethod...");
       await syncWithStandardMethod();
     }
 
     console.log("✅ Synchronization completed successfully");
+    process.exit(0);
   } catch (error) {
     console.error("❌ Synchronization failed:", error);
+    console.error("Error message:", error.message);
+    if (error.stack) {
+      console.error("Error stack:", error.stack);
+    }
     process.exit(1);
   }
 }

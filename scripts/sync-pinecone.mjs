@@ -22,10 +22,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Import the embedding service (ES module)
-// Use file:// URL for Windows compatibility
-const embeddingServicePath = join(__dirname, "../app/services/embeddingService.js");
-const embeddingServiceUrl = `file://${embeddingServicePath.replace(/\\/g, "/")}`;
-const embeddingServiceModule = await import(embeddingServiceUrl);
+const embeddingServiceModule = await import(
+  join(__dirname, "../app/services/embeddingService.js")
+);
 const { embeddingService } = embeddingServiceModule;
 
 const args = process.argv.slice(2);

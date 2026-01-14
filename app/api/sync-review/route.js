@@ -1,0 +1,122 @@
+import { embeddingService } from "../../services/embeddingService";
+import { withCors } from "../../utils/cors";
+import {
+  createErrorResponse,
+  logError,
+  identifyErrorType,
+} from "../../utils/errorHandler";
+import { db } from "../../lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+
+/**
+ * API route to sync a single review to Pinecone
+ * Called after a review is added to Firestore from the client
+ * This ensures server-side environment variables are available
+ */
+async function syncReviewHandler(req) {
+  try {
+    if (req.method !== "POST") {
+      return createErrorResponse(
+        new Error("Method not allowed"),
+        "INVALID_METHOD",
+        405
+      );
+    }
+
+    const { reviewId } = await req.json();
+
+    if (!reviewId) {
+      return createErrorResponse(
+        new Error("Review ID is required"),
+        "INVALID_INPUT",
+        400
+      );
+    }
+
+    // Get the review from Firestore directly by ID
+    // This is more efficient than getting all reviews
+    const reviewRef = doc(db, "reviews", reviewId);
+    const reviewSnap = await getDoc(reviewRef);
+
+    if (!reviewSnap.exists()) {
+      return createErrorResponse(
+        new Error("Review not found"),
+        "NOT_FOUND",
+        404
+      );
+    }
+
+    const review = {
+      id: reviewSnap.id,
+      ...reviewSnap.data(),
+      createdAt: reviewSnap.data().createdAt?.toDate() || new Date(),
+    };
+
+    // Get OpenAI and Pinecone clients (server-side)
+    const { openai, pc } = await embeddingService.getClients();
+    const index = pc.Index("rag");
+
+    // Create enhanced embedding input
+    const professorName = (review.professor || "").trim();
+    const subject = (review.subject || "").trim();
+    const reviewText = (review.review || "").trim();
+
+    const embeddingInput = [
+      professorName && `Professor ${professorName}`,
+      subject && `teaches ${subject}`,
+      reviewText,
+    ]
+      .filter(Boolean)
+      .join(". ");
+
+    const finalInput = embeddingInput || reviewText || "Review";
+
+    // Generate embedding for the review
+    const embeddingResponse = await openai.embeddings.create({
+      input: finalInput,
+      model: "text-embedding-3-small",
+    });
+
+    // Upsert to Pinecone
+    await index.upsert([
+      {
+        values: embeddingResponse.data[0].embedding,
+        id: review.id,
+        metadata: {
+          review: review.review,
+          subject: review.subject,
+          stars: review.stars,
+          professor: review.professor,
+          createdAt:
+            review.createdAt instanceof Date
+              ? review.createdAt.toISOString()
+              : new Date(review.createdAt).toISOString(),
+        },
+      },
+    ]);
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: `Review ${reviewId} synced to Pinecone successfully`,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  } catch (error) {
+    logError(error, "sync-review-api", {
+      reviewId: req.body?.reviewId,
+    });
+
+    const errorType = identifyErrorType(error);
+    return createErrorResponse(
+      error,
+      errorType,
+      errorType === "EXTERNAL_SERVICE_ERROR" ? 503 : 500
+    );
+  }
+}
+
+export const POST = withCors(syncReviewHandler);

@@ -148,31 +148,45 @@ export const reviewsService = {
         createdAt: docSnap.data().createdAt?.toDate() || new Date(),
       };
 
-      // Sync with Pinecone in the background
-      // Using setTimeout with 0ms to make this non-blocking
-      setTimeout(async () => {
-        try {
-          console.log("Starting Pinecone sync for new review...");
-          await embeddingService.syncFirestoreWithPinecone();
-          console.log(`Successfully synced review ${docRef.id} to Pinecone`);
-        } catch (syncError) {
-          logError(syncError, "pinecone-sync-after-add", {
-            reviewId: docRef.id,
+      // Sync with Pinecone via server-side API route
+      // This ensures server-side environment variables are available
+      // The sync happens asynchronously so it doesn't block the review submission
+      try {
+        // Call the server-side API route to sync this review to Pinecone
+        // This runs in the background and won't block the user experience
+        fetch("/api/sync-review", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ reviewId: docRef.id }),
+        })
+          .then((response) => {
+            if (response.ok) {
+              console.log(
+                `Successfully triggered sync for review ${docRef.id}`
+              );
+            } else {
+              console.warn(
+                `Failed to trigger sync for review ${docRef.id}: ${response.statusText}`
+              );
+            }
+          })
+          .catch((error) => {
+            console.warn(
+              `Error triggering sync for review ${docRef.id}:`,
+              error.message
+            );
+            // Don't throw - this is a background operation
           });
-
-          // Attempt alternative sync method
-          try {
-            console.log("Attempting alternative sync method...");
-            await embeddingService.syncFirestoreWithPineconeFallback();
-            console.log("Alternative sync successful");
-          } catch (fallbackError) {
-            logError(fallbackError, "pinecone-sync-fallback", {
-              reviewId: docRef.id,
-            });
-            // Don't throw here since this is background sync
-          }
-        }
-      }, 0);
+      } catch (syncError) {
+        // If triggering sync fails, log but don't block the review submission
+        // A cron job or manual sync will catch this later
+        console.warn(
+          `Failed to trigger sync for review ${docRef.id}:`,
+          syncError.message
+        );
+      }
 
       return savedReview;
     } catch (error) {

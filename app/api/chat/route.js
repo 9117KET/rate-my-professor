@@ -1,12 +1,146 @@
 import { OpenAI } from "openai";
 import { embeddingService } from "../../services/embeddingService";
 import { rateLimiterService } from "../../services/rateLimiterService";
+import { reviewsService } from "../../services/reviewsService";
 import { withCors } from "../../utils/cors";
 import {
   createErrorResponse,
   logError,
   identifyErrorType,
 } from "../../utils/errorHandler";
+import localReviewsData from "../../../reviews.json";
+
+// Detect "best rated professor" queries in flexible phrasing.
+// This keeps the match logic simple and avoids brittle, exact matching.
+const BEST_RATED_QUERY_PATTERN =
+  /(best|top|highest)\s*(rated|rating|ratings)?\s*(professor|professors|lecturer|instructor)/i;
+
+// Stream a short, deterministic answer back to the client without waiting on LLMs.
+// This is useful for ranking questions where we can compute a reliable result.
+const createTextStream = (text) =>
+  new ReadableStream({
+    start(controller) {
+      controller.enqueue(text);
+      controller.close();
+    },
+  });
+
+// Decide if a message is asking for a ranking of professors.
+// We keep this fast to avoid extra server work on unrelated queries.
+const isBestRatedProfessorQuery = (message) => {
+  if (!message) return false;
+  const normalized = message.toLowerCase();
+  return (
+    BEST_RATED_QUERY_PATTERN.test(normalized) ||
+    normalized.includes("best professor")
+  );
+};
+
+// Use local JSON data as a safe fallback when Firestore is unavailable on the server.
+// This prevents a full 500 error and keeps the chat responsive.
+const getFallbackReviews = () =>
+  Array.isArray(localReviewsData?.reviews) ? localReviewsData.reviews : [];
+
+// Compute the top-rated professors from review data using averages.
+// This avoids asking the LLM to "guess" rankings from raw text.
+const buildBestRatedProfessorResponse = async () => {
+  let reviews = [];
+
+  try {
+    reviews = await reviewsService.getAllReviews();
+  } catch (error) {
+    // If Firestore isn't reachable in this environment, we fall back to local data.
+    // Real-life analogy: like checking a cached leaderboard when the live API is down.
+    logError(error, "best-rated-professor-firestore-fallback");
+  }
+
+  if (!Array.isArray(reviews) || reviews.length === 0) {
+    reviews = getFallbackReviews();
+  }
+
+  if (!Array.isArray(reviews) || reviews.length === 0) {
+    return (
+      "I do not have enough reviews yet to determine the best rated professor. " +
+      "Try again after more reviews are submitted."
+    );
+  }
+
+  const stats = new Map();
+
+  reviews.forEach((review) => {
+    const professor = (review.professor || "").trim();
+    const stars = Number(review.stars);
+
+    if (!professor || Number.isNaN(stars)) {
+      return;
+    }
+
+    if (!stats.has(professor)) {
+      stats.set(professor, {
+        professor,
+        totalRating: 0,
+        reviewCount: 0,
+        subjects: new Set(),
+      });
+    }
+
+    const entry = stats.get(professor);
+    entry.totalRating += stars;
+    entry.reviewCount += 1;
+
+    if (review.subject) {
+      entry.subjects.add(review.subject);
+    }
+  });
+
+  const ranked = Array.from(stats.values())
+    .map((entry) => ({
+      professor: entry.professor,
+      averageRating: entry.totalRating / entry.reviewCount,
+      reviewCount: entry.reviewCount,
+      subjects: Array.from(entry.subjects),
+    }))
+    .sort((a, b) => {
+      if (b.averageRating !== a.averageRating) {
+        return b.averageRating - a.averageRating;
+      }
+      if (b.reviewCount !== a.reviewCount) {
+        return b.reviewCount - a.reviewCount;
+      }
+      return a.professor.localeCompare(b.professor);
+    });
+
+  if (ranked.length === 0) {
+    return (
+      "I could not find any rated professors yet. " +
+      "Once reviews are submitted, I can calculate the best rated professor."
+    );
+  }
+
+  const topRated = ranked[0];
+  const topList = ranked.slice(0, 3);
+
+  const summaryLine =
+    `Based on ${topRated.reviewCount} review` +
+    `${topRated.reviewCount === 1 ? "" : "s"}, the best rated professor is ` +
+    `${topRated.professor} (${topRated.averageRating.toFixed(2)}/5).`;
+
+  const listLines = topList
+    .map((entry, index) => {
+      const subjects =
+        entry.subjects.length > 0
+          ? ` Subjects: ${entry.subjects.join(", ")}.`
+          : "";
+      return `${index + 1}. ${entry.professor} - ${entry.averageRating.toFixed(
+        2
+      )}/5 from ${entry.reviewCount} review${
+        entry.reviewCount === 1 ? "" : "s"
+      }.${subjects}`;
+    })
+    .join("\n");
+
+  return `${summaryLine}\n\nTop rated professors:\n${listLines}`;
+};
 
 async function chatHandler(req) {
   try {
@@ -202,20 +336,42 @@ async function chatHandler(req) {
       );
     }
 
+    if (isBestRatedProfessorQuery(userMessage)) {
+      const responseText = await buildBestRatedProfessorResponse();
+      return new Response(createTextStream(responseText), {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "X-RateLimit-Limit": rateLimitResult.limit.toString(),
+          "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+          "X-RateLimit-Reset": rateLimitResult.resetTime.toString(),
+        },
+      });
+    }
+
     // Initialize OpenAI (use trimmed key)
     const openai = new OpenAI({
       apiKey: openAIKey,
     });
 
-    // Get similar reviews using RAG
-    const matches = await embeddingService.queryReviews(userMessage);
+    // Get similar reviews using RAG with enhanced query context
+    // Enhance user message with context for better semantic matching
+    const enhancedQuery =
+      userMessage.toLowerCase().includes("professor") ||
+      userMessage.toLowerCase().includes("teach") ||
+      userMessage.toLowerCase().includes("course")
+        ? userMessage // Already has context
+        : userMessage; // Keep original for now
 
-    // Format context from similar reviews
-    // Handle empty matches gracefully
+    const matches = await embeddingService.queryReviews(enhancedQuery);
+
+    // Format context from similar reviews, prioritizing higher relevance scores
+    // Filter and sort by relevance (lower score = higher relevance in Pinecone)
     const context =
       matches && matches.length > 0
         ? matches
-            .filter((match) => match.metadata) // Filter out matches without metadata
+            .filter((match) => match.metadata && match.score !== undefined) // Filter out invalid matches
+            .sort((a, b) => a.score - b.score) // Sort by relevance (lower score = better match)
+            .slice(0, 5) // Take top 5 most relevant matches (we query 10, but use best 5)
             .map(
               (match) =>
                 `Professor: ${
