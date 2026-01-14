@@ -150,42 +150,69 @@ export const reviewsService = {
 
       // Sync with Pinecone via server-side API route
       // This ensures server-side environment variables are available
-      // The sync happens asynchronously so it doesn't block the review submission
+      // IMPORTANT: This sync happens automatically but doesn't block review submission
+      // If sync fails, the review is still saved and can be synced later via cron or manual sync
       try {
+        console.log(
+          `[SYNC] Starting automatic sync for review ${docRef.id}...`
+        );
+
         // Call the server-side API route to sync this review to Pinecone
-        // This runs in the background and won't block the user experience
-        fetch("/api/sync-review", {
+        // Add timeout to prevent hanging (10 seconds max)
+        const syncPromise = fetch("/api/sync-review", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ reviewId: docRef.id }),
-        })
-          .then((response) => {
-            if (response.ok) {
-              console.log(
-                `Successfully triggered sync for review ${docRef.id}`
-              );
-            } else {
-              console.warn(
-                `Failed to trigger sync for review ${docRef.id}: ${response.statusText}`
-              );
-            }
-          })
-          .catch((error) => {
-            console.warn(
-              `Error triggering sync for review ${docRef.id}:`,
-              error.message
-            );
-            // Don't throw - this is a background operation
-          });
+        });
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Sync timeout after 10 seconds")),
+            10000
+          )
+        );
+
+        const syncResponse = await Promise.race([syncPromise, timeoutPromise]);
+
+        if (syncResponse.ok) {
+          const result = await syncResponse.json();
+          console.log(
+            `[SYNC] ✅ Successfully synced review ${docRef.id} to Pinecone:`,
+            result.message
+          );
+        } else {
+          const errorData = await syncResponse.json().catch(() => ({}));
+          console.error(
+            `[SYNC] ❌ Failed to sync review ${docRef.id}:`,
+            syncResponse.status,
+            syncResponse.statusText,
+            errorData
+          );
+          // Log to error handler for monitoring
+          logError(
+            new Error(
+              `Sync failed: ${syncResponse.status} ${syncResponse.statusText}`
+            ),
+            "auto-sync-failed",
+            { reviewId: docRef.id }
+          );
+        }
       } catch (syncError) {
-        // If triggering sync fails, log but don't block the review submission
+        // If triggering sync fails or times out, log but don't block the review submission
         // A cron job or manual sync will catch this later
-        console.warn(
-          `Failed to trigger sync for review ${docRef.id}:`,
+        console.error(
+          `[SYNC] ❌ Error/timeout syncing review ${docRef.id}:`,
           syncError.message
         );
+        console.warn(
+          `[SYNC] Review ${docRef.id} was saved to Firestore but not yet synced to Pinecone.`,
+          "Run 'npm run sync-pinecone:full' to sync all reviews."
+        );
+        logError(syncError, "auto-sync-error", {
+          reviewId: docRef.id,
+        });
       }
 
       return savedReview;

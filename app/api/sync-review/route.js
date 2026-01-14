@@ -15,6 +15,8 @@ import { doc, getDoc } from "firebase/firestore";
  */
 async function syncReviewHandler(req) {
   try {
+    console.log("[SYNC-API] Received sync request");
+    
     if (req.method !== "POST") {
       return createErrorResponse(
         new Error("Method not allowed"),
@@ -24,6 +26,7 @@ async function syncReviewHandler(req) {
     }
 
     const { reviewId } = await req.json();
+    console.log(`[SYNC-API] Syncing review: ${reviewId}`);
 
     if (!reviewId) {
       return createErrorResponse(
@@ -35,16 +38,20 @@ async function syncReviewHandler(req) {
 
     // Get the review from Firestore directly by ID
     // This is more efficient than getting all reviews
+    console.log(`[SYNC-API] Fetching review ${reviewId} from Firestore...`);
     const reviewRef = doc(db, "reviews", reviewId);
     const reviewSnap = await getDoc(reviewRef);
 
     if (!reviewSnap.exists()) {
+      console.error(`[SYNC-API] Review ${reviewId} not found in Firestore`);
       return createErrorResponse(
         new Error("Review not found"),
         "NOT_FOUND",
         404
       );
     }
+    
+    console.log(`[SYNC-API] Review found: ${reviewSnap.data().professor || "Unknown"}`);
 
     const review = {
       id: reviewSnap.id,
@@ -53,8 +60,10 @@ async function syncReviewHandler(req) {
     };
 
     // Get OpenAI and Pinecone clients (server-side)
+    console.log(`[SYNC-API] Initializing OpenAI and Pinecone clients...`);
     const { openai, pc } = await embeddingService.getClients();
     const index = pc.Index("rag");
+    console.log(`[SYNC-API] Clients initialized`);
 
     // Create enhanced embedding input
     const professorName = (review.professor || "").trim();
@@ -70,12 +79,14 @@ async function syncReviewHandler(req) {
       .join(". ");
 
     const finalInput = embeddingInput || reviewText || "Review";
+    console.log(`[SYNC-API] Creating embedding for: ${professorName} - ${subject}`);
 
     // Generate embedding for the review
     const embeddingResponse = await openai.embeddings.create({
       input: finalInput,
       model: "text-embedding-3-small",
     });
+    console.log(`[SYNC-API] Embedding generated, upserting to Pinecone...`);
 
     // Upsert to Pinecone
     await index.upsert([
@@ -94,6 +105,8 @@ async function syncReviewHandler(req) {
         },
       },
     ]);
+
+    console.log(`[SYNC-API] ✅ Successfully synced review ${reviewId} to Pinecone`);
 
     return new Response(
       JSON.stringify({
