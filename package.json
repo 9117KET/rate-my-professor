@@ -8,7 +8,13 @@
     "start": "npx next start",
     "lint": "npx next lint",
     "sync-pinecone": "node scripts/sync-pinecone-compat.js",
-    "sync-pinecone:full": "node scripts/sync-pinecone-compat.js --alt-method"
+    "sync-pinecone:full": "node scripts/sync-pinecone-compat.js --alt-method",
+    "test:diagnostics": "node tests/agents/run-all.js",
+    "test:firestore": "node tests/agents/firestore-inspector.js",
+    "test:pinecone": "node tests/agents/pinecone-inspector.js",
+    "test:sync": "node tests/agents/sync-validator.js",
+    "test:queries": "node tests/agents/query-tester.js",
+    "test:metadata": "node tests/agents/metadata-consistency.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

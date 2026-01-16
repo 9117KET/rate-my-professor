@@ -190,15 +190,19 @@ export const embeddingService = {
       // Enhanced embedding input includes professor name, subject, and review text
       // This improves semantic matching by providing more context for vector search
       console.log("Generating embeddings for reviews...");
-      
+
       // Process reviews in batches to avoid rate limits and timeouts
       const BATCH_SIZE = 50;
       const processedData = [];
-      
+
       for (let i = 0; i < reviews.length; i += BATCH_SIZE) {
         const batch = reviews.slice(i, i + BATCH_SIZE);
-        console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(reviews.length / BATCH_SIZE)} (${batch.length} reviews)`);
-        
+        console.log(
+          `Processing batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(
+            reviews.length / BATCH_SIZE
+          )} (${batch.length} reviews)`
+        );
+
         const batchResults = await Promise.all(
           batch.map(async (review) => {
             try {
@@ -208,7 +212,7 @@ export const embeddingService = {
               const professorName = (review.professor || "").trim();
               const subject = (review.subject || "").trim();
               const reviewText = (review.review || "").trim();
-              
+
               // Build comprehensive embedding input
               const embeddingInput = [
                 professorName && `Professor ${professorName}`,
@@ -217,10 +221,10 @@ export const embeddingService = {
               ]
                 .filter(Boolean)
                 .join(". ");
-              
+
               // Fallback to review text if no other context available
               const finalInput = embeddingInput || reviewText || "Review";
-              
+
               // Create embeddings using OpenAI's embedding model
               const response = await openai.embeddings.create({
                 input: finalInput,
@@ -251,18 +255,22 @@ export const embeddingService = {
             }
           })
         );
-        
+
         // Filter out failed embeddings and add to processed data
-        const successfulResults = batchResults.filter((result) => result !== null);
+        const successfulResults = batchResults.filter(
+          (result) => result !== null
+        );
         processedData.push(...successfulResults);
-        
+
         // Small delay between batches to avoid rate limits
         if (i + BATCH_SIZE < reviews.length) {
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
       }
-      
-      console.log(`Successfully generated ${processedData.length} embeddings out of ${reviews.length} reviews`);
+
+      console.log(
+        `Successfully generated ${processedData.length} embeddings out of ${reviews.length} reviews`
+      );
 
       // Step 6: Upsert to Pinecone
       if (processedData.length > 0) {
@@ -314,11 +322,15 @@ export const embeddingService = {
       // Process in batches to avoid rate limits
       const BATCH_SIZE = 50;
       const processedData = [];
-      
+
       for (let i = 0; i < reviews.length; i += BATCH_SIZE) {
         const batch = reviews.slice(i, i + BATCH_SIZE);
-        console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(reviews.length / BATCH_SIZE)}`);
-        
+        console.log(
+          `Processing batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(
+            reviews.length / BATCH_SIZE
+          )}`
+        );
+
         const batchResults = await Promise.all(
           batch.map(async (review) => {
             try {
@@ -326,7 +338,7 @@ export const embeddingService = {
               const professorName = (review.professor || "").trim();
               const subject = (review.subject || "").trim();
               const reviewText = (review.review || "").trim();
-              
+
               const embeddingInput = [
                 professorName && `Professor ${professorName}`,
                 subject && `teaches ${subject}`,
@@ -334,9 +346,9 @@ export const embeddingService = {
               ]
                 .filter(Boolean)
                 .join(". ");
-              
+
               const finalInput = embeddingInput || reviewText || "Review";
-              
+
               const response = await openai.embeddings.create({
                 input: finalInput,
                 model: "text-embedding-3-small",
@@ -353,15 +365,20 @@ export const embeddingService = {
                 },
               };
             } catch (error) {
-              console.error(`Failed to generate embedding for review ${review.id}:`, error);
+              console.error(
+                `Failed to generate embedding for review ${review.id}:`,
+                error
+              );
               return null;
             }
           })
         );
-        
-        const successfulResults = batchResults.filter((result) => result !== null);
+
+        const successfulResults = batchResults.filter(
+          (result) => result !== null
+        );
         processedData.push(...successfulResults);
-        
+
         if (i + BATCH_SIZE < reviews.length) {
           await new Promise((resolve) => setTimeout(resolve, 100));
         }

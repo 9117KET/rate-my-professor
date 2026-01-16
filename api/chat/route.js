@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { Pinecone } from "@pinecone-database/pinecone";
 import OpenAI from "openai";
-import { encode } from "punycode";
 import NodeCache from "node-cache";
 import Fuse from "fuse.js";
 
@@ -184,22 +183,24 @@ async function getProfessorNames(index) {
         // Process this page of results
         const pageResults = Object.values(response.vectors || {}).flatMap(
           (prof) => {
-            const name = prof.metadata?.name || prof.id;
+            // Fix: Use 'professor' field (what sync code writes) instead of 'name'
+            const name =
+              prof.metadata?.professor || prof.metadata?.name || prof.id;
             // Skip items without a name
-            if (!name) return [];
+            if (!name || name === prof.id) return [];
 
             const [original, normalized, simplified] =
               normalizeGermanText(name);
             totalVectors++;
 
             // Create entries for all name variants
+            // Note: department field removed as it's not available in Firestore
             return [
               {
                 id: prof.id,
                 fullName: original,
                 normalizedName: normalized,
                 simplifiedName: simplified,
-                department: prof.metadata?.department || "",
                 subject: prof.metadata?.subject || "",
               },
               // Only add variant if different from original
@@ -210,7 +211,6 @@ async function getProfessorNames(index) {
                       fullName: normalized,
                       normalizedName: normalized,
                       simplifiedName: simplified,
-                      department: prof.metadata?.department || "",
                       subject: prof.metadata?.subject || "",
                     },
                   ]
@@ -223,7 +223,6 @@ async function getProfessorNames(index) {
                       fullName: simplified,
                       normalizedName: simplified,
                       simplifiedName: simplified,
-                      department: prof.metadata?.department || "",
                       subject: prof.metadata?.subject || "",
                     },
                   ]
@@ -268,7 +267,6 @@ function findProfessorMatches(userMessage, professorNames) {
     keys: [
       { name: "fullName", weight: 2 },
       { name: "normalizedName", weight: 2 },
-      { name: "department", weight: 0.5 },
       { name: "subject", weight: 0.5 },
     ],
     includeScore: true,
@@ -513,10 +511,11 @@ export async function POST(req) {
     const context = (queryResponse.matches || [])
       .map((match) => {
         const metadata = match.metadata || {};
+        // Fix: Use 'professor' field (what sync code writes) instead of 'name'
+        const professorName = metadata.professor || metadata.name || match.id;
         return `Professor ID: ${match.id}
-Full Name: ${metadata.name || match.id}
+Full Name: ${professorName}
 Subject: ${metadata.subject || "N/A"}
-Department: ${metadata.department || "N/A"}
 Rating: ${metadata.stars || "N/A"} stars
 Review: ${metadata.review || "No review available"}
 Similarity Score: ${match.score}

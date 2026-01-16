@@ -5,8 +5,9 @@ import {
   logError,
   identifyErrorType,
 } from "../../utils/errorHandler";
-import { db } from "../../lib/firebase";
+import { db, auth } from "../../lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { signInAnonymously } from "firebase/auth";
 
 /**
  * API route to sync a single review to Pinecone
@@ -16,7 +17,7 @@ import { doc, getDoc } from "firebase/firestore";
 async function syncReviewHandler(req) {
   try {
     console.log("[SYNC-API] Received sync request");
-    
+
     if (req.method !== "POST") {
       return createErrorResponse(
         new Error("Method not allowed"),
@@ -36,6 +37,20 @@ async function syncReviewHandler(req) {
       );
     }
 
+    // Authenticate anonymously for server-side Firestore access
+    // Server-side API routes need authentication to satisfy Firestore security rules
+    if (!auth.currentUser) {
+      try {
+        await signInAnonymously(auth);
+        console.log(
+          "[SYNC-API] Authenticated anonymously for Firestore access"
+        );
+      } catch (authError) {
+        console.error("[SYNC-API] Failed to authenticate:", authError.message);
+        throw new Error(`Firebase authentication failed: ${authError.message}`);
+      }
+    }
+
     // Get the review from Firestore directly by ID
     // This is more efficient than getting all reviews
     console.log(`[SYNC-API] Fetching review ${reviewId} from Firestore...`);
@@ -50,8 +65,10 @@ async function syncReviewHandler(req) {
         404
       );
     }
-    
-    console.log(`[SYNC-API] Review found: ${reviewSnap.data().professor || "Unknown"}`);
+
+    console.log(
+      `[SYNC-API] Review found: ${reviewSnap.data().professor || "Unknown"}`
+    );
 
     const review = {
       id: reviewSnap.id,
@@ -79,7 +96,9 @@ async function syncReviewHandler(req) {
       .join(". ");
 
     const finalInput = embeddingInput || reviewText || "Review";
-    console.log(`[SYNC-API] Creating embedding for: ${professorName} - ${subject}`);
+    console.log(
+      `[SYNC-API] Creating embedding for: ${professorName} - ${subject}`
+    );
 
     // Generate embedding for the review
     const embeddingResponse = await openai.embeddings.create({
@@ -106,7 +125,9 @@ async function syncReviewHandler(req) {
       },
     ]);
 
-    console.log(`[SYNC-API] ✅ Successfully synced review ${reviewId} to Pinecone`);
+    console.log(
+      `[SYNC-API] ✅ Successfully synced review ${reviewId} to Pinecone`
+    );
 
     return new Response(
       JSON.stringify({
