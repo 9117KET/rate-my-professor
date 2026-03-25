@@ -2,6 +2,7 @@ import { OpenAI } from "openai";
 import { embeddingService } from "../../services/embeddingService";
 import { rateLimiterService } from "../../services/rateLimiterService";
 import { reviewsService } from "../../services/reviewsService";
+import { chunkText } from "../../utils/textChunker";
 import { withCors } from "../../utils/cors";
 import {
   createErrorResponse,
@@ -35,6 +36,23 @@ const isBestRatedProfessorQuery = (message) => {
     normalized.includes("best professor")
   );
 };
+
+// Extract an "exact phrase" from user text if present.
+// Used as a fallback when vector search misses exact string matches.
+function extractExactPhrase(userMessage) {
+  if (!userMessage) return null;
+  const quoted = userMessage.match(/"([^"]{3,200})"/);
+  if (quoted?.[1]) return quoted[1].trim();
+
+  const lower = userMessage.toLowerCase();
+  const idx = lower.lastIndexOf("mentions ");
+  if (idx !== -1) {
+    const phrase = userMessage.slice(idx + "mentions ".length).trim();
+    if (phrase.length >= 3 && phrase.length <= 200) return phrase;
+  }
+
+  return null;
+}
 
 // Use local JSON data as a safe fallback when Firestore is unavailable on the server.
 // This prevents a full 500 error and keeps the chat responsive.
@@ -362,7 +380,64 @@ async function chatHandler(req) {
         ? userMessage // Already has context
         : userMessage; // Keep original for now
 
-    const matches = await embeddingService.queryReviews(enhancedQuery);
+    let matches = await embeddingService.queryReviews(enhancedQuery);
+
+
+    // Lexical fallback for exact-phrase queries (helps when embeddings miss rare strings).
+    const exactPhrase = extractExactPhrase(userMessage);
+    const phraseLower = exactPhrase ? exactPhrase.toLowerCase() : null;
+    const chunkTexts = Array.isArray(matches)
+      ? matches
+          .map((m) => (m?.metadata?.chunk ? String(m.metadata.chunk) : ""))
+          .filter(Boolean)
+      : [];
+    const hasAnyChunkMatches = chunkTexts.length > 0;
+    const retrievedContainsPhrase =
+      Boolean(phraseLower) &&
+      chunkTexts.some((c) => c.toLowerCase().includes(phraseLower));
+
+    // If the user asks for an exact phrase but the retrieved chunks don't contain it,
+    // run a lexical fallback to guarantee correctness for "mentions <phrase>" queries.
+    if (exactPhrase && (!hasAnyChunkMatches || !retrievedContainsPhrase)) {
+      const phraseLower = exactPhrase.toLowerCase();
+      let allReviews = [];
+      try {
+        allReviews = await reviewsService.getAllReviews();
+      } catch (e) {
+        logError(e, "chat-lexical-fallback-getAllReviews");
+      }
+
+      const hits = (allReviews || [])
+        .filter((r) => (r?.review || "").toLowerCase().includes(phraseLower))
+        .slice(0, 5)
+        .flatMap((r) => {
+          const chunks = chunkText(r.review || "");
+          const matchingChunks = chunks.filter((c) =>
+            c.toLowerCase().includes(phraseLower)
+          );
+          const keep =
+            matchingChunks.length > 0 ? matchingChunks : chunks.slice(0, 1);
+          return keep.slice(0, 2).map((chunk, idx) => ({
+            id: `${r.id}#lex${idx}`,
+            score: 0,
+            metadata: {
+              reviewId: r.id,
+              chunk,
+              professor: r.professor,
+              subject: r.subject,
+              stars: r.stars,
+              createdAt:
+                r.createdAt instanceof Date
+                  ? r.createdAt.toISOString()
+                  : new Date(r.createdAt).toISOString(),
+            },
+          }));
+        });
+
+      if (hits.length > 0) {
+        matches = hits;
+      }
+    }
 
     // Format context from similar reviews, prioritizing higher relevance scores
     // Filter and sort by relevance (lower score = higher relevance in Pinecone)
@@ -378,7 +453,11 @@ async function chatHandler(req) {
                   match.metadata.professor || "Unknown"
                 }\nSubject: ${match.metadata.subject || "Unknown"}\nRating: ${
                   match.metadata.stars || "N/A"
-                }/5\nReview: ${match.metadata.review || "No review text"}`
+                }/5\nExcerpt: ${
+                  match.metadata.chunk ||
+                  match.metadata.review ||
+                  "No review text"
+                }`
             )
             .join("\n\n")
         : "No matching professor reviews found in the database.";

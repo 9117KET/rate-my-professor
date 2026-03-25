@@ -1,6 +1,7 @@
 import { reviewsService } from "./reviewsService";
 import { OpenAI } from "openai";
 import { Pinecone } from "@pinecone-database/pinecone";
+import { chunkText } from "../utils/textChunker";
 
 /**
  * Service for managing vector embeddings of reviews and other content
@@ -98,19 +99,9 @@ export const embeddingService = {
           apiKey.length <= 60));
 
     if (!isValidFormat) {
-      const originalLength = apiKeyRaw?.length || 0;
-      const expectedFormat = apiKey?.startsWith("sk-proj-")
-        ? "sk-proj- format (100-200 characters)"
-        : "sk- format (40-60 characters) or sk-proj- format (100-200 characters)";
-      throw new Error(
-        `Invalid OpenAI API key format. Key preview: ${keyPreview}. OpenAI API keys should start with "sk-" or "sk-proj-" and be the correct length for their format (found: ${
-          apiKey.length
-        } chars, expected: ${expectedFormat}).${
-          originalLength > 200
-            ? ` The original key was ${originalLength} characters, which suggests it may be duplicated or concatenated. Please check your Vercel environment variable and ensure it contains only a single valid API key.`
-            : ""
-        } Please verify your OPENAI_API_KEY in Vercel Settings → Environment Variables.`
-      );
+      // In local/dev (or when chat/embeddings are not configured), we want the app to keep working.
+      // Callers that require embeddings should treat "missing client" as "sync disabled".
+      return null;
     }
 
     const openai = new OpenAI({
@@ -134,7 +125,16 @@ export const embeddingService = {
   async syncFirestoreWithPinecone() {
     try {
       console.log("Starting Pinecone sync...");
-      const { openai, pc } = await this.getClients();
+      const clients = await this.getClients();
+      if (!clients) {
+        console.warn(
+          "Pinecone sync skipped: missing/invalid OPENAI_API_KEY (embeddings disabled)."
+        );
+
+        return false;
+      }
+
+      const { openai, pc } = clients;
       const index = pc.Index("rag");
 
       // Step 1: Get all reviews from Firestore
@@ -160,9 +160,12 @@ export const embeddingService = {
           console.log(`Found ${pineconeIds.length} vectors in Pinecone`);
 
           // Step 3: Find vectors to delete
-          const vectorsToDelete = pineconeIds.filter(
-            (id) => !firestoreIds.includes(id)
-          );
+          // With chunking, Pinecone IDs are like reviewId#chunkIndex.
+          // Delete vectors whose base reviewId no longer exists in Firestore.
+          const vectorsToDelete = pineconeIds.filter((id) => {
+            const baseId = String(id).split("#")[0];
+            return !firestoreIds.includes(baseId);
+          });
 
           // Step 4: Delete vectors that no longer exist in Firestore
           if (vectorsToDelete.length > 0) {
@@ -194,6 +197,7 @@ export const embeddingService = {
       // Process reviews in batches to avoid rate limits and timeouts
       const BATCH_SIZE = 50;
       const processedData = [];
+      const expectedIds = new Set();
 
       for (let i = 0; i < reviews.length; i += BATCH_SIZE) {
         const batch = reviews.slice(i, i + BATCH_SIZE);
@@ -213,54 +217,64 @@ export const embeddingService = {
               const subject = (review.subject || "").trim();
               const reviewText = (review.review || "").trim();
 
-              // Build comprehensive embedding input
-              const embeddingInput = [
+              const chunks = chunkText(reviewText);
+              if (chunks.length === 0) return [];
+
+              // Prefix helps name/subject queries match even if the review text doesn't repeat them.
+              const prefix = [
                 professorName && `Professor ${professorName}`,
-                subject && `teaches ${subject}`,
-                reviewText,
+                subject && `Subject ${subject}`,
               ]
                 .filter(Boolean)
                 .join(". ");
 
-              // Fallback to review text if no other context available
-              const finalInput = embeddingInput || reviewText || "Review";
+              const createdAtIso =
+                review.createdAt instanceof Date
+                  ? review.createdAt.toISOString()
+                  : new Date(review.createdAt).toISOString();
 
-              // Create embeddings using OpenAI's embedding model
-              const response = await openai.embeddings.create({
-                input: finalInput,
-                model: "text-embedding-3-small",
-              });
+              const vectors = [];
+              for (let i = 0; i < chunks.length; i += 1) {
+                const chunk = chunks[i];
+                const finalInput = prefix ? `${prefix}. ${chunk}` : chunk;
 
-              return {
-                values: response.data[0].embedding,
-                id: review.id,
-                metadata: {
-                  review: review.review,
-                  subject: review.subject,
-                  stars: review.stars,
-                  professor: review.professor,
-                  createdAt:
-                    review.createdAt instanceof Date
-                      ? review.createdAt.toISOString()
-                      : new Date(review.createdAt).toISOString(),
-                },
-              };
+                const response = await openai.embeddings.create({
+                  input: finalInput,
+                  model: "text-embedding-3-small",
+                });
+
+                const id = `${review.id}#${i}`;
+                expectedIds.add(id);
+
+                vectors.push({
+                  values: response.data[0].embedding,
+                  id,
+                  metadata: {
+                    reviewId: review.id,
+                    chunkIndex: i,
+                    chunk,
+                    subject: review.subject,
+                    stars: review.stars,
+                    professor: review.professor,
+                    createdAt: createdAtIso,
+                  },
+                });
+              }
+
+              return vectors;
             } catch (error) {
               console.error(
                 `Failed to generate embedding for review ${review.id}:`,
                 error
               );
               // Don't throw - continue with other reviews
-              return null;
+              return [];
             }
           })
         );
 
         // Filter out failed embeddings and add to processed data
-        const successfulResults = batchResults.filter(
-          (result) => result !== null
-        );
-        processedData.push(...successfulResults);
+        processedData.push(...batchResults.flat().filter(Boolean));
 
         // Small delay between batches to avoid rate limits
         if (i + BATCH_SIZE < reviews.length) {
@@ -269,7 +283,7 @@ export const embeddingService = {
       }
 
       console.log(
-        `Successfully generated ${processedData.length} embeddings out of ${reviews.length} reviews`
+        `Successfully generated ${processedData.length} vector embeddings from ${reviews.length} reviews`
       );
 
       // Step 6: Upsert to Pinecone
@@ -281,11 +295,34 @@ export const embeddingService = {
         const stats = await index.describeIndexStats();
         console.log("Post-upsert Pinecone stats:", stats);
 
-        if (stats.totalRecordCount !== reviews.length) {
+        if (stats.totalRecordCount !== processedData.length) {
           console.warn(
-            `Warning: Pinecone record count (${stats.totalRecordCount}) doesn't match Firestore review count (${reviews.length})`
+            `Warning: Pinecone record count (${stats.totalRecordCount}) doesn't match expected vector count (${processedData.length})`
           );
         }
+      }
+
+      // Cleanup: remove stale chunk IDs for reviews that still exist (e.g., edits).
+      try {
+        const vectorsList = await index.listVectors();
+        const pineconeIds =
+          vectorsList?.vectors?.map((vector) => vector.id) || [];
+
+        const stale = pineconeIds.filter((id) => {
+          const baseId = String(id).split("#")[0];
+          if (!firestoreIds.includes(baseId)) return false;
+          return !expectedIds.has(id);
+        });
+
+        if (stale.length > 0) {
+          console.log(`Deleting ${stale.length} stale chunk vector(s) from Pinecone`);
+          await index.deleteMany(stale);
+        }
+      } catch (cleanupError) {
+        console.warn(
+          "Unable to perform stale-chunk cleanup:",
+          cleanupError?.message || cleanupError
+        );
       }
 
       console.log("Pinecone sync completed successfully");
@@ -303,7 +340,13 @@ export const embeddingService = {
    */
   async syncFirestoreWithPineconeFallback() {
     try {
-      const { openai, pc } = await this.getClients();
+      const clients = await this.getClients();
+      if (!clients) {
+        throw new Error(
+          "Pinecone sync fallback cannot run: missing/invalid OPENAI_API_KEY."
+        );
+      }
+      const { openai, pc } = clients;
       const index = pc.Index("rag");
 
       // Get all reviews from Firestore
@@ -334,50 +377,61 @@ export const embeddingService = {
         const batchResults = await Promise.all(
           batch.map(async (review) => {
             try {
-              // Enhanced embedding input with professor name, subject, and review
               const professorName = (review.professor || "").trim();
               const subject = (review.subject || "").trim();
               const reviewText = (review.review || "").trim();
 
-              const embeddingInput = [
+              const chunks = chunkText(reviewText);
+              if (chunks.length === 0) return [];
+
+              const prefix = [
                 professorName && `Professor ${professorName}`,
-                subject && `teaches ${subject}`,
-                reviewText,
+                subject && `Subject ${subject}`,
               ]
                 .filter(Boolean)
                 .join(". ");
 
-              const finalInput = embeddingInput || reviewText || "Review";
+              const createdAtIso =
+                review.createdAt instanceof Date
+                  ? review.createdAt.toISOString()
+                  : new Date(review.createdAt).toISOString();
 
-              const response = await openai.embeddings.create({
-                input: finalInput,
-                model: "text-embedding-3-small",
-              });
+              const vectors = [];
+              for (let i = 0; i < chunks.length; i += 1) {
+                const chunk = chunks[i];
+                const finalInput = prefix ? `${prefix}. ${chunk}` : chunk;
+                const response = await openai.embeddings.create({
+                  input: finalInput,
+                  model: "text-embedding-3-small",
+                });
 
-              return {
-                values: response.data[0].embedding,
-                id: review.id,
-                metadata: {
-                  review: review.review,
-                  subject: review.subject,
-                  stars: review.stars,
-                  professor: review.professor,
-                },
-              };
+                vectors.push({
+                  values: response.data[0].embedding,
+                  id: `${review.id}#${i}`,
+                  metadata: {
+                    reviewId: review.id,
+                    chunkIndex: i,
+                    chunk,
+                    subject: review.subject,
+                    stars: review.stars,
+                    professor: review.professor,
+                    createdAt: createdAtIso,
+                  },
+                });
+              }
+
+              return vectors;
             } catch (error) {
               console.error(
                 `Failed to generate embedding for review ${review.id}:`,
                 error
               );
-              return null;
+              return [];
             }
           })
         );
 
-        const successfulResults = batchResults.filter(
-          (result) => result !== null
-        );
-        processedData.push(...successfulResults);
+        processedData.push(...batchResults.flat().filter(Boolean));
 
         if (i + BATCH_SIZE < reviews.length) {
           await new Promise((resolve) => setTimeout(resolve, 100));
@@ -445,7 +499,11 @@ export const embeddingService = {
         throw new Error("PINECONE_API_KEY is not configured");
       }
 
-      const { openai, pc } = await this.getClients();
+      const clients = await this.getClients();
+      if (!clients) {
+        throw new Error("Embeddings are not configured (OPENAI_API_KEY missing).");
+      }
+      const { openai, pc } = clients;
       const index = pc.Index("rag");
 
       // Get embedding for user message
@@ -462,12 +520,19 @@ export const embeddingService = {
       // Higher topK helps when users ask about professors, subjects, or specific topics
       const queryResponse = await index.query({
         vector: embeddingResponse.data[0].embedding,
-        topK: 10, // Increased from 3 to 10 for better coverage
+        // With chunked storage we want enough candidates to reliably surface
+        // at least a few chunk vectors even if legacy (non-chunk) vectors exist.
+        topK: 50,
         includeMetadata: true,
       });
 
+      // Prefer chunked matches when present (Option A).
+      // Legacy vectors may still exist in the index until a full backfill/cleanup is run.
+      const matches = queryResponse.matches || [];
+      const chunkMatches = matches.filter((m) => Boolean(m?.metadata?.chunk));
+
       // Return matches or empty array if no matches found
-      return queryResponse.matches || [];
+      return chunkMatches.length > 0 ? chunkMatches : matches;
     } catch (error) {
       console.error("Error querying reviews:", error);
 

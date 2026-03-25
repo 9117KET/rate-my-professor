@@ -118,6 +118,7 @@ export const SubmitReviewModal = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     const userId = userTrackingService.getOrCreateUserId();
     if (!userId) {
       setReviewError(

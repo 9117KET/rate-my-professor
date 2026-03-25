@@ -285,14 +285,17 @@ export default function Home() {
   const sendMessage = async (overrideMessage) => {
     const messageToSend = overrideMessage ?? message;
 
-    if (!messageToSend.trim() || !userId) return;
+    const messageText =
+      typeof messageToSend === "string" ? messageToSend : String(messageToSend ?? "");
+
+    if (!messageText.trim() || !userId) return;
 
     setIsLoading(true);
     const newMessages = [
       ...messages,
       {
         role: "user",
-        content: messageToSend,
+        content: messageText,
         timestamp: new Date(),
       },
       {
@@ -316,7 +319,7 @@ export default function Home() {
           ...messages,
           {
             role: "user",
-            content: messageToSend,
+            content: messageText,
             timestamp: new Date().toISOString(),
           },
         ]),
@@ -1108,7 +1111,7 @@ export default function Home() {
                 />
                 <IconButton
                   color="primary"
-                  onClick={sendMessage}
+                  onClick={() => sendMessage()}
                   disabled={!message.trim() || isLoading}
                   sx={{
                     borderRadius: "50%",

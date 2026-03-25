@@ -1,5 +1,6 @@
 import { embeddingService } from "../../services/embeddingService";
 import { withCors } from "../../utils/cors";
+import { chunkText } from "../../utils/textChunker";
 import {
   createErrorResponse,
   logError,
@@ -78,52 +79,85 @@ async function syncReviewHandler(req) {
 
     // Get OpenAI and Pinecone clients (server-side)
     console.log(`[SYNC-API] Initializing OpenAI and Pinecone clients...`);
-    const { openai, pc } = await embeddingService.getClients();
+    const clients = await embeddingService.getClients();
+    if (!clients) {
+      return createErrorResponse(
+        new Error(
+          "Embeddings are not configured (missing/invalid OPENAI_API_KEY)."
+        ),
+        "EXTERNAL_SERVICE_ERROR",
+        503
+      );
+    }
+    const { openai, pc } = clients;
     const index = pc.Index("rag");
     console.log(`[SYNC-API] Clients initialized`);
 
-    // Create enhanced embedding input
+    // Chunk the review text for better retrieval (RAG).
+    const reviewText = (review.review || "").trim();
+    const chunks = chunkText(reviewText);
+
+    if (chunks.length === 0) {
+      return createErrorResponse(
+        new Error("Review text is empty; nothing to embed."),
+        "INVALID_INPUT",
+        400
+      );
+    }
+
+    const testPhrase = "blue pineapple suitcase";
+    const reviewHasTestPhrase = reviewText
+      .toLowerCase()
+      .includes(testPhrase);
+
+    // Create enhanced embedding input prefix to help queries that mention professor/subject.
     const professorName = (review.professor || "").trim();
     const subject = (review.subject || "").trim();
-    const reviewText = (review.review || "").trim();
-
-    const embeddingInput = [
+    const prefix = [
       professorName && `Professor ${professorName}`,
-      subject && `teaches ${subject}`,
-      reviewText,
+      subject && `Subject ${subject}`,
     ]
       .filter(Boolean)
       .join(". ");
 
-    const finalInput = embeddingInput || reviewText || "Review";
     console.log(
-      `[SYNC-API] Creating embedding for: ${professorName} - ${subject}`
+      `[SYNC-API] Creating ${chunks.length} chunk embedding(s) for: ${professorName} - ${subject}`
     );
 
-    // Generate embedding for the review
-    const embeddingResponse = await openai.embeddings.create({
-      input: finalInput,
-      model: "text-embedding-3-small",
-    });
-    console.log(`[SYNC-API] Embedding generated, upserting to Pinecone...`);
+    const createdAtIso =
+      review.createdAt instanceof Date
+        ? review.createdAt.toISOString()
+        : new Date(review.createdAt).toISOString();
 
-    // Upsert to Pinecone
-    await index.upsert([
-      {
+    const vectors = [];
+
+    for (let i = 0; i < chunks.length; i += 1) {
+      const chunk = chunks[i];
+      const finalInput = prefix ? `${prefix}. ${chunk}` : chunk;
+
+      const embeddingResponse = await openai.embeddings.create({
+        input: finalInput,
+        model: "text-embedding-3-small",
+      });
+
+      vectors.push({
         values: embeddingResponse.data[0].embedding,
-        id: review.id,
+        id: `${review.id}#${i}`,
         metadata: {
-          review: review.review,
+          reviewId: review.id,
+          chunkIndex: i,
+          chunk,
+          // keep core metadata used by chat/context
           subject: review.subject,
           stars: review.stars,
           professor: review.professor,
-          createdAt:
-            review.createdAt instanceof Date
-              ? review.createdAt.toISOString()
-              : new Date(review.createdAt).toISOString(),
+          createdAt: createdAtIso,
         },
-      },
-    ]);
+      });
+    }
+
+    console.log(`[SYNC-API] Upserting ${vectors.length} vector(s) to Pinecone...`);
+    await index.upsert(vectors);
 
     console.log(
       `[SYNC-API] ✅ Successfully synced review ${reviewId} to Pinecone`

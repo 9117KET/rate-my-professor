@@ -157,48 +157,53 @@ export const reviewsService = {
           `[SYNC] Starting automatic sync for review ${docRef.id}...`
         );
 
-        // Call the server-side API route to sync this review to Pinecone
-        // Add timeout to prevent hanging (10 seconds max)
-        const syncPromise = fetch("/api/sync-review", {
+        // Trigger server-side sync without blocking the user flow.
+        // Any failures here should not delay the UI or the "accepted" state.
+        fetch("/api/sync-review", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ reviewId: docRef.id }),
-        });
+        })
+          .then(async (syncResponse) => {
+            if (syncResponse.ok) {
+              const result = await syncResponse.json().catch(() => ({}));
+              console.log(
+                `[SYNC] ✅ Successfully synced review ${docRef.id} to Pinecone:`,
+                result.message
+              );
+              return;
+            }
 
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Sync timeout after 10 seconds")),
-            10000
-          )
-        );
-
-        const syncResponse = await Promise.race([syncPromise, timeoutPromise]);
-
-        if (syncResponse.ok) {
-          const result = await syncResponse.json();
-          console.log(
-            `[SYNC] ✅ Successfully synced review ${docRef.id} to Pinecone:`,
-            result.message
-          );
-        } else {
-          const errorData = await syncResponse.json().catch(() => ({}));
-          console.error(
-            `[SYNC] ❌ Failed to sync review ${docRef.id}:`,
-            syncResponse.status,
-            syncResponse.statusText,
-            errorData
-          );
-          // Log to error handler for monitoring
-          logError(
-            new Error(
-              `Sync failed: ${syncResponse.status} ${syncResponse.statusText}`
-            ),
-            "auto-sync-failed",
-            { reviewId: docRef.id }
-          );
-        }
+            const errorData = await syncResponse.json().catch(() => ({}));
+            console.error(
+              `[SYNC] ❌ Failed to sync review ${docRef.id}:`,
+              syncResponse.status,
+              syncResponse.statusText,
+              errorData
+            );
+            logError(
+              new Error(
+                `Sync failed: ${syncResponse.status} ${syncResponse.statusText}`
+              ),
+              "auto-sync-failed",
+              { reviewId: docRef.id }
+            );
+          })
+          .catch((syncError) => {
+            console.error(
+              `[SYNC] ❌ Error/timeout syncing review ${docRef.id}:`,
+              syncError.message
+            );
+            console.warn(
+              `[SYNC] Review ${docRef.id} was saved to Firestore but not yet synced to Pinecone.`,
+              "Run 'npm run sync-pinecone:full' to sync all reviews."
+            );
+            logError(syncError, "auto-sync-error", {
+              reviewId: docRef.id,
+            });
+          });
       } catch (syncError) {
         // If triggering sync fails or times out, log but don't block the review submission
         // A cron job or manual sync will catch this later
@@ -299,30 +304,47 @@ export const reviewsService = {
         throw new Error("Unauthorized to delete this review");
       }
 
-      // Check if within 2 hours
-      const createdAt = reviewData.createdAt.toDate();
-      const now = new Date();
-      const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
-
-      if (hoursDiff > 2) {
-        throw new Error(
-          "Review can only be deleted within 2 hours of creation"
-        );
-      }
+      // NOTE: We do not enforce a time window for deletion in the client app.
+      // If you want time-based restrictions, enforce them server-side via Security Rules / backend.
+      const createdAtDate = reviewData?.createdAt?.toDate?.();
+      const createdAtMs =
+        createdAtDate instanceof Date ? createdAtDate.getTime() : null;
+      const nowMs = Date.now();
+      const hoursDiff =
+        typeof createdAtMs === "number"
+          ? (nowMs - createdAtMs) / (1000 * 60 * 60)
+          : null;
 
       await deleteDoc(reviewRef);
       console.log(`Deleted review with ID: ${reviewId}`);
 
-      // Sync with Pinecone after deletion
+      // Sync Pinecone after deletion (best-effort, non-blocking)
       try {
-        await embeddingService.syncFirestoreWithPinecone();
-        console.log(
-          `Successfully synced Pinecone after deleting review: ${reviewId}`
-        );
+        fetch("/api/delete-review-vectors", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reviewId }),
+        })
+          .then(async (res) => {
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              throw new Error(
+                `delete-review-vectors failed: ${res.status} ${res.statusText} ${JSON.stringify(
+                  data
+                )}`
+              );
+            }
+          })
+          .catch((syncError) => {
+            console.warn(
+              `Unable to delete vectors for review ${reviewId}:`,
+              syncError?.message || syncError
+            );
+          });
       } catch (syncError) {
-        console.error(
-          `Error syncing with Pinecone after deleting review: ${reviewId}`,
-          syncError
+        console.warn(
+          `Unable to delete vectors for review ${reviewId}:`,
+          syncError?.message || syncError
         );
         // We don't throw here to not disrupt the user flow, but we log the error
       }
