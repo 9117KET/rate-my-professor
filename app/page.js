@@ -26,6 +26,7 @@ import {
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import SchoolIcon from "@mui/icons-material/School";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import ExploreOutlinedIcon from "@mui/icons-material/ExploreOutlined";
 import StarBorderOutlinedIcon from "@mui/icons-material/StarBorderOutlined";
 import ChatBubbleOutlineOutlinedIcon from "@mui/icons-material/ChatBubbleOutlineOutlined";
@@ -173,12 +174,18 @@ export default function Home() {
   const [activeNav, setActiveNav] = useState("home");
   const [isLoading, setIsLoading] = useState(false);
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
+  const [heroVerbIndex, setHeroVerbIndex] = useState(0);
+  const [heroPolarityIndex, setHeroPolarityIndex] = useState(0);
   const [showReviewReminderPopup, setShowReviewReminderPopup] = useState(false);
   const reminderTimerIdRef = useRef(null);
   const messagesEndRef = useRef(null);
   const muiTheme = useTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
   const [userId, setUserId] = useState(null);
+
+  const heroVerbsBest = ["Rate", "Review"];
+  const heroVerbWorst = "Roast";
+  const heroPolarities = ["best", "worst"];
 
   // Check for first-time visitor and set up other initial state
   useEffect(() => {
@@ -212,6 +219,20 @@ export default function Home() {
       }
     };
   }, []); // Empty dependency array
+
+  // Landing hero micro-animation (only when on Home).
+  useEffect(() => {
+    if (activeNav !== "home") return;
+
+    const timer = setInterval(() => {
+      setHeroPolarityIndex((i) => (i + 1) % heroPolarities.length);
+      setHeroVerbIndex((i) => (i + 1) % heroVerbsBest.length);
+    }, 3200);
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, [activeNav, heroVerbsBest.length, heroPolarities.length]);
 
   // Function to setup the recurring reminder
   const setupRecurringReminder = () => {
@@ -417,7 +438,7 @@ export default function Home() {
   // Handle attempt to view reviews when not yet reviewed
   const handleViewReviewsClick = () => {
     // Always open the view modal, where we'll show the prompt if needed
-    setActiveNav("explore");
+    setActiveNav("reviews");
     setOpenViewModal(true);
   };
 
@@ -459,7 +480,7 @@ export default function Home() {
       return;
     }
 
-    if (value === "explore") {
+    if (value === "reviews") {
       closeAllNavigationModals();
       setOpenViewModal(true);
       return;
@@ -514,16 +535,16 @@ export default function Home() {
             Home
           </Button>
           <Button
-            variant={activeNav === "explore" ? "contained" : "text"}
-            onClick={() => handleNavChange("explore")}
-          >
-            Explore
-          </Button>
-          <Button
             variant={activeNav === "rate" ? "contained" : "text"}
             onClick={() => handleNavChange("rate")}
           >
             Rate
+          </Button>
+          <Button
+            variant={activeNav === "reviews" ? "contained" : "text"}
+            onClick={() => handleNavChange("reviews")}
+          >
+            Reviews
           </Button>
           <Button
             variant={activeNav === "chat" ? "contained" : "text"}
@@ -563,17 +584,6 @@ export default function Home() {
               {/* Hero */}
               <Box component={motion.div} variants={motionFadeUp} sx={{ mb: 3 }}>
                 <Typography
-                  sx={{
-                    fontWeight: 800,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.12em",
-                    color: theme.primary.main,
-                    fontSize: "0.75rem",
-                  }}
-                >
-                  Constructor University
-                </Typography>
-                <Typography
                   component="h1"
                   sx={{
                     fontWeight: 900,
@@ -583,9 +593,45 @@ export default function Home() {
                     fontSize: { xs: "2.6rem", sm: "3.4rem" },
                   }}
                 >
-                  Rate your best and worst professors
-                  <br />
-                  anonymously.
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={`verb-${heroPolarities[heroPolarityIndex]}-${heroVerbIndex}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.35 }}
+                      style={{
+                        display: "inline-block",
+                        paddingRight: 10,
+                        color: theme.primary.main,
+                      }}
+                    >
+                      {heroPolarities[heroPolarityIndex] === "worst"
+                        ? heroVerbWorst
+                        : heroVerbsBest[heroVerbIndex]}
+                    </motion.span>
+                  </AnimatePresence>
+                  your
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={`polarity-${heroPolarities[heroPolarityIndex]}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.35 }}
+                      style={{
+                        display: "inline-block",
+                        paddingLeft: 10,
+                        paddingRight: 10,
+                        textDecoration: "underline",
+                        textUnderlineOffset: "6px",
+                        textDecorationThickness: "3px",
+                      }}
+                    >
+                      {heroPolarities[heroPolarityIndex]}
+                    </motion.span>
+                  </AnimatePresence>
+                  professors on campus&nbsp;anonymously.
                 </Typography>
                 <Typography
                   sx={{
@@ -596,7 +642,7 @@ export default function Home() {
                     maxWidth: "44ch",
                   }}
                 >
-                  Post one review. Unlock what other students are saying.
+                  Rate professors and help other students choose better.
                 </Typography>
               </Box>
 
@@ -699,10 +745,10 @@ export default function Home() {
                 <Button
                   variant="outlined"
                   fullWidth
-                  onClick={() => handleNavChange("explore")}
+                  onClick={() => handleNavChange("reviews")}
                   sx={{ py: 1.6, borderRadius: 3, fontWeight: 900 }}
                 >
-                  Explore reviews
+                  Reviews
                 </Button>
                 <Button
                   variant="text"
@@ -710,51 +756,12 @@ export default function Home() {
                   onClick={() => handleNavChange("chat")}
                   sx={{ py: 1.6, borderRadius: 3, fontWeight: 900 }}
                 >
-                  Ask the chat
+                  Ask our AI chat assistant
                 </Button>
               </Stack>
-
-              {/* Contribution Gate */}
-              <Paper
-                component={motion.div}
-                variants={motionFadeUp}
-                elevation={0}
-                sx={{
-                  p: 2.5,
-                  borderRadius: 3,
-                  bgcolor: "rgba(0,0,0,0.03)",
-                  border: "1px solid rgba(0,0,0,0.06)",
-                }}
-              >
-                <Typography
-                  sx={{
-                    fontWeight: 900,
-                    letterSpacing: "0.12em",
-                    textTransform: "uppercase",
-                    fontSize: "0.75rem",
-                    color: theme.primary.main,
-                  }}
-                >
-                  Locked content
-                </Typography>
-                <Typography sx={{ fontWeight: 900, fontSize: "1.35rem", mt: 1 }}>
-                  Want the full tea?
-                </Typography>
-                <Typography sx={{ color: theme.text.secondary, mt: 1 }}>
-                  Share one review to unlock the feed.
-                </Typography>
-                <Button
-                  variant="contained"
-                  onClick={() => handleNavChange("rate")}
-                  sx={{ mt: 2, borderRadius: 3, fontWeight: 900 }}
-                >
-                  Unlock now
-                </Button>
-              </Paper>
-
-              <Box sx={{ mt: 2.5, px: 0.5 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Student fun project. Not officially affiliated with the university. Anonymous.
+              <Box component={motion.div} variants={motionFadeUp} sx={{ mt: 0.5 }}>
+                <Typography variant="body2" sx={{ color: theme.text.secondary }}>
+                  Ask our AI chat assistant powered by real student reviews.
                 </Typography>
               </Box>
             </Box>
@@ -1205,19 +1212,24 @@ export default function Home() {
           onChange={(_, value) => handleNavChange(value)}
           sx={{
             "& .MuiBottomNavigationAction-root": {
-              minWidth: 88,
+              minWidth: 72,
             },
           }}
         >
           <BottomNavigationAction
-            label="Explore"
-            value="explore"
-            icon={<ExploreOutlinedIcon />}
+            label="Home"
+            value="home"
+            icon={<HomeOutlinedIcon />}
           />
           <BottomNavigationAction
             label="Rate"
             value="rate"
             icon={<StarBorderOutlinedIcon />}
+          />
+          <BottomNavigationAction
+            label="Reviews"
+            value="reviews"
+            icon={<ExploreOutlinedIcon />}
           />
           <BottomNavigationAction
             label="Chat"
