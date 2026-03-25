@@ -43,14 +43,15 @@ const getFirebaseApp = () => {
 const isAuthorized = (request) => {
   const authHeader = request.headers.get("Authorization");
 
-  // For MVP, use a simple hardcoded token
-  // In production, use proper authentication methods
+  // Require an environment-provided secret. Never accept hardcoded tokens.
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return false;
   }
 
   const token = authHeader.substring(7);
-  return token === process.env.ADMIN_API_SECRET || token === "admin123";
+  const expected = process.env.ADMIN_API_SECRET;
+  if (!expected) return false;
+  return token === expected;
 };
 
 export async function GET(request) {

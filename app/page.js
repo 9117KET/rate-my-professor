@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import {
   Box,
@@ -10,10 +9,14 @@ import {
   Paper,
   Typography,
   Avatar,
+  BottomNavigation,
+  BottomNavigationAction,
   Container,
   Fade,
   Grow,
   IconButton,
+  AppBar,
+  Toolbar,
   useMediaQuery,
   useTheme,
   Dialog,
@@ -23,11 +26,15 @@ import {
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import SchoolIcon from "@mui/icons-material/School";
+import ExploreOutlinedIcon from "@mui/icons-material/ExploreOutlined";
+import StarBorderOutlinedIcon from "@mui/icons-material/StarBorderOutlined";
+import ChatBubbleOutlineOutlinedIcon from "@mui/icons-material/ChatBubbleOutlineOutlined";
+import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import ReactMarkdown from "react-markdown";
+import { motion, AnimatePresence } from "framer-motion";
 import { SubmitReviewModal } from "./components/SubmitReviewModal";
 import { ViewReviewsModal } from "./components/ViewReviewsModal";
 import { ActionButtons } from "./components/ActionButtons";
-import reviews from "../reviews.json";
 import { TipsModal } from "./components/TipsModal";
 import { ImprintModal } from "./components/ImprintModal";
 import { chatService } from "./services/chatService";
@@ -108,6 +115,21 @@ const messageStyles = {
   },
 };
 
+const motionFadeUp = {
+  hidden: { opacity: 0, y: 14, filter: "blur(6px)" },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 0.45, ease: "easeOut" },
+  },
+};
+
+const motionStagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
+};
+
 const formatTimestamp = (date) => {
   if (!date) return "";
 
@@ -147,6 +169,8 @@ export default function Home() {
   const [openPrivacyModal, setOpenPrivacyModal] = useState(false);
   const [openFirstVisitModal, setOpenFirstVisitModal] = useState(false);
   const [openReportBugModal, setOpenReportBugModal] = useState(false);
+  const [openMoreModal, setOpenMoreModal] = useState(false);
+  const [activeNav, setActiveNav] = useState("home");
   const [isLoading, setIsLoading] = useState(false);
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
   const [showReviewReminderPopup, setShowReviewReminderPopup] = useState(false);
@@ -368,6 +392,7 @@ export default function Home() {
   // Prevent closing the rate modal if user hasn't submitted a review and it was triggered by view reviews
   const handleRateModalClose = () => {
     setOpenRateModal(false);
+    setActiveNav("home");
   };
 
   // Handle How to Use modal close
@@ -392,6 +417,7 @@ export default function Home() {
   // Handle attempt to view reviews when not yet reviewed
   const handleViewReviewsClick = () => {
     // Always open the view modal, where we'll show the prompt if needed
+    setActiveNav("explore");
     setOpenViewModal(true);
   };
 
@@ -409,6 +435,49 @@ export default function Home() {
     setOpenHowToUseModal(true);
   };
 
+  const closeAllNavigationModals = () => {
+    setOpenViewModal(false);
+    setOpenRateModal(false);
+    setOpenTipsModal(false);
+    setOpenImprintModal(false);
+    setOpenHowToUseModal(false);
+    setOpenPrivacyModal(false);
+    setOpenReportBugModal(false);
+    setOpenMoreModal(false);
+  };
+
+  const handleNavChange = (value) => {
+    setActiveNav(value);
+
+    if (value === "home") {
+      closeAllNavigationModals();
+      return;
+    }
+
+    if (value === "chat") {
+      closeAllNavigationModals();
+      return;
+    }
+
+    if (value === "explore") {
+      closeAllNavigationModals();
+      setOpenViewModal(true);
+      return;
+    }
+
+    if (value === "rate") {
+      closeAllNavigationModals();
+      setOpenRateModal(true);
+      return;
+    }
+
+    if (value === "more") {
+      closeAllNavigationModals();
+      setOpenMoreModal(true);
+      return;
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -420,81 +489,56 @@ export default function Home() {
         maxWidth: "100vw",
       }}
     >
-      <Box
-        component="header"
+      {/* Desktop top navigation */}
+      <AppBar
+        position="sticky"
+        elevation={0}
         sx={{
-          p: { xs: 1, sm: 1.5 },
-          bgcolor: theme.primary.main,
-          color: "white",
-          textAlign: "center",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-          background: `linear-gradient(135deg, ${theme.primary.main} 0%, ${theme.primary.light} 100%)`,
-          position: "relative",
-          overflow: "hidden",
-          "&::after": {
-            content: '""',
-            position: "absolute",
-            top: 0,
-            right: 0,
-            bottom: 0,
-            left: 0,
-            background:
-              "radial-gradient(circle at 20% 150%, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0) 70%)",
-            pointerEvents: "none",
-          },
+          display: { xs: "none", sm: "block" },
+          bgcolor: "rgba(255,255,255,0.75)",
+          color: theme.text.primary,
+          backdropFilter: "blur(12px)",
+          borderBottom: "1px solid rgba(0,0,0,0.06)",
         }}
       >
-        <Container maxWidth="lg">
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              mb: { xs: 1, sm: 1.5 },
-            }}
-          >
-            <SchoolIcon
-              sx={{
-                fontSize: { xs: "1.5rem", sm: "2rem", md: "2.5rem" },
-                mr: 1.5,
-                color: theme.secondary.main,
-              }}
-            />
-            <Typography
-              variant="h4"
-              component="h1"
-              sx={{
-                color: "white",
-                fontSize: { xs: "1.1rem", sm: "1.5rem", md: "1.75rem" },
-                fontWeight: 700,
-                letterSpacing: "-0.01em",
-                textShadow: "0 2px 4px rgba(0,0,0,0.2)",
-              }}
-            >
-              Rate My Professor AI Assistant
-            </Typography>
-          </Box>
-          <Typography
-            variant="subtitle1"
-            sx={{
-              color: "white",
-              fontSize: { xs: "0.8rem", sm: "0.9rem" },
-              mb: { xs: 0.75, sm: 1 },
-              opacity: 0.9,
-              maxWidth: "600px",
-              mx: "auto",
-              fontWeight: 300,
-            }}
-          >
-            Rate your best and worst professors and get personalized assistance
+        <Toolbar sx={{ gap: 1.5 }}>
+          <SchoolIcon sx={{ color: theme.primary.main }} />
+          <Typography sx={{ fontWeight: 800, letterSpacing: "-0.02em" }}>
+            Rate My Professor
           </Typography>
-          <ActionButtons
-            onRateClick={() => setOpenRateModal(true)}
-            onViewClick={handleViewReviewsClick}
-            onTipsClick={() => setOpenTipsModal(true)}
-          />
-        </Container>
-      </Box>
+          <Box sx={{ flex: 1 }} />
+          <Button
+            variant={activeNav === "home" ? "contained" : "text"}
+            onClick={() => handleNavChange("home")}
+          >
+            Home
+          </Button>
+          <Button
+            variant={activeNav === "explore" ? "contained" : "text"}
+            onClick={() => handleNavChange("explore")}
+          >
+            Explore
+          </Button>
+          <Button
+            variant={activeNav === "rate" ? "contained" : "text"}
+            onClick={() => handleNavChange("rate")}
+          >
+            Rate
+          </Button>
+          <Button
+            variant={activeNav === "chat" ? "contained" : "text"}
+            onClick={() => handleNavChange("chat")}
+          >
+            Chat
+          </Button>
+          <Button
+            variant={activeNav === "more" ? "contained" : "text"}
+            onClick={() => handleNavChange("more")}
+          >
+            More
+          </Button>
+        </Toolbar>
+      </AppBar>
 
       <Box
         sx={{
@@ -506,298 +550,511 @@ export default function Home() {
           justifyContent: "center",
         }}
       >
-        <Container maxWidth="md" sx={{ height: "100%" }}>
-          <Paper
-            elevation={0}
-            sx={{
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              bgcolor: "transparent",
-              borderRadius: 3,
-              overflow: "hidden",
-              boxShadow: "0 8px 40px rgba(0,0,0,0.05)",
-              border: "1px solid rgba(0,0,0,0.08)",
-            }}
-          >
-            {/* Chat messages container */}
+        {/* Home (Landing) */}
+        {activeNav === "home" && (
+          <Container maxWidth="md">
             <Box
-              sx={{
-                flex: 1,
-                overflow: "auto",
-                p: { xs: 2, sm: 3 },
-                bgcolor: theme.background.paper,
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-                backgroundImage:
-                  "radial-gradient(rgba(0,0,0,0.02) 1px, transparent 1px)",
-                backgroundSize: "20px 20px",
-              }}
+              component={motion.div}
+              variants={motionStagger}
+              initial="hidden"
+              animate="visible"
+              sx={{ mt: { xs: 1, sm: 3 }, mb: { xs: 10, sm: 4 } }}
             >
-              {messages.map((message, index) => (
-                <Grow
-                  in={true}
-                  key={index}
-                  timeout={300 + index * 100}
-                  style={{
-                    transformOrigin:
-                      message.role === "assistant" ? "0 100%" : "100% 100%",
+              {/* Hero */}
+              <Box component={motion.div} variants={motionFadeUp} sx={{ mb: 3 }}>
+                <Typography
+                  sx={{
+                    fontWeight: 800,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    color: theme.primary.main,
+                    fontSize: "0.75rem",
                   }}
                 >
-                  <Box
+                  Constructor University
+                </Typography>
+                <Typography
+                  component="h1"
+                  sx={{
+                    fontWeight: 900,
+                    letterSpacing: "-0.04em",
+                    lineHeight: 0.95,
+                    mt: 1,
+                    fontSize: { xs: "2.6rem", sm: "3.4rem" },
+                  }}
+                >
+                  Rate your best and worst professors
+                  <br />
+                  anonymously.
+                </Typography>
+                <Typography
+                  sx={{
+                    mt: 1.5,
+                    color: theme.text.secondary,
+                    fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                    lineHeight: 1.6,
+                    maxWidth: "44ch",
+                  }}
+                >
+                  Post one review. Unlock what other students are saying.
+                </Typography>
+              </Box>
+
+              {/* Bento cards */}
+              <Stack spacing={1.5} sx={{ mb: 3 }}>
+                <Paper
+                  component={motion.div}
+                  variants={motionFadeUp}
+                  elevation={0}
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 3,
+                    bgcolor: theme.background.paper,
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    boxShadow: "0 8px 30px rgba(0,0,0,0.05)",
+                  }}
+                >
+                  <Typography sx={{ fontWeight: 900, fontSize: "1.25rem" }}>
+                    Got a professor story
+                  </Typography>
+                  <Typography sx={{ color: theme.text.secondary, mt: 0.75 }}>
+                    Roast or praise. Stay anonymous. Help the next student.
+                  </Typography>
+                </Paper>
+
+                <Stack direction="row" spacing={1.5}>
+                  <Paper
+                    component={motion.div}
+                    variants={motionFadeUp}
+                    elevation={0}
                     sx={{
+                      flex: 1,
+                      p: 2,
+                      borderRadius: 3,
+                      bgcolor: "rgba(227,30,36,0.12)",
+                      border: "1px solid rgba(227,30,36,0.18)",
+                      minHeight: 140,
                       display: "flex",
-                      justifyContent:
-                        message.role === "assistant"
-                          ? "flex-start"
-                          : "flex-end",
-                      mb: 2,
-                      position: "relative",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
                     }}
                   >
-                    {message.role === "assistant" && (
-                      <Avatar
-                        sx={{
-                          bgcolor: theme.primary.main,
-                          width: 36,
-                          height: 36,
-                          mr: 1,
-                          mb: "auto",
-                          mt: 0.5,
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                          display: { xs: "none", sm: "flex" },
-                        }}
-                      >
-                        <SchoolIcon fontSize="small" />
-                      </Avatar>
-                    )}
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        p: { xs: 1.5, sm: 2 },
-                        maxWidth: { xs: "85%", sm: "75%", md: "70%" },
-                        ...(message.role === "assistant"
-                          ? messageStyles.assistant
-                          : messageStyles.user),
-                        position: "relative",
-                        "& .timestamp": {
-                          position: "absolute",
-                          bottom: -18,
-                          fontSize: { xs: "0.7rem", sm: "0.75rem" },
-                          color: theme.text.secondary,
-                          right: message.role === "user" ? 8 : "auto",
-                          left: message.role === "assistant" ? 8 : "auto",
-                        },
-                        mb: { xs: 1, sm: 1.5 },
-                        wordBreak: "break-word",
-                        transition: "all 0.2s ease-in-out",
-                        "&:hover": {
-                          transform: "translateY(-2px)",
-                          boxShadow:
-                            message.role === "assistant"
-                              ? "0 4px 12px rgba(0,27,63,0.15)"
-                              : "0 4px 12px rgba(227,30,36,0.15)",
-                        },
-                      }}
-                    >
-                      <ReactMarkdown
-                        components={{
-                          p: ({ children }) => (
-                            <Typography
-                              variant="body1"
-                              component="div"
-                              sx={{
-                                mb: 1,
-                                lineHeight: 1.6,
-                                fontSize: { xs: "0.9rem", sm: "1rem" },
-                              }}
-                            >
-                              {children}
-                            </Typography>
-                          ),
-                          h1: ({ children }) => (
-                            <Typography
-                              variant="h5"
-                              component="div"
-                              sx={{
-                                mb: 1.5,
-                                fontWeight: 600,
-                                fontSize: { xs: "1.25rem", sm: "1.5rem" },
-                              }}
-                            >
-                              {children}
-                            </Typography>
-                          ),
-                          h2: ({ children }) => (
-                            <Typography
-                              variant="h6"
-                              component="div"
-                              sx={{
-                                mb: 1.5,
-                                fontWeight: 600,
-                                fontSize: { xs: "1.1rem", sm: "1.25rem" },
-                              }}
-                            >
-                              {children}
-                            </Typography>
-                          ),
-                          li: ({ children }) => (
-                            <Typography
-                              variant="body1"
-                              component="li"
-                              sx={{
-                                mb: 0.5,
-                                fontSize: { xs: "0.9rem", sm: "1rem" },
-                              }}
-                            >
-                              {children}
-                            </Typography>
-                          ),
-                        }}
-                      >
-                        {message.content}
-                      </ReactMarkdown>
-                      <Typography
-                        className="timestamp"
-                        variant="caption"
-                        component="div"
-                        suppressHydrationWarning
-                      >
-                        {formatTimestamp(message.timestamp)}
-                      </Typography>
-                    </Paper>
-                    {message.role === "user" && (
-                      <Avatar
-                        sx={{
-                          bgcolor: theme.secondary.main,
-                          width: 36,
-                          height: 36,
-                          ml: 1,
-                          mb: "auto",
-                          mt: 0.5,
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                          display: { xs: "none", sm: "flex" },
-                        }}
-                      >
-                        {/* User initial avatar */}U
-                      </Avatar>
-                    )}
-                  </Box>
-                </Grow>
-              ))}
-              <div ref={messagesEndRef} />
-            </Box>
+                    <Typography sx={{ fontWeight: 900 }}>
+                      Ever wanted to roast a professor
+                    </Typography>
+                    <Typography sx={{ fontWeight: 800, color: theme.secondary.dark }}>
+                      Here is your chance
+                    </Typography>
+                  </Paper>
 
-            {/* Input area */}
-            <Box
-              sx={{
-                p: { xs: 1, sm: 1.5 },
-                bgcolor: theme.background.light,
-                borderTop: "1px solid rgba(0,0,0,0.06)",
-                position: "sticky",
-                bottom: 0,
-                zIndex: 1,
-              }}
-            >
-              {/* Suggestion buttons */}
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: { xs: 0.25, sm: 1 },
-                  mb: { xs: 1.5, sm: 2 },
-                  flexWrap: "nowrap",
-                  justifyContent: "space-between",
-                  width: "100%",
-                }}
+                  <Paper
+                    component={motion.div}
+                    variants={motionFadeUp}
+                    elevation={0}
+                    sx={{
+                      flex: 1,
+                      p: 2,
+                      borderRadius: 3,
+                      bgcolor: "rgba(0,27,63,0.08)",
+                      border: "1px solid rgba(0,27,63,0.12)",
+                      minHeight: 140,
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Typography sx={{ fontWeight: 900 }}>
+                      Want to give genuine feedback
+                    </Typography>
+                    <Typography sx={{ color: theme.text.secondary }}>
+                      They will not know who you are
+                    </Typography>
+                  </Paper>
+                </Stack>
+              </Stack>
+
+              {/* CTAs */}
+              <Stack
+                component={motion.div}
+                variants={motionFadeUp}
+                spacing={1.25}
+                sx={{ mb: 3 }}
               >
                 <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={async () => {
-                    await sendMessage("Who are the highest rated professors?");
-                  }}
-                  disabled={isLoading}
+                  variant="contained"
+                  fullWidth
+                  onClick={() => handleNavChange("rate")}
                   sx={{
+                    py: 1.6,
                     borderRadius: 3,
-                    borderColor: "rgba(0,0,0,0.1)",
-                    color: theme.text.secondary,
-                    fontSize: { xs: "0.6rem", sm: "0.8rem" },
-                    px: { xs: 0.5, sm: 2 },
-                    py: { xs: 0.25, sm: 0.75 },
-                    minWidth: 0,
-                    flex: 1,
-                    mx: 0.25,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
+                    fontWeight: 900,
+                    background: `linear-gradient(135deg, ${theme.primary.main} 0%, ${theme.primary.light} 100%)`,
                     "&:hover": {
-                      borderColor: theme.primary.main,
-                      bgcolor: "rgba(0,27,63,0.05)",
+                      background: `linear-gradient(135deg, ${theme.primary.light} 0%, ${theme.primary.main} 100%)`,
                     },
                   }}
                 >
-                  🌟 Best rated
+                  Rate a professor
                 </Button>
                 <Button
                   variant="outlined"
-                  size="small"
-                  onClick={async () => {
-                    await sendMessage("How do I submit a review?");
-                  }}
-                  disabled={isLoading}
-                  sx={{
-                    borderRadius: 3,
-                    borderColor: "rgba(0,0,0,0.1)",
-                    color: theme.text.secondary,
-                    fontSize: { xs: "0.6rem", sm: "0.8rem" },
-                    px: { xs: 0.5, sm: 2 },
-                    py: { xs: 0.25, sm: 0.75 },
-                    minWidth: 0,
-                    flex: 1,
-                    mx: 0.25,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    "&:hover": {
-                      borderColor: theme.primary.main,
-                      bgcolor: "rgba(0,27,63,0.05)",
-                    },
-                  }}
+                  fullWidth
+                  onClick={() => handleNavChange("explore")}
+                  sx={{ py: 1.6, borderRadius: 3, fontWeight: 900 }}
                 >
-                  ✍️ submit a review
+                  Explore reviews
                 </Button>
                 <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={async () => {
-                    await sendMessage(
-                      "What are the tips for succeeding in courses?"
-                    );
-                  }}
-                  disabled={isLoading}
+                  variant="text"
+                  fullWidth
+                  onClick={() => handleNavChange("chat")}
+                  sx={{ py: 1.6, borderRadius: 3, fontWeight: 900 }}
+                >
+                  Ask the chat
+                </Button>
+              </Stack>
+
+              {/* Contribution Gate */}
+              <Paper
+                component={motion.div}
+                variants={motionFadeUp}
+                elevation={0}
+                sx={{
+                  p: 2.5,
+                  borderRadius: 3,
+                  bgcolor: "rgba(0,0,0,0.03)",
+                  border: "1px solid rgba(0,0,0,0.06)",
+                }}
+              >
+                <Typography
                   sx={{
-                    borderRadius: 3,
-                    borderColor: "rgba(0,0,0,0.1)",
-                    color: theme.text.secondary,
-                    fontSize: { xs: "0.6rem", sm: "0.8rem" },
-                    px: { xs: 0.5, sm: 2 },
-                    py: { xs: 0.25, sm: 0.75 },
-                    minWidth: 0,
-                    flex: 1,
-                    mx: 0.25,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    "&:hover": {
-                      borderColor: theme.primary.main,
-                      bgcolor: "rgba(0,27,63,0.05)",
-                    },
+                    fontWeight: 900,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    fontSize: "0.75rem",
+                    color: theme.primary.main,
                   }}
                 >
-                  💡 Tips for courses
+                  Locked content
+                </Typography>
+                <Typography sx={{ fontWeight: 900, fontSize: "1.35rem", mt: 1 }}>
+                  Want the full tea?
+                </Typography>
+                <Typography sx={{ color: theme.text.secondary, mt: 1 }}>
+                  Share one review to unlock the feed.
+                </Typography>
+                <Button
+                  variant="contained"
+                  onClick={() => handleNavChange("rate")}
+                  sx={{ mt: 2, borderRadius: 3, fontWeight: 900 }}
+                >
+                  Unlock now
                 </Button>
+              </Paper>
+
+              <Box sx={{ mt: 2.5, px: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Student fun project. Not officially affiliated with the university. Anonymous.
+                </Typography>
               </Box>
+            </Box>
+          </Container>
+        )}
+
+        {/* Chat */}
+        {activeNav === "chat" && (
+          <Container maxWidth="md" sx={{ height: "100%" }}>
+            <Paper
+              elevation={0}
+              sx={{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                bgcolor: "transparent",
+                borderRadius: 3,
+                overflow: "hidden",
+                boxShadow: "0 8px 40px rgba(0,0,0,0.05)",
+                border: "1px solid rgba(0,0,0,0.08)",
+              }}
+            >
+              {/* Chat messages container */}
+              <Box
+                sx={{
+                  flex: 1,
+                  overflow: "auto",
+                  p: { xs: 2, sm: 3 },
+                  bgcolor: theme.background.paper,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                  backgroundImage:
+                    "radial-gradient(rgba(0,0,0,0.02) 1px, transparent 1px)",
+                  backgroundSize: "20px 20px",
+                }}
+              >
+                {messages.map((message, index) => (
+                  <Grow
+                    in={true}
+                    key={index}
+                    timeout={300 + index * 100}
+                    style={{
+                      transformOrigin:
+                        message.role === "assistant" ? "0 100%" : "100% 100%",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent:
+                          message.role === "assistant"
+                            ? "flex-start"
+                            : "flex-end",
+                        mb: 2,
+                        position: "relative",
+                      }}
+                    >
+                      {message.role === "assistant" && (
+                        <Avatar
+                          sx={{
+                            bgcolor: theme.primary.main,
+                            width: 36,
+                            height: 36,
+                            mr: 1,
+                            mb: "auto",
+                            mt: 0.5,
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                            display: { xs: "none", sm: "flex" },
+                          }}
+                        >
+                          <SchoolIcon fontSize="small" />
+                        </Avatar>
+                      )}
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: { xs: 1.5, sm: 2 },
+                          maxWidth: { xs: "85%", sm: "75%", md: "70%" },
+                          ...(message.role === "assistant"
+                            ? messageStyles.assistant
+                            : messageStyles.user),
+                          position: "relative",
+                          "& .timestamp": {
+                            position: "absolute",
+                            bottom: -18,
+                            fontSize: { xs: "0.7rem", sm: "0.75rem" },
+                            color: theme.text.secondary,
+                            right: message.role === "user" ? 8 : "auto",
+                            left: message.role === "assistant" ? 8 : "auto",
+                          },
+                          mb: { xs: 1, sm: 1.5 },
+                          wordBreak: "break-word",
+                          transition: "all 0.2s ease-in-out",
+                          "&:hover": {
+                            transform: "translateY(-2px)",
+                            boxShadow:
+                              message.role === "assistant"
+                                ? "0 4px 12px rgba(0,27,63,0.15)"
+                                : "0 4px 12px rgba(227,30,36,0.15)",
+                          },
+                        }}
+                      >
+                        <ReactMarkdown
+                          components={{
+                            p: ({ children }) => (
+                              <Typography
+                                variant="body1"
+                                component="div"
+                                sx={{
+                                  mb: 1,
+                                  lineHeight: 1.6,
+                                  fontSize: { xs: "0.9rem", sm: "1rem" },
+                                }}
+                              >
+                                {children}
+                              </Typography>
+                            ),
+                            h1: ({ children }) => (
+                              <Typography
+                                variant="h5"
+                                component="div"
+                                sx={{
+                                  mb: 1.5,
+                                  fontWeight: 600,
+                                  fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                                }}
+                              >
+                                {children}
+                              </Typography>
+                            ),
+                            h2: ({ children }) => (
+                              <Typography
+                                variant="h6"
+                                component="div"
+                                sx={{
+                                  mb: 1.5,
+                                  fontWeight: 600,
+                                  fontSize: { xs: "1.1rem", sm: "1.25rem" },
+                                }}
+                              >
+                                {children}
+                              </Typography>
+                            ),
+                            li: ({ children }) => (
+                              <Typography
+                                variant="body1"
+                                component="li"
+                                sx={{
+                                  mb: 0.5,
+                                  fontSize: { xs: "0.9rem", sm: "1rem" },
+                                }}
+                              >
+                                {children}
+                              </Typography>
+                            ),
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                        <Typography
+                          className="timestamp"
+                          variant="caption"
+                          component="div"
+                          suppressHydrationWarning
+                        >
+                          {formatTimestamp(message.timestamp)}
+                        </Typography>
+                      </Paper>
+                      {message.role === "user" && (
+                        <Avatar
+                          sx={{
+                            bgcolor: theme.secondary.main,
+                            width: 36,
+                            height: 36,
+                            ml: 1,
+                            mb: "auto",
+                            mt: 0.5,
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                            display: { xs: "none", sm: "flex" },
+                          }}
+                        >
+                          {/* User initial avatar */}U
+                        </Avatar>
+                      )}
+                    </Box>
+                  </Grow>
+                ))}
+                <div ref={messagesEndRef} />
+              </Box>
+
+              {/* Input area */}
+              <Box
+                sx={{
+                  p: { xs: 1, sm: 1.5 },
+                  bgcolor: theme.background.light,
+                  borderTop: "1px solid rgba(0,0,0,0.06)",
+                  position: "sticky",
+                  bottom: { xs: 78, sm: 0 },
+                  zIndex: 1,
+                }}
+              >
+                {/* Suggestion buttons */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: { xs: 0.25, sm: 1 },
+                    mb: { xs: 1.5, sm: 2 },
+                    flexWrap: "nowrap",
+                    justifyContent: "space-between",
+                    width: "100%",
+                  }}
+                >
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={async () => {
+                      await sendMessage("Who are the highest rated professors?");
+                    }}
+                    disabled={isLoading}
+                    sx={{
+                      borderRadius: 3,
+                      borderColor: "rgba(0,0,0,0.1)",
+                      color: theme.text.secondary,
+                      fontSize: { xs: "0.6rem", sm: "0.8rem" },
+                      px: { xs: 0.5, sm: 2 },
+                      py: { xs: 0.25, sm: 0.75 },
+                      minWidth: 0,
+                      flex: 1,
+                      mx: 0.25,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      "&:hover": {
+                        borderColor: theme.primary.main,
+                        bgcolor: "rgba(0,27,63,0.05)",
+                      },
+                    }}
+                  >
+                    🌟 Best rated
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={async () => {
+                      await sendMessage("How do I submit a review?");
+                    }}
+                    disabled={isLoading}
+                    sx={{
+                      borderRadius: 3,
+                      borderColor: "rgba(0,0,0,0.1)",
+                      color: theme.text.secondary,
+                      fontSize: { xs: "0.6rem", sm: "0.8rem" },
+                      px: { xs: 0.5, sm: 2 },
+                      py: { xs: 0.25, sm: 0.75 },
+                      minWidth: 0,
+                      flex: 1,
+                      mx: 0.25,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      "&:hover": {
+                        borderColor: theme.primary.main,
+                        bgcolor: "rgba(0,27,63,0.05)",
+                      },
+                    }}
+                  >
+                    ✍️ submit a review
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={async () => {
+                      await sendMessage(
+                        "What are the tips for succeeding in courses?"
+                      );
+                    }}
+                    disabled={isLoading}
+                    sx={{
+                      borderRadius: 3,
+                      borderColor: "rgba(0,0,0,0.1)",
+                      color: theme.text.secondary,
+                      fontSize: { xs: "0.6rem", sm: "0.8rem" },
+                      px: { xs: 0.5, sm: 2 },
+                      py: { xs: 0.25, sm: 0.75 },
+                      minWidth: 0,
+                      flex: 1,
+                      mx: 0.25,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      "&:hover": {
+                        borderColor: theme.primary.main,
+                        bgcolor: "rgba(0,27,63,0.05)",
+                      },
+                    }}
+                  >
+                    💡 Tips for courses
+                  </Button>
+                </Box>
               <Stack
                 direction="row"
                 spacing={1}
@@ -924,7 +1181,57 @@ export default function Home() {
             </Box>
           </Paper>
         </Container>
+        )}
       </Box>
+
+      {/* Mobile navigation */}
+      <Paper
+        elevation={4}
+        sx={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 60,
+          display: { xs: "block", sm: "none" },
+          borderTopLeftRadius: 3,
+          borderTopRightRadius: 3,
+          overflow: "hidden",
+        }}
+      >
+        <BottomNavigation
+          showLabels
+          value={activeNav}
+          onChange={(_, value) => handleNavChange(value)}
+          sx={{
+            "& .MuiBottomNavigationAction-root": {
+              minWidth: 88,
+            },
+          }}
+        >
+          <BottomNavigationAction
+            label="Explore"
+            value="explore"
+            icon={<ExploreOutlinedIcon />}
+          />
+          <BottomNavigationAction
+            label="Rate"
+            value="rate"
+            icon={<StarBorderOutlinedIcon />}
+          />
+          <BottomNavigationAction
+            label="Chat"
+            value="chat"
+            icon={<ChatBubbleOutlineOutlinedIcon />}
+          />
+          <BottomNavigationAction
+            label="More"
+            value="more"
+            icon={<MoreHorizIcon />}
+          />
+        </BottomNavigation>
+      </Paper>
+
       <SubmitReviewModal
         open={openRateModal}
         onClose={handleRateModalClose}
@@ -934,7 +1241,10 @@ export default function Home() {
       />
       <ViewReviewsModal
         open={openViewModal}
-        onClose={() => setOpenViewModal(false)}
+        onClose={() => {
+          setOpenViewModal(false);
+          setActiveNav("home");
+        }}
         userId={userId}
         onOpenSubmitForm={() => setOpenRateModal(true)}
       />
@@ -961,6 +1271,73 @@ export default function Home() {
         onPrivacyClick={() => setOpenPrivacyModal(true)}
         onConsent={handlePrivacyConsent}
       />
+
+      <Dialog
+        open={openMoreModal}
+        onClose={() => {
+          setOpenMoreModal(false);
+          setActiveNav("home");
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>More</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5} sx={{ pt: 1 }}>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setOpenMoreModal(false);
+                setActiveNav("home");
+                setOpenImprintModal(true);
+              }}
+            >
+              Guidelines
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setOpenMoreModal(false);
+                setActiveNav("home");
+                setOpenPrivacyModal(true);
+              }}
+            >
+              Privacy
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setOpenMoreModal(false);
+                setActiveNav("home");
+                setOpenReportBugModal(true);
+              }}
+            >
+              Bug Report
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setOpenMoreModal(false);
+                setActiveNav("home");
+                setOpenHowToUseModal(true);
+              }}
+            >
+              How to Use
+            </Button>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setOpenMoreModal(false);
+              setActiveNav("home");
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Box
         component="footer"
         sx={{
@@ -968,7 +1345,7 @@ export default function Home() {
           bgcolor: theme.primary.main,
           color: "white",
           textAlign: "center",
-          display: "flex",
+          display: { xs: "none", sm: "flex" },
           flexDirection: "row",
           justifyContent: "center",
           gap: { xs: 0.5, sm: 2 },
@@ -1092,8 +1469,8 @@ export default function Home() {
             variant="contained"
             color="primary"
             onClick={() => {
-              setOpenRateModal(true);
               setShowReviewReminderPopup(false);
+              handleNavChange("rate");
             }}
             sx={{
               borderRadius: 2,

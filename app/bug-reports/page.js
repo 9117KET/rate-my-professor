@@ -22,19 +22,18 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 export default function BugReports() {
   const [authenticated, setAuthenticated] = useState(false);
-  const [password, setPassword] = useState("");
+  const [token, setToken] = useState("");
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleLogin = () => {
-    // Simple password check - in a real app, use proper authentication
-    if (password === "admin123") {
+    // Token is verified server-side by /api/admin/bug-reports (ADMIN_API_SECRET).
+    if (token.trim().length > 0) {
       setAuthenticated(true);
-      localStorage.setItem("bugReportsAuth", "true");
       fetchReports();
     } else {
-      setError("Invalid password");
+      setError("Please provide an admin token");
     }
   };
 
@@ -45,8 +44,7 @@ export default function BugReports() {
     try {
       const response = await fetch("/api/admin/bug-reports", {
         headers: {
-          // Simple admin token for demo purposes
-          Authorization: "Bearer admin123",
+          Authorization: `Bearer ${token.trim()}`,
         },
       });
 
@@ -77,11 +75,7 @@ export default function BugReports() {
 
   // Check for existing authentication on load
   useEffect(() => {
-    const isAuth = localStorage.getItem("bugReportsAuth");
-    if (isAuth === "true") {
-      setAuthenticated(true);
-      fetchReports();
-    }
+    // Intentionally do not persist admin tokens in browser storage.
   }, []);
 
   // Login form
@@ -100,11 +94,11 @@ export default function BugReports() {
           )}
 
           <TextField
-            label="Password"
+            label="Admin Token"
             type="password"
             fullWidth
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
             sx={{ mb: 3 }}
           />
 
@@ -276,8 +270,8 @@ export default function BugReports() {
             variant="text"
             color="error"
             onClick={() => {
-              localStorage.removeItem("bugReportsAuth");
               setAuthenticated(false);
+              setToken("");
             }}
           >
             Logout

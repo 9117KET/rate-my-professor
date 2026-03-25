@@ -1,6 +1,7 @@
 import { bugReportService } from "../../services/bugReportService";
 import { NextResponse } from "next/server";
 import { rateLimiterService } from "../../services/rateLimiterService";
+import crypto from "crypto";
 
 /**
  * API route for handling bug reports
@@ -163,13 +164,8 @@ function isValidDataUrl(dataUrl) {
  * @returns {string} Hashed IP
  */
 function hashIp(ip) {
-  // This is a simple hash function adequate for basic anonymization
-  // For real production use, consider using a proper cryptographic hash
-  let hash = 0;
-  for (let i = 0; i < ip.length; i++) {
-    const char = ip.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return "ip_" + Math.abs(hash).toString(16);
+  const salt = process.env.IP_HASH_SALT || "";
+  return (
+    "ip_" + crypto.createHash("sha256").update(`${salt}${ip}`).digest("hex")
+  );
 }

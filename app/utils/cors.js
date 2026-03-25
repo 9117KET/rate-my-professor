@@ -32,28 +32,33 @@ const DEFAULT_CORS_CONFIG = {
 };
 
 /**
- * Apply CORS headers to a Response object
+ * Apply CORS headers to a Response object.
+ *
+ * Note: CORS decisions must be based on the *request* Origin header.
+ * Reading Origin from response headers is a logic bug and can break CORS.
+ *
+ * @param {Request} req - The incoming Request
  * @param {Response} response - The Response object to apply CORS headers to
- * @param {Object} config - CORS configuration options
+ * @param {Object} customConfig - CORS configuration options
  * @returns {Response} - The Response object with CORS headers
  */
-export function applyCorsHeaders(response, customConfig = {}) {
+export function applyCorsHeaders(req, response, customConfig = {}) {
   const config = { ...DEFAULT_CORS_CONFIG, ...customConfig };
   const headers = response.headers;
 
   // Get the origin from the request (if provided)
-  const origin = headers.get("Origin") || "";
+  const origin = req?.headers?.get("origin") || "";
 
-  // Check if the origin is allowed
-  const isAllowedOrigin =
-    config.allowedOrigins.includes(origin) ||
-    config.allowedOrigins.includes("*");
+  // Check if the origin is allowed.
+  // If credentials are allowed, we must echo the specific origin (not "*").
+  const allowsWildcard = config.allowedOrigins.includes("*");
+  const isAllowedOrigin = allowsWildcard
+    ? Boolean(origin)
+    : config.allowedOrigins.includes(origin);
 
-  // Set the appropriate Access-Control-Allow-Origin header
   if (isAllowedOrigin) {
     headers.set("Access-Control-Allow-Origin", origin);
-  } else if (config.allowedOrigins.includes("*")) {
-    headers.set("Access-Control-Allow-Origin", "*");
+    headers.append("Vary", "Origin");
   }
 
   // Set other CORS headers
@@ -81,7 +86,7 @@ export async function cors(req, customConfig = {}) {
   // Handle preflight OPTIONS request
   if (req.method === "OPTIONS") {
     const response = new Response(null, { status: 204 }); // No content
-    return applyCorsHeaders(response, config);
+    return applyCorsHeaders(req, response, config);
   }
 
   // For other requests, return null to continue processing
@@ -104,6 +109,6 @@ export function withCors(handler, customConfig = {}) {
     const response = await handler(req);
 
     // Apply CORS headers to the response
-    return applyCorsHeaders(response, customConfig);
+    return applyCorsHeaders(req, response, customConfig);
   };
 }

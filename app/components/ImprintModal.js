@@ -53,7 +53,7 @@ export const ImprintModal = ({ open, onClose }) => {
 
       <DialogContent>
         <List>
-          {/* Created By Section */}
+          {/* Project Disclosure Section */}
           <ListItem sx={{ pt: 1 }}>
             <ListItemIcon>
               <CodeIcon color="primary" />
@@ -65,33 +65,18 @@ export const ImprintModal = ({ open, onClose }) => {
                   fontWeight={600}
                   component="div"
                 >
-                  Created By
+                  Student Fun Project
                 </Typography>
               }
               secondary={
-                <Box sx={{ mt: 0.5 }}>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      fontStyle: "italic",
-                      fontWeight: 500,
-                      color: "primary.main",
-                    }}
-                    component="div"
-                  >
-                    Kinlo ET
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    component="div"
-                  >
-                    Constructor University Bremen Student
-                  </Typography>
-                </Box>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  component="div"
+                >
+                  This platform is a student fun project.
+                </Typography>
               }
-              secondaryTypographyProps={{ component: "div" }}
             />
           </ListItem>
 
