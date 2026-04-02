@@ -1,120 +1,211 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working in this repository.
 
-## Common Development Commands
+---
 
-### Essential Commands
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
+## Non-Negotiable Rules
 
-### Testing
-- `node tests/database.test.js` - Run basic database tests
+### Commit & PR Authorship
+**Never include any Claude or AI attribution in commits or PRs.** This means:
+- No `Co-Authored-By: Claude ...` in commit messages
+- No `Generated with Claude Code` in PR bodies
+- No `🤖` attribution lines anywhere
 
-### Vector Store Synchronization
-- `node scripts/sync-pinecone.js` - Sync Firestore with Pinecone vector database
-- `node scripts/sync-pinecone.js --alt-method` - Full resync (delete all + upsert)
-- `node scripts/check-embeddings.js` - Check embedding consistency
+Commit messages contain only: subject line + optional body. Nothing else.
 
-## Architecture Overview
+---
 
-This is a Next.js application with App Router that provides an AI-powered Rate My Professor interface. The architecture follows a layered approach:
+## Commands
+
+### Dev & Build
+```bash
+npm run dev              # Start dev server (localhost:3000)
+npm run build            # Production build
+npm run start            # Start production server
+npm run lint             # ESLint
+```
+
+### Vector Sync
+```bash
+npm run sync-pinecone              # Standard Firestore → Pinecone sync
+npm run sync-pinecone:full         # Full reset: delete all vectors + fresh upsert
+node scripts/check-embeddings.js   # Verify embedding consistency
+```
+
+### Diagnostics & Tests
+```bash
+npm run test:diagnostics   # Run all diagnostic agents
+npm run test:firestore     # Firestore connection + data check
+npm run test:pinecone      # Pinecone index stats + vector structure
+npm run test:queries       # End-to-end embedding query test
+npm run test:sync          # Firestore/Pinecone consistency check
+npm run test:metadata      # Metadata alignment check
+```
+
+---
+
+## Architecture
 
 ### Tech Stack
-- **Frontend**: Next.js 15+ (App Router), React 19, Material-UI
-- **Backend**: Next.js API Routes with service layer
-- **Database**: Firebase Firestore (primary) + Pinecone (vector embeddings)
-- **AI**: OpenAI API for chat and embeddings
-- **Deployment**: Vercel with cron jobs
+- **Frontend**: Next.js 15 (App Router), React 19, Material-UI 6, Framer Motion
+- **Backend**: Next.js API Routes (thin controllers) + service layer
+- **Databases**: Firebase Firestore (source of truth) + Pinecone (vector search)
+- **AI**: OpenAI `text-embedding-3-small` (embeddings) + `gpt-4-turbo` (chat)
+- **Deployment**: Vercel + Firebase
 
-### Key Architectural Patterns
-
-**Service Layer Architecture**: Business logic is organized into services in `app/services/`:
-- `chatService.js` - AI chat interactions using RAG (Retrieval Augmented Generation)
-- `reviewsService.js` - Professor review CRUD operations
-- `embeddingService.js` - Vector embedding management and Pinecone operations
-- `bugReportService.js` - Bug report handling
-- `userTrackingService.js` - Anonymous user tracking and privacy management
-
-**Dual Database System**: 
-- Firestore stores the source of truth for reviews and user data
-- Pinecone stores vector embeddings for semantic search in the chat feature
-- Synchronization between databases is handled automatically and via cron jobs
-
-**RAG Implementation**: The chat feature uses Retrieval Augmented Generation:
-1. User queries are converted to embeddings
-2. Similar professor reviews are retrieved from Pinecone
-3. Retrieved context is sent to OpenAI with the user query
-4. AI generates responses based on actual review data
-
-## Key Directory Structure
-
+### Directory Structure
 ```
 app/
-├── api/                    # Next.js API routes
-│   ├── chat/              # AI chat endpoint
-│   ├── sync-embeddings/   # Manual vector sync
-│   ├── cron/              # Scheduled tasks
-│   └── admin/             # Admin endpoints
-├── components/            # React UI components
-├── services/              # Business logic layer
-├── utils/                 # Utility functions
-└── lib/                   # External service configs
-scripts/                   # Maintenance scripts
-tests/                     # Test files
+├── api/                          # Thin API route controllers
+│   ├── chat/route.js             # Streaming RAG chat
+│   ├── sync-review/route.js      # Single-review embedding sync
+│   ├── sync-embeddings/route.js  # Bulk sync (Bearer: API_SECRET_KEY)
+│   ├── delete-review-vectors/    # Vector deletion
+│   ├── report-bug/route.js       # Bug submission (rate limited)
+│   ├── cron/sync-pinecone/       # Scheduled sync (Bearer: CRON_SECRET_KEY)
+│   └── admin/bug-reports/        # Admin retrieval (Bearer: ADMIN_API_SECRET)
+├── components/                   # Modal-heavy UI (each manages its own state)
+├── services/                     # All business logic lives here
+├── utils/                        # Shared helpers (error, cors, validation)
+└── lib/firebase.js               # Firebase init
+scripts/                          # Manual maintenance scripts
+tests/agents/                     # Operational/integration diagnostic scripts
 ```
 
-## Important Implementation Details
+### Service Layer (app/services/)
+| File | Responsibility |
+|------|---------------|
+| `embeddingService.js` | OpenAI embeddings + Pinecone upsert/query/delete |
+| `reviewsService.js` | Review CRUD, reactions, replies, GDPR deletion |
+| `rateLimiterService.js` | In-memory rate limiting (NodeCache, 1-hr TTL) |
+| `chatService.js` | Chat history persistence to Firestore |
+| `bugReportService.js` | Bug report creation + admin retrieval |
+| `contentModerationService.js` | Text validation, word-boundary profanity check |
+| `userTrackingService.js` | Anonymous UUID identity + privacy consent |
+| `tipsService.js` | Tips CRUD with ownership verification |
+
+---
+
+## Key Implementation Details
+
+### RAG Chat Flow
+1. User message received at `POST /api/chat`
+2. Rate check: 50 messages/hour per user (`x-anonymous-user-id` header required)
+3. "Best rated" queries → computed rankings shortcut (bypasses Pinecone)
+4. Otherwise: embed query → Pinecone top-5 semantic search → inject context into system prompt
+5. GPT-4-turbo generates response → streamed back via `ReadableStream`
+
+### Dual-Database Sync Strategy
+- **On review write**: `POST /api/sync-review` triggered automatically
+- **Scheduled**: `/api/cron/sync-pinecone` every 6 hours (Vercel cron)
+- **Manual reset**: `npm run sync-pinecone:full` (deleteAll + upsert)
+- Pinecone vector IDs: `${reviewId}#${chunkIndex}`
+- Chunks: ~1200 chars, 2-sentence overlap, sentence-boundary aware
+
+### Firestore Collections
+| Collection | Purpose |
+|------------|---------|
+| `reviews` | Professor reviews (source of truth) |
+| `professors` | Known professors list |
+| `chats` | User conversation history |
+| `tips` | Community tips |
+| `bug_reports` | Submitted bug reports |
+| `users` | Privacy settings + consent |
+
+### Pinecone Index
+- Index name: `rag`
+- Dimensions: 1536 (`text-embedding-3-small`)
+- Metadata per vector: `{ reviewId, chunkIndex, chunk, professor, subject, stars, createdAt }`
+
+### Rate Limits (rateLimiterService.js)
+| Action | Limit |
+|--------|-------|
+| CHAT | 50/hour |
+| REVIEW_SUBMISSION | 10/day |
+| REPLY_SUBMISSION | 20/hour |
+| BUG_REPORT | 5/hour |
+| CONTENT_MODERATION | 20/hour |
 
 ### Environment Variables
-The application requires these environment variables:
-- `OPENAI_API_KEY` - OpenAI API access
-- `PINECONE_API_KEY` - Pinecone vector database
-- `API_SECRET_KEY` - API authentication
-- `CRON_SECRET_KEY` - Cron job authentication
-- Firebase config variables (all prefixed with `NEXT_PUBLIC_FIREBASE_`)
+```
+# Server-only secrets
+OPENAI_API_KEY          # sk- or sk-proj- format — validated at runtime
+PINECONE_API_KEY
+API_SECRET_KEY          # Bearer token for /api/sync-embeddings
+CRON_SECRET_KEY         # Bearer token for /api/cron/sync-pinecone
+ADMIN_API_SECRET        # Bearer token for /api/admin/bug-reports
+IP_HASH_SALT            # Production IP anonymization salt
 
-### Security & Privacy
-- **Anonymous User System**: Users are identified by UUIDs in localStorage
-- **Comprehensive Privacy Features**: Data export, deletion, consent management
-- **Security Headers**: HTTPS enforcement, CORS protection, error sanitization
-- **Error Handling**: Centralized error handling with sanitized client responses
+# Public Firebase config (NEXT_PUBLIC_ prefix)
+NEXT_PUBLIC_FIREBASE_API_KEY
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+NEXT_PUBLIC_FIREBASE_PROJECT_ID
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+NEXT_PUBLIC_FIREBASE_APP_ID
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 
-### Data Synchronization
-The system maintains consistency between Firestore and Pinecone:
-- **Automatic Sync**: Triggered on review create/update/delete
-- **Scheduled Sync**: Cron job runs every 6 hours (`/api/cron/sync-pinecone`)
-- **Manual Sync**: Available via API endpoint or script
+# Optional
+NEXT_PUBLIC_APP_VERSION
+NEXT_PUBLIC_SITE_URL    # Used for CORS allowlist in production
+```
 
-### Chat Feature Implementation
-The AI chat uses semantic search over professor reviews:
-1. Reviews are embedded using OpenAI's text-embedding-ada-002
-2. User queries are embedded and matched against review vectors in Pinecone
-3. Top relevant reviews provide context for OpenAI's response generation
-4. Responses include source attribution and professor information
+---
 
-## Development Workflow
+## Development Patterns
 
-1. **Adding New Features**: Follow the service layer pattern - create services for business logic, use API routes as thin controllers
-2. **Database Changes**: Remember to sync both Firestore and Pinecone when dealing with review data
-3. **Testing**: Run existing tests and add new ones for complex business logic
-4. **Privacy Compliance**: Ensure new features respect the anonymous user system and privacy controls
-
-## Common Patterns
+### Adding a New Feature
+1. Create a service in `app/services/` for business logic
+2. Create a thin API route in `app/api/` — wrap with `withCors()` and use `createErrorResponse()`
+3. Call the service from the component or route — don't put logic in components
+4. If the feature touches reviews, sync both Firestore and Pinecone
 
 ### Error Handling
-- Use `createErrorResponse()` from `utils/errorHandler.js` in API routes
-- Use `formatClientError()` from `utils/clientErrorHandler.js` for user-facing errors
-- Custom error classes are defined in service files
+```js
+// In API routes (server)
+import { createErrorResponse } from '@/utils/errorHandler';
+return createErrorResponse(error, request);
 
-### CORS and Security
-- API routes use `cors.js` middleware for cross-origin protection
-- Different endpoints have different CORS policies based on sensitivity
-- All API keys are validated server-side
+// In components (client)
+import { formatClientError } from '@/utils/clientErrorHandler';
+```
 
-### Component Architecture
-- Components are organized by functionality, not by type
-- Modal components handle their own state and visibility
-- Services are imported directly into components for data operations
+### CORS
+```js
+import { withCors } from '@/utils/cors';
+export const GET = withCors(async (req) => { ... });
+```
+
+### Rate Limiting
+```js
+import { checkRateLimit } from '@/services/rateLimiterService';
+const result = await checkRateLimit(userId, 'CHAT');
+if (!result.allowed) return 429 response;
+```
+
+### Content Moderation
+Always call `moderateContent()` from `contentModerationService.js` before saving user-submitted text (reviews, replies, tips).
+
+### Anonymous User Identity
+Users are identified by Firebase anonymous auth UID (preferred) or UUID4 in localStorage (fallback). Always pass the user ID in `x-anonymous-user-id` header for chat requests. Use `getOrCreateUserId()` from `userTrackingService.js`.
+
+### Firestore Security Rules
+- All operations require `isSignedIn()` (Firebase anonymous auth counts)
+- Users can only read/write their own data
+- Reviews: readable by all signed-in users; writable/deletable only by owner
+- Bug reports: create-only by authenticated users (no client-side delete/update)
+
+### Adding New Professors
+Edit `app/utils/professorNames.js` — this drives the autocomplete in `SubmitReviewModal`.
+
+---
+
+## Common Gotchas
+
+- **OpenAI key format**: The chat route validates `sk-` or `sk-proj-` prefix — other formats will be rejected at runtime, not build time.
+- **Pinecone cold start**: First query after inactivity may be slow. The `getClients()` call in `embeddingService.js` caches the client.
+- **Chunked vectors**: One review can produce multiple Pinecone vectors (`reviewId#0`, `reviewId#1`, …). Deleting a review must call `/api/delete-review-vectors` to clean up all chunks.
+- **Streaming + Vercel**: Chat responses use `ReadableStream`. Vercel Edge/Serverless timeout is 60s — long responses may be cut off on free plans.
+- **Rate limiter is in-memory**: `NodeCache` resets on cold start. This is intentional (lightweight), but limits don't persist across serverless function instances.
+- **No unit test framework**: All tests are operational/diagnostic scripts in `tests/agents/`. Add new diagnostics there, not Jest/Vitest tests.

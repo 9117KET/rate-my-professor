@@ -1,0 +1,27 @@
+{
+  "skills": [
+    ".claude/skills/project-conventions",
+    ".claude/skills/add-api-route",
+    ".claude/skills/new-service",
+    ".claude/skills/add-component",
+    ".claude/skills/add-professor",
+    ".claude/skills/debug-rag",
+    ".claude/skills/pr-check"
+  ],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"C:/Users/kinlo/OneDrive - Constructor University/Desktop/dev/projects/RateMyProfessor2026/rate-my-professor\" && npm run lint 2>&1 | tail -10",
+            "timeout": 30,
+            "statusMessage": "Linting...",
+            "asyncRewake": true
+          }
+        ]
+      }
+    ]
+  }
+}

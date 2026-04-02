@@ -185,16 +185,16 @@ async function chatHandler(req) {
         .trim()
         .replace(/[^\x20-\x7E]/g, "");
 
-      // Check for sk-proj- format (project keys, typically 100-200 chars)
+      // Check for sk-proj- format (project keys, 100-300 chars — OpenAI key lengths vary)
       if (cleaned.startsWith("sk-proj-")) {
-        if (cleaned.length >= 100 && cleaned.length <= 200) {
+        if (cleaned.length >= 100 && cleaned.length <= 300) {
           return cleaned;
         }
-        // If too long, might be duplicated - try to extract the first valid one
-        if (cleaned.length > 200) {
-          const keyPattern = /sk-proj-[a-zA-Z0-9_-]{90,190}/;
+        // If still too long, likely duplicated — extract first valid segment
+        if (cleaned.length > 300) {
+          const keyPattern = /sk-proj-[a-zA-Z0-9_-]{90,290}/;
           const match = cleaned.match(keyPattern);
-          if (match && match[0].length >= 100 && match[0].length <= 200) {
+          if (match && match[0].length >= 100 && match[0].length <= 300) {
             return match[0];
           }
         }
@@ -229,16 +229,17 @@ async function chatHandler(req) {
       (openAIKey.startsWith("sk-proj-") || openAIKey.startsWith("sk-")) &&
       ((openAIKey.startsWith("sk-proj-") &&
         openAIKey.length >= 100 &&
-        openAIKey.length <= 200) ||
+        openAIKey.length <= 300) ||
         (openAIKey.startsWith("sk-") &&
+          !openAIKey.startsWith("sk-proj-") &&
           openAIKey.length >= 40 &&
           openAIKey.length <= 60));
 
     if (!isValidFormat) {
       const originalLength = openAIKeyRaw?.length || 0;
       const expectedFormat = openAIKey?.startsWith("sk-proj-")
-        ? "sk-proj- format (100-200 characters)"
-        : "sk- format (40-60 characters) or sk-proj- format (100-200 characters)";
+        ? "sk-proj- format (100-300 characters)"
+        : "sk- format (40-60 characters) or sk-proj- format (100-300 characters)";
       const keyPreview = openAIKey
         ? `${openAIKey.substring(0, 10)}...${openAIKey.substring(
             openAIKey.length - 4

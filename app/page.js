@@ -31,6 +31,13 @@ import ExploreOutlinedIcon from "@mui/icons-material/ExploreOutlined";
 import StarBorderOutlinedIcon from "@mui/icons-material/StarBorderOutlined";
 import ChatBubbleOutlineOutlinedIcon from "@mui/icons-material/ChatBubbleOutlineOutlined";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
+import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import LightbulbOutlinedIcon from "@mui/icons-material/LightbulbOutlined";
+import ThumbUpOutlinedIcon from "@mui/icons-material/ThumbUpOutlined";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { SubmitReviewModal } from "./components/SubmitReviewModal";
@@ -343,7 +350,21 @@ export default function Home() {
         return;
       }
 
-      if (!res.ok) throw new Error(res.statusText);
+      if (!res.ok) {
+        let errMsg;
+        try {
+          const errData = await res.json();
+          // error shape: { error: { message: "..." } } from createErrorResponse
+          errMsg =
+            errData.error?.message ||
+            (typeof errData.error === "string" ? errData.error : null) ||
+            errData.message ||
+            `Request failed (${res.status})`;
+        } catch {
+          errMsg = `Request failed (${res.status})`;
+        }
+        throw new Error(errMsg);
+      }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -517,50 +538,59 @@ export default function Home() {
       <AppBar
         position="sticky"
         elevation={0}
-        sx={{
-          display: { xs: "none", sm: "block" },
-          bgcolor: "rgba(255,255,255,0.75)",
-          color: theme.text.primary,
-          backdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(0,0,0,0.06)",
-        }}
+        sx={{ display: { xs: "none", sm: "block" } }}
       >
-        <Toolbar sx={{ gap: 1.5 }}>
-          <SchoolIcon sx={{ color: theme.primary.main }} />
-          <Typography sx={{ fontWeight: 800, letterSpacing: "-0.02em" }}>
-            Rate My Professor
-          </Typography>
+        <Toolbar sx={{ gap: 0.5, minHeight: "56px !important" }}>
+          <Box sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            mr: 2,
+          }}>
+            <Box sx={{
+              width: 32,
+              height: 32,
+              borderRadius: "10px",
+              bgcolor: theme.primary.main,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}>
+              <SchoolIcon sx={{ color: "white", fontSize: 18 }} />
+            </Box>
+            <Typography sx={{
+              fontWeight: 800,
+              letterSpacing: "-0.03em",
+              fontSize: "0.95rem",
+              color: theme.primary.main,
+            }}>
+              Rate My Professor
+            </Typography>
+          </Box>
           <Box sx={{ flex: 1 }} />
-          <Button
-            variant={activeNav === "home" ? "contained" : "text"}
-            onClick={() => handleNavChange("home")}
-          >
-            Home
-          </Button>
-          <Button
-            variant={activeNav === "rate" ? "contained" : "text"}
-            onClick={() => handleNavChange("rate")}
-          >
-            Rate
-          </Button>
-          <Button
-            variant={activeNav === "reviews" ? "contained" : "text"}
-            onClick={() => handleNavChange("reviews")}
-          >
-            Reviews
-          </Button>
-          <Button
-            variant={activeNav === "chat" ? "contained" : "text"}
-            onClick={() => handleNavChange("chat")}
-          >
-            Chat
-          </Button>
-          <Button
-            variant={activeNav === "more" ? "contained" : "text"}
-            onClick={() => handleNavChange("more")}
-          >
-            More
-          </Button>
+          {["home", "rate", "reviews", "chat", "more"].map((nav) => (
+            <Button
+              key={nav}
+              onClick={() => handleNavChange(nav)}
+              sx={{
+                px: 1.5,
+                py: 0.6,
+                borderRadius: "8px",
+                fontSize: "0.8125rem",
+                fontWeight: activeNav === nav ? 700 : 500,
+                color: activeNav === nav ? theme.primary.main : theme.text.secondary,
+                bgcolor: activeNav === nav ? "rgba(0,27,63,0.07)" : "transparent",
+                "&:hover": {
+                  bgcolor: activeNav === nav ? "rgba(0,27,63,0.10)" : "rgba(0,0,0,0.04)",
+                  color: theme.primary.main,
+                },
+                textTransform: "capitalize",
+                minWidth: 0,
+              }}
+            >
+              {nav}
+            </Button>
+          ))}
         </Toolbar>
       </AppBar>
 
@@ -582,191 +612,269 @@ export default function Home() {
               variants={motionStagger}
               initial="hidden"
               animate="visible"
-              sx={{ mt: { xs: 1, sm: 3 }, mb: { xs: 10, sm: 4 } }}
+              sx={{ mt: { xs: 1, sm: 3 }, mb: { xs: 11, sm: 4 } }}
             >
               {/* Hero */}
               <Box component={motion.div} variants={motionFadeUp} sx={{ mb: 3 }}>
-                <Typography
-                  component="h1"
-                  sx={{
-                    fontWeight: 900,
-                    letterSpacing: "-0.04em",
-                    lineHeight: 0.95,
-                    mt: 1,
-                    fontSize: { xs: "2.6rem", sm: "3.4rem" },
-                  }}
-                >
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.span
-                      key={`verb-${heroPolarities[heroPolarityIndex]}-${heroVerbIndex}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.35 }}
-                      style={{
-                        display: "inline-block",
-                        paddingRight: 10,
-                        color: theme.primary.main,
-                      }}
-                    >
-                      {heroPolarities[heroPolarityIndex] === "worst"
-                        ? heroVerbWorst
-                        : heroVerbsBest[heroVerbIndex]}
-                    </motion.span>
-                  </AnimatePresence>
-                  your
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.span
-                      key={`polarity-${heroPolarities[heroPolarityIndex]}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.35 }}
-                      style={{
-                        display: "inline-block",
-                        paddingLeft: 10,
-                        paddingRight: 10,
-                        textDecoration: "underline",
-                        textUnderlineOffset: "6px",
-                        textDecorationThickness: "3px",
-                      }}
-                    >
-                      {heroPolarities[heroPolarityIndex]}
-                    </motion.span>
-                  </AnimatePresence>
-                  professors on campus&nbsp;anonymously.
-                </Typography>
+                {/* Hero — two lines: animated verb+polarity on line 1, "professors." on line 2 */}
+                <Box component="h1" sx={{ m: 0 }}>
+                  <Typography
+                    component="div"
+                    sx={{
+                      fontWeight: 900,
+                      letterSpacing: "-0.04em",
+                      lineHeight: 1,
+                      mt: 1,
+                      fontSize: { xs: "2.8rem", sm: "3.6rem" },
+                    }}
+                  >
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.span
+                        key={`verb-${heroPolarities[heroPolarityIndex]}-${heroVerbIndex}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.35 }}
+                        style={{
+                          display: "inline-block",
+                          paddingRight: 10,
+                          color: theme.primary.main,
+                        }}
+                      >
+                        {heroPolarities[heroPolarityIndex] === "worst"
+                          ? heroVerbWorst
+                          : heroVerbsBest[heroVerbIndex]}
+                      </motion.span>
+                    </AnimatePresence>
+                    your
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.span
+                        key={`polarity-${heroPolarities[heroPolarityIndex]}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.35 }}
+                        style={{
+                          display: "inline-block",
+                          paddingLeft: 10,
+                          paddingRight: 10,
+                          textDecoration: "underline",
+                          textUnderlineOffset: "6px",
+                          textDecorationThickness: "3px",
+                        }}
+                      >
+                        {heroPolarities[heroPolarityIndex]}
+                      </motion.span>
+                    </AnimatePresence>
+                  </Typography>
+                  <Typography
+                    component="div"
+                    sx={{
+                      fontWeight: 900,
+                      letterSpacing: "-0.04em",
+                      lineHeight: 1,
+                      fontSize: { xs: "2.8rem", sm: "3.6rem" },
+                    }}
+                  >
+                    professors.
+                  </Typography>
+                </Box>
                 <Typography
                   sx={{
                     mt: 1.5,
                     color: theme.text.secondary,
-                    fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                    fontSize: { xs: "0.925rem", sm: "1.05rem" },
                     lineHeight: 1.6,
-                    maxWidth: "44ch",
+                    maxWidth: "40ch",
                   }}
                 >
-                  Rate professors and help other students choose better.
+                  Real reviews from real students. Help each other choose better.
                 </Typography>
+                {/* Badges */}
+                <Box sx={{ mt: 1.5, display: "flex", flexWrap: "wrap", gap: 0.75 }}>
+                  <Box sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 0.6,
+                    px: 1,
+                    py: 0.4,
+                    borderRadius: "8px",
+                    bgcolor: "rgba(0,27,63,0.07)",
+                    border: "1px solid rgba(0,27,63,0.12)",
+                  }}>
+                    <SchoolIcon sx={{ fontSize: 12, color: theme.primary.main }} />
+                    <Typography sx={{ fontSize: "0.7rem", fontWeight: 600, color: theme.primary.main }}>
+                      Constructor University Bremen
+                    </Typography>
+                  </Box>
+                  <Box sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 0.6,
+                    px: 1,
+                    py: 0.4,
+                    borderRadius: "8px",
+                    bgcolor: "rgba(0,180,0,0.07)",
+                    border: "1px solid rgba(0,180,0,0.15)",
+                  }}>
+                    <LockOutlinedIcon sx={{ fontSize: 12, color: "#16a34a" }} />
+                    <Typography sx={{ fontSize: "0.7rem", fontWeight: 600, color: "#16a34a" }}>
+                      Anonymous
+                    </Typography>
+                  </Box>
+                </Box>
               </Box>
 
-              {/* Bento cards */}
-              <Stack spacing={1.5} sx={{ mb: 3 }}>
+              {/* Feature cards */}
+              <Box component={motion.div} variants={motionFadeUp} sx={{ mb: 3 }}>
+                {/* Top wide card */}
                 <Paper
-                  component={motion.div}
-                  variants={motionFadeUp}
                   elevation={0}
                   sx={{
-                    p: 2.5,
-                    borderRadius: 3,
-                    bgcolor: theme.background.paper,
-                    border: "1px solid rgba(0,0,0,0.08)",
-                    boxShadow: "0 8px 30px rgba(0,0,0,0.05)",
+                    p: { xs: 2, sm: 2.5 },
+                    mb: 1.5,
+                    borderRadius: "16px",
+                    bgcolor: theme.primary.main,
+                    border: "1px solid rgba(0,27,63,0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 2,
+                    cursor: "pointer",
+                    transition: "transform 0.18s ease, box-shadow 0.18s ease",
+                    "&:hover": {
+                      transform: "translateY(-2px)",
+                      boxShadow: "0 12px 32px rgba(0,27,63,0.25)",
+                    },
                   }}
+                  onClick={() => handleNavChange("chat")}
                 >
-                  <Typography sx={{ fontWeight: 900, fontSize: "1.25rem" }}>
-                    Got a professor story
-                  </Typography>
-                  <Typography sx={{ color: theme.text.secondary, mt: 0.75 }}>
-                    Roast or praise. Stay anonymous. Help the next student.
-                  </Typography>
+                  <Box>
+                    <Typography sx={{ fontWeight: 800, fontSize: "1.1rem", color: "white", mb: 0.5 }}>
+                      Ask our AI anything
+                    </Typography>
+                    <Typography sx={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.65)", lineHeight: 1.5 }}>
+                      Powered by real student reviews — find out who to take.
+                    </Typography>
+                  </Box>
+                  <Box sx={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: "12px",
+                    bgcolor: "rgba(255,255,255,0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}>
+                    <AutoAwesomeIcon sx={{ color: "rgba(255,255,255,0.85)", fontSize: 22 }} />
+                  </Box>
                 </Paper>
 
+                {/* Bottom two cards */}
                 <Stack direction="row" spacing={1.5}>
                   <Paper
-                    component={motion.div}
-                    variants={motionFadeUp}
                     elevation={0}
                     sx={{
                       flex: 1,
                       p: 2,
-                      borderRadius: 3,
-                      bgcolor: "rgba(227,30,36,0.12)",
-                      border: "1px solid rgba(227,30,36,0.18)",
-                      minHeight: 140,
+                      borderRadius: "16px",
+                      bgcolor: "rgba(227,30,36,0.08)",
+                      border: "1px solid rgba(227,30,36,0.15)",
+                      minHeight: 120,
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
+                      cursor: "pointer",
+                      transition: "transform 0.18s ease",
+                      "&:hover": { transform: "translateY(-2px)" },
                     }}
+                    onClick={() => handleNavChange("rate")}
                   >
-                    <Typography sx={{ fontWeight: 900 }}>
-                      Ever wanted to roast a professor
-                    </Typography>
-                    <Typography sx={{ fontWeight: 800, color: theme.secondary.dark }}>
-                      Here is your chance
-                    </Typography>
+                    <RateReviewOutlinedIcon sx={{ fontSize: 22, color: theme.secondary.main, mb: 0.5 }} />
+                    <Box>
+                      <Typography sx={{ fontWeight: 800, fontSize: "0.9rem", mb: 0.25 }}>
+                        Rate a professor
+                      </Typography>
+                      <Typography sx={{ fontSize: "0.78rem", color: theme.text.secondary }}>
+                        Anonymous · 2 min
+                      </Typography>
+                    </Box>
                   </Paper>
 
                   <Paper
-                    component={motion.div}
-                    variants={motionFadeUp}
                     elevation={0}
                     sx={{
                       flex: 1,
                       p: 2,
-                      borderRadius: 3,
-                      bgcolor: "rgba(0,27,63,0.08)",
-                      border: "1px solid rgba(0,27,63,0.12)",
-                      minHeight: 140,
+                      borderRadius: "16px",
+                      bgcolor: "rgba(0,27,63,0.06)",
+                      border: "1px solid rgba(0,27,63,0.10)",
+                      minHeight: 120,
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
+                      cursor: "pointer",
+                      transition: "transform 0.18s ease",
+                      "&:hover": { transform: "translateY(-2px)" },
                     }}
+                    onClick={() => handleNavChange("reviews")}
                   >
-                    <Typography sx={{ fontWeight: 900 }}>
-                      Want to give genuine feedback
-                    </Typography>
-                    <Typography sx={{ color: theme.text.secondary }}>
-                      They will not know who you are
-                    </Typography>
+                    <MenuBookOutlinedIcon sx={{ fontSize: 22, color: theme.primary.main, mb: 0.5 }} />
+                    <Box>
+                      <Typography sx={{ fontWeight: 800, fontSize: "0.9rem", mb: 0.25 }}>
+                        Read reviews
+                      </Typography>
+                      <Typography sx={{ fontSize: "0.78rem", color: theme.text.secondary }}>
+                        Search by professor
+                      </Typography>
+                    </Box>
                   </Paper>
                 </Stack>
-              </Stack>
+              </Box>
 
               {/* CTAs */}
               <Stack
                 component={motion.div}
                 variants={motionFadeUp}
-                spacing={1.25}
+                spacing={1}
                 sx={{ mb: 3 }}
               >
                 <Button
                   variant="contained"
+                  color="secondary"
                   fullWidth
                   onClick={() => handleNavChange("rate")}
                   sx={{
-                    py: 1.6,
-                    borderRadius: 3,
-                    fontWeight: 900,
-                    background: `linear-gradient(135deg, ${theme.primary.main} 0%, ${theme.primary.light} 100%)`,
-                    "&:hover": {
-                      background: `linear-gradient(135deg, ${theme.primary.light} 0%, ${theme.primary.main} 100%)`,
-                    },
+                    py: 1.5,
+                    borderRadius: "14px",
+                    fontWeight: 800,
+                    fontSize: "0.9375rem",
                   }}
                 >
-                  Rate a professor
+                  Rate a professor now
                 </Button>
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  onClick={() => handleNavChange("reviews")}
-                  sx={{ py: 1.6, borderRadius: 3, fontWeight: 900 }}
-                >
-                  Reviews
-                </Button>
-                <Button
-                  variant="text"
-                  fullWidth
-                  onClick={() => handleNavChange("chat")}
-                  sx={{ py: 1.6, borderRadius: 3, fontWeight: 900 }}
-                >
-                  Ask our AI chat assistant
-                </Button>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    fullWidth
+                    onClick={() => handleNavChange("reviews")}
+                    sx={{ py: 1.25, borderRadius: "14px", fontWeight: 700 }}
+                  >
+                    Browse reviews
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    fullWidth
+                    onClick={() => handleNavChange("chat")}
+                    sx={{ py: 1.25, borderRadius: "14px", fontWeight: 700 }}
+                  >
+                    Chat with AI
+                  </Button>
+                </Stack>
               </Stack>
-              <Box component={motion.div} variants={motionFadeUp} sx={{ mt: 0.5 }}>
-                <Typography variant="body2" sx={{ color: theme.text.secondary }}>
-                  Ask our AI chat assistant powered by real student reviews.
-                </Typography>
-              </Box>
             </Box>
           </Container>
         )}
@@ -781,12 +889,62 @@ export default function Home() {
                 display: "flex",
                 flexDirection: "column",
                 bgcolor: "transparent",
-                borderRadius: 3,
+                borderRadius: "18px",
                 overflow: "hidden",
-                boxShadow: "0 8px 40px rgba(0,0,0,0.05)",
-                border: "1px solid rgba(0,0,0,0.08)",
+                boxShadow: "0 8px 40px rgba(0,0,0,0.06)",
+                border: "1px solid rgba(0,0,0,0.07)",
               }}
             >
+              {/* Chat header */}
+              <Box sx={{
+                px: { xs: 2, sm: 2.5 },
+                py: 1.25,
+                bgcolor: theme.primary.main,
+                display: "flex",
+                alignItems: "center",
+                gap: 1.25,
+              }}>
+                <Box sx={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: "10px",
+                  bgcolor: "rgba(255,255,255,0.12)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  <SchoolIcon sx={{ color: "white", fontSize: 18 }} />
+                </Box>
+                <Box>
+                  <Typography sx={{ fontWeight: 700, fontSize: "0.875rem", color: "white", lineHeight: 1.3 }}>
+                    AI Professor Assistant
+                  </Typography>
+                  <Typography sx={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.6)", lineHeight: 1 }}>
+                    Powered by real student reviews
+                  </Typography>
+                </Box>
+                <Box sx={{ flex: 1 }} />
+                <Box sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  px: 1,
+                  py: 0.4,
+                  borderRadius: "20px",
+                  bgcolor: "rgba(34,197,94,0.2)",
+                }}>
+                  <Box sx={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    bgcolor: "#22c55e",
+                  }} />
+                  <Typography sx={{ fontSize: "0.7rem", color: "#86efac", fontWeight: 600 }}>
+                    Online
+                  </Typography>
+                </Box>
+              </Box>
+
               {/* Chat messages container */}
               <Box
                 sx={{
@@ -963,107 +1121,54 @@ export default function Home() {
                   bgcolor: theme.background.light,
                   borderTop: "1px solid rgba(0,0,0,0.06)",
                   position: "sticky",
-                  bottom: { xs: 78, sm: 0 },
+                  bottom: { xs: 82, sm: 0 },
                   zIndex: 1,
                 }}
               >
-                {/* Suggestion buttons */}
+                {/* Suggestion chips — 2-column wrapping grid */}
                 <Box
                   sx={{
-                    display: "flex",
-                    gap: { xs: 0.25, sm: 1 },
-                    mb: { xs: 1.5, sm: 2 },
-                    flexWrap: "nowrap",
-                    justifyContent: "space-between",
-                    width: "100%",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 0.75,
+                    mb: 1.25,
                   }}
                 >
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={async () => {
-                      await sendMessage("Who are the highest rated professors?");
-                    }}
-                    disabled={isLoading}
-                    sx={{
-                      borderRadius: 3,
-                      borderColor: "rgba(0,0,0,0.1)",
-                      color: theme.text.secondary,
-                      fontSize: { xs: "0.6rem", sm: "0.8rem" },
-                      px: { xs: 0.5, sm: 2 },
-                      py: { xs: 0.25, sm: 0.75 },
-                      minWidth: 0,
-                      flex: 1,
-                      mx: 0.25,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      "&:hover": {
-                        borderColor: theme.primary.main,
-                        bgcolor: "rgba(0,27,63,0.05)",
-                      },
-                    }}
-                  >
-                    🌟 Best rated
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={async () => {
-                      await sendMessage("How do I submit a review?");
-                    }}
-                    disabled={isLoading}
-                    sx={{
-                      borderRadius: 3,
-                      borderColor: "rgba(0,0,0,0.1)",
-                      color: theme.text.secondary,
-                      fontSize: { xs: "0.6rem", sm: "0.8rem" },
-                      px: { xs: 0.5, sm: 2 },
-                      py: { xs: 0.25, sm: 0.75 },
-                      minWidth: 0,
-                      flex: 1,
-                      mx: 0.25,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      "&:hover": {
-                        borderColor: theme.primary.main,
-                        bgcolor: "rgba(0,27,63,0.05)",
-                      },
-                    }}
-                  >
-                    ✍️ submit a review
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={async () => {
-                      await sendMessage(
-                        "What are the tips for succeeding in courses?"
-                      );
-                    }}
-                    disabled={isLoading}
-                    sx={{
-                      borderRadius: 3,
-                      borderColor: "rgba(0,0,0,0.1)",
-                      color: theme.text.secondary,
-                      fontSize: { xs: "0.6rem", sm: "0.8rem" },
-                      px: { xs: 0.5, sm: 2 },
-                      py: { xs: 0.25, sm: 0.75 },
-                      minWidth: 0,
-                      flex: 1,
-                      mx: 0.25,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      "&:hover": {
-                        borderColor: theme.primary.main,
-                        bgcolor: "rgba(0,27,63,0.05)",
-                      },
-                    }}
-                  >
-                    💡 Tips for courses
-                  </Button>
+                  {[
+                    { label: "Top rated profs", icon: <StarBorderOutlinedIcon sx={{ fontSize: 14 }} />, msg: "Who are the highest rated professors?" },
+                    { label: "Course tips", icon: <LightbulbOutlinedIcon sx={{ fontSize: 14 }} />, msg: "What are the tips for succeeding in courses?" },
+                    { label: "Easy graders", icon: <ThumbUpOutlinedIcon sx={{ fontSize: 14 }} />, msg: "Which professors are known for being fair and approachable?" },
+                    { label: "How to review", icon: <EditOutlinedIcon sx={{ fontSize: 14 }} />, msg: "How do I submit a review?" },
+                  ].map(({ label, icon, msg }) => (
+                    <Button
+                      key={label}
+                      variant="outlined"
+                      size="small"
+                      startIcon={icon}
+                      onClick={() => sendMessage(msg)}
+                      disabled={isLoading}
+                      sx={{
+                        borderRadius: "10px",
+                        borderColor: "rgba(0,0,0,0.1)",
+                        color: theme.text.secondary,
+                        fontSize: "0.75rem",
+                        fontWeight: 500,
+                        px: 1.25,
+                        py: 0.625,
+                        justifyContent: "flex-start",
+                        bgcolor: "white",
+                        minWidth: 0,
+                        "& .MuiButton-startIcon": { mr: 0.5 },
+                        "&:hover": {
+                          borderColor: theme.primary.main,
+                          color: theme.primary.main,
+                          bgcolor: "rgba(0,27,63,0.04)",
+                        },
+                      }}
+                    >
+                      {label}
+                    </Button>
+                  ))}
                 </Box>
               <Stack
                 direction="row"
@@ -1194,58 +1299,63 @@ export default function Home() {
         )}
       </Box>
 
-      {/* Mobile navigation */}
-      <Paper
-        elevation={4}
+      {/* Mobile navigation — floating pill */}
+      <Box
         sx={{
           position: "fixed",
-          left: 0,
-          right: 0,
-          bottom: 0,
+          left: 12,
+          right: 12,
+          bottom: 12,
           zIndex: 60,
           display: { xs: "block", sm: "none" },
-          borderTopLeftRadius: 3,
-          borderTopRightRadius: 3,
-          overflow: "hidden",
         }}
       >
-        <BottomNavigation
-          showLabels
-          value={activeNav}
-          onChange={(_, value) => handleNavChange(value)}
+        <Paper
+          elevation={0}
           sx={{
-            "& .MuiBottomNavigationAction-root": {
-              minWidth: 72,
-            },
+            borderRadius: "20px",
+            overflow: "hidden",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08)",
+            border: "1px solid rgba(0,0,0,0.06)",
+            bgcolor: "rgba(255,255,255,0.97)",
+            backdropFilter: "blur(20px)",
           }}
         >
-          <BottomNavigationAction
-            label="Home"
-            value="home"
-            icon={<HomeOutlinedIcon />}
-          />
-          <BottomNavigationAction
-            label="Rate"
-            value="rate"
-            icon={<StarBorderOutlinedIcon />}
-          />
-          <BottomNavigationAction
-            label="Reviews"
-            value="reviews"
-            icon={<ExploreOutlinedIcon />}
-          />
-          <BottomNavigationAction
-            label="Chat"
-            value="chat"
-            icon={<ChatBubbleOutlineOutlinedIcon />}
-          />
-          <BottomNavigationAction
-            label="More"
-            value="more"
-            icon={<MoreHorizIcon />}
-          />
-        </BottomNavigation>
-      </Paper>
+          <BottomNavigation
+            showLabels
+            value={activeNav}
+            onChange={(_, value) => handleNavChange(value)}
+            sx={{
+              height: 58,
+              bgcolor: "transparent",
+              "& .MuiBottomNavigationAction-root": {
+                minWidth: 0,
+                flex: 1,
+                py: 0.75,
+                gap: 0.25,
+                color: "#9CA3AF",
+                "&.Mui-selected": {
+                  color: theme.primary.main,
+                },
+                "& .MuiBottomNavigationAction-label": {
+                  fontSize: "0.65rem",
+                  fontWeight: 500,
+                  "&.Mui-selected": {
+                    fontSize: "0.65rem",
+                    fontWeight: 700,
+                  },
+                },
+              },
+            }}
+          >
+            <BottomNavigationAction label="Home" value="home" icon={<HomeOutlinedIcon sx={{ fontSize: 20 }} />} />
+            <BottomNavigationAction label="Rate" value="rate" icon={<StarBorderOutlinedIcon sx={{ fontSize: 20 }} />} />
+            <BottomNavigationAction label="Reviews" value="reviews" icon={<ExploreOutlinedIcon sx={{ fontSize: 20 }} />} />
+            <BottomNavigationAction label="Chat" value="chat" icon={<ChatBubbleOutlineOutlinedIcon sx={{ fontSize: 20 }} />} />
+            <BottomNavigationAction label="More" value="more" icon={<MoreHorizIcon sx={{ fontSize: 20 }} />} />
+          </BottomNavigation>
+        </Paper>
+      </Box>
 
       <SubmitReviewModal
         open={openRateModal}
@@ -1459,14 +1569,19 @@ export default function Home() {
       >
         <DialogTitle
           sx={{
-            fontSize: { xs: "1.2rem", sm: "1.5rem" },
+            fontSize: { xs: "1.1rem", sm: "1.3rem" },
             pt: { xs: 2, sm: 3 },
             pb: { xs: 1, sm: 2 },
             textAlign: "center",
-            fontWeight: 600,
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 1,
           }}
         >
-          🎓 Share Your Experience!
+          <SchoolIcon sx={{ color: "primary.main", fontSize: "1.4rem" }} />
+          Share Your Experience
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <Typography variant="body1" sx={{ mb: 2, textAlign: "center" }}>
