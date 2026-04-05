@@ -19,10 +19,10 @@ export const PrivacyConsentBanner = ({ onPrivacyClick, onConsent }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   useEffect(() => {
-    // Check if user has already consented
+    // Only show the banner if the user has never made a decision (no record at all).
+    // If they previously accepted OR declined, respect that choice and don't show again.
     const consent = userTrackingService.getPrivacyConsent();
-    if (!consent || !consent.consented) {
-      // Show banner if no consent found
+    if (!consent) {
       setOpen(true);
     }
   }, []);
@@ -30,17 +30,15 @@ export const PrivacyConsentBanner = ({ onPrivacyClick, onConsent }) => {
   const handleAccept = () => {
     userTrackingService.setPrivacyConsent(true);
     setOpen(false);
-
-    // Trigger callback to notify parent component that consent has been given
-    if (onConsent) {
-      onConsent();
-    }
+    if (onConsent) onConsent();
   };
 
-  const handleViewPrivacy = () => {
-    if (onPrivacyClick) {
-      onPrivacyClick();
-    }
+  // Decline: saves the decision so the banner never re-appears, but still allows full use.
+  // Chat history will not be saved server-side when consent is false.
+  const handleDecline = () => {
+    userTrackingService.setPrivacyConsent(false);
+    setOpen(false);
+    if (onConsent) onConsent();
   };
 
   if (!open) return null;
@@ -48,39 +46,37 @@ export const PrivacyConsentBanner = ({ onPrivacyClick, onConsent }) => {
   return (
     <Slide direction="up" in={open} mountOnEnter unmountOnExit>
       <Paper
-        elevation={3}
+        elevation={4}
         sx={{
           position: "fixed",
           bottom: 0,
           left: 0,
           right: 0,
           zIndex: 1000,
-          p: { xs: 1.5, sm: 2 },
-          m: { xs: 1, sm: 2 },
-          borderRadius: 2,
-          bgcolor: "rgba(255, 255, 255, 0.95)",
-          backdropFilter: "blur(10px)",
-          boxShadow: "0 -4px 20px rgba(0, 0, 0, 0.1)",
-          maxWidth: { sm: "500px", md: "600px" },
-          mx: "auto",
+          p: { xs: 2, sm: 2.5 },
+          mx: { xs: 1.5, sm: "auto" },
+          mb: { xs: "calc(78px + env(safe-area-inset-bottom))", sm: 2 },
+          borderRadius: "16px",
+          bgcolor: "rgba(255,255,255,0.97)",
+          backdropFilter: "blur(16px)",
+          boxShadow: "0 -4px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)",
+          maxWidth: { sm: "520px" },
+          border: "1px solid rgba(0,0,0,0.07)",
         }}
       >
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
-            Privacy Notice
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>
+            We value your privacy
           </Typography>
-          <Typography
-            variant="body2"
-            component="div"
-            sx={{ fontSize: "0.8rem" }}
-          >
-            We use cookies and local storage to improve your experience. By
-            clicking &quot;Accept&quot;, you consent to our{" "}
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem", lineHeight: 1.6 }}>
+            We store an anonymous ID in your browser to power reviews, rate limiting, and chat history.
+            We do not collect your name, email, or any identifying information unless you provide it
+            voluntarily (e.g. in a bug report). By clicking <strong>Accept</strong>, you consent to our{" "}
             <Link
               component="button"
               variant="body2"
-              onClick={handleViewPrivacy}
-              sx={{ textDecoration: "underline", fontSize: "0.8rem" }}
+              onClick={onPrivacyClick}
+              sx={{ fontSize: "0.8rem", fontWeight: 600 }}
             >
               Privacy Policy
             </Link>
@@ -89,29 +85,31 @@ export const PrivacyConsentBanner = ({ onPrivacyClick, onConsent }) => {
           <Box
             sx={{
               display: "flex",
-              justifyContent: "flex-end",
               gap: 1,
-              mt: 1,
-              flexDirection: isMobile ? "column" : "row",
+              mt: 0.5,
+              flexDirection: isMobile ? "column-reverse" : "row",
+              justifyContent: "flex-end",
             }}
           >
             <Button
               variant="outlined"
               color="primary"
-              onClick={handleViewPrivacy}
-              fullWidth={isMobile}
+              onClick={handleDecline}
               size="small"
+              fullWidth={isMobile}
+              sx={{ borderRadius: "10px", fontWeight: 600 }}
             >
-              View Policy
+              Essential only
             </Button>
             <Button
               variant="contained"
               color="primary"
               onClick={handleAccept}
-              fullWidth={isMobile}
               size="small"
+              fullWidth={isMobile}
+              sx={{ borderRadius: "10px", fontWeight: 700 }}
             >
-              Accept
+              Accept all
             </Button>
           </Box>
         </Box>

@@ -14,6 +14,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* iOS momentum scrolling for scrollable containers */
+[data-scroll="true"],
+.MuiDialogContent-root,
+.MuiBox-root {
+  -webkit-overflow-scrolling: touch;
+}
+
 body {
   background: #F5F5F5;
 }

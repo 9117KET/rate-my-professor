@@ -23,6 +23,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Divider,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import SchoolIcon from "@mui/icons-material/School";
@@ -38,6 +42,11 @@ import LightbulbOutlinedIcon from "@mui/icons-material/LightbulbOutlined";
 import ThumbUpOutlinedIcon from "@mui/icons-material/ThumbUpOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import BugReportOutlinedIcon from "@mui/icons-material/BugReportOutlined";
+import GavelOutlinedIcon from "@mui/icons-material/GavelOutlined";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import CloseIcon from "@mui/icons-material/Close";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { SubmitReviewModal } from "./components/SubmitReviewModal";
@@ -267,22 +276,23 @@ export default function Home() {
   // Initialize user ID on component mount
   useEffect(() => {
     const initAuth = async () => {
+      // Set a local ID immediately (synchronous localStorage read) so sendMessage
+      // is never blocked by the async Firebase auth call.
       try {
-        // First, ensure Firebase authentication
-        await ensureAuthenticated();
+        const localId = userTrackingService.getOrCreateUserId();
+        setUserId(localId);
+      } catch (e) {
+        console.error("Error reading local user ID:", e);
+      }
 
-        // Then get/create user ID
+      // Then upgrade to Firebase UID asynchronously.
+      try {
+        await ensureAuthenticated();
         const id = userTrackingService.getOrCreateUserId();
         setUserId(id);
       } catch (error) {
-        console.error("Error initializing authentication:", error);
-        // Fallback to localStorage-only mode if authentication fails
-        try {
-          const id = userTrackingService.getOrCreateUserId();
-          setUserId(id);
-        } catch (localError) {
-          console.error("Error initializing user ID:", localError);
-        }
+        console.error("Error initializing Firebase authentication:", error);
+        // Local ID already set above — no further action needed.
       }
     };
 
@@ -354,7 +364,6 @@ export default function Home() {
         let errMsg;
         try {
           const errData = await res.json();
-          // error shape: { error: { message: "..." } } from createErrorResponse
           errMsg =
             errData.error?.message ||
             (typeof errData.error === "string" ? errData.error : null) ||
@@ -363,7 +372,13 @@ export default function Home() {
         } catch {
           errMsg = `Request failed (${res.status})`;
         }
-        throw new Error(errMsg);
+        const apiErrorMessages = [
+          ...newMessages.slice(0, -1),
+          { role: "assistant", content: errMsg, timestamp: new Date() },
+        ];
+        setMessages(apiErrorMessages);
+        await chatService.saveChat(apiErrorMessages, userId);
+        return;
       }
 
       const reader = res.body.getReader();
@@ -568,9 +583,16 @@ export default function Home() {
             </Typography>
           </Box>
           <Box sx={{ flex: 1 }} />
-          {["home", "rate", "reviews", "chat", "more"].map((nav) => (
+          {[
+            { nav: "home", label: "Home", icon: <HomeOutlinedIcon sx={{ fontSize: 15 }} /> },
+            { nav: "rate", label: "Rate", icon: <StarBorderOutlinedIcon sx={{ fontSize: 15 }} /> },
+            { nav: "reviews", label: "Reviews", icon: <ExploreOutlinedIcon sx={{ fontSize: 15 }} /> },
+            { nav: "chat", label: "Chat", icon: <ChatBubbleOutlineOutlinedIcon sx={{ fontSize: 15 }} /> },
+            { nav: "more", label: "More", icon: <MoreHorizIcon sx={{ fontSize: 15 }} /> },
+          ].map(({ nav, label, icon }) => (
             <Button
               key={nav}
+              startIcon={icon}
               onClick={() => handleNavChange(nav)}
               sx={{
                 px: 1.5,
@@ -584,11 +606,11 @@ export default function Home() {
                   bgcolor: activeNav === nav ? "rgba(0,27,63,0.10)" : "rgba(0,0,0,0.04)",
                   color: theme.primary.main,
                 },
-                textTransform: "capitalize",
                 minWidth: 0,
+                "& .MuiButton-startIcon": { mr: 0.5 },
               }}
             >
-              {nav}
+              {label}
             </Button>
           ))}
         </Toolbar>
@@ -600,6 +622,7 @@ export default function Home() {
           overflowY: "auto",
           overflowX: "hidden",
           p: { xs: 1, sm: 2, md: 3 },
+          pb: { xs: "calc(82px + env(safe-area-inset-bottom))", sm: 2, md: 3 },
           display: "flex",
           justifyContent: "center",
         }}
@@ -754,7 +777,7 @@ export default function Home() {
                       Ask our AI anything
                     </Typography>
                     <Typography sx={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.65)", lineHeight: 1.5 }}>
-                      Powered by real student reviews — find out who to take.
+                      Powered by real student reviews. Find out who to take.
                     </Typography>
                   </Box>
                   <Box sx={{
@@ -826,7 +849,7 @@ export default function Home() {
                         Read reviews
                       </Typography>
                       <Typography sx={{ fontSize: "0.78rem", color: theme.text.secondary }}>
-                        Search by professor
+                        See what students are saying
                       </Typography>
                     </Box>
                   </Paper>
@@ -1121,12 +1144,12 @@ export default function Home() {
                   bgcolor: theme.background.light,
                   borderTop: "1px solid rgba(0,0,0,0.06)",
                   position: "sticky",
-                  bottom: { xs: 82, sm: 0 },
+                  bottom: 0,
                   zIndex: 1,
                 }}
               >
-                {/* Suggestion chips — 2-column wrapping grid */}
-                <Box
+                {/* Suggestion chips — only shown on fresh/empty chat */}
+                {messages.length <= 1 && <Box
                   sx={{
                     display: "grid",
                     gridTemplateColumns: "1fr 1fr",
@@ -1169,7 +1192,7 @@ export default function Home() {
                       {label}
                     </Button>
                   ))}
-                </Box>
+                </Box>}
               <Stack
                 direction="row"
                 spacing={1}
@@ -1305,7 +1328,7 @@ export default function Home() {
           position: "fixed",
           left: 12,
           right: 12,
-          bottom: 12,
+          bottom: "calc(12px + env(safe-area-inset-bottom))",
           zIndex: 60,
           display: { xs: "block", sm: "none" },
         }}
@@ -1405,62 +1428,88 @@ export default function Home() {
         }}
         maxWidth="xs"
         fullWidth
+        sx={{
+          "& .MuiDialog-paper": {
+            borderRadius: "20px",
+            "@media (max-width:600px)": {
+              position: "fixed",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              margin: 0,
+              width: "100%",
+              maxWidth: "100%",
+              borderRadius: "20px 20px 0 0",
+            },
+          },
+        }}
       >
-        <DialogTitle sx={{ fontWeight: 600 }}>More</DialogTitle>
-        <DialogContent>
-          <Stack spacing={1.5} sx={{ pt: 1 }}>
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setOpenMoreModal(false);
-                setActiveNav("home");
-                setOpenImprintModal(true);
-              }}
+        <DialogTitle sx={{ pb: 0.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Typography sx={{ fontWeight: 700, fontSize: "1.0625rem" }}>More</Typography>
+            <IconButton
+              size="small"
+              onClick={() => { setOpenMoreModal(false); setActiveNav("home"); }}
+              sx={{ color: "text.secondary" }}
             >
-              Guidelines
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setOpenMoreModal(false);
-                setActiveNav("home");
-                setOpenPrivacyModal(true);
-              }}
-            >
-              Privacy
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setOpenMoreModal(false);
-                setActiveNav("home");
-                setOpenReportBugModal(true);
-              }}
-            >
-              Bug Report
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setOpenMoreModal(false);
-                setActiveNav("home");
-                setOpenHowToUseModal(true);
-              }}
-            >
-              How to Use
-            </Button>
-          </Stack>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ px: 1.5, pb: 2 }}>
+          {[
+            {
+              label: "How to Use",
+              sublabel: "Learn how the platform works",
+              icon: <HelpOutlineIcon />,
+              action: () => { setOpenMoreModal(false); setActiveNav("home"); setOpenHowToUseModal(true); },
+            },
+            {
+              label: "Guidelines",
+              sublabel: "Community rules & review standards",
+              icon: <GavelOutlinedIcon />,
+              action: () => { setOpenMoreModal(false); setActiveNav("home"); setOpenImprintModal(true); },
+            },
+            {
+              label: "Privacy Policy",
+              sublabel: "How we handle your data",
+              icon: <LockOutlinedIcon />,
+              action: () => { setOpenMoreModal(false); setActiveNav("home"); setOpenPrivacyModal(true); },
+            },
+            {
+              label: "Report a Bug",
+              sublabel: "Something not working? Let us know",
+              icon: <BugReportOutlinedIcon />,
+              action: () => { setOpenMoreModal(false); setActiveNav("home"); setOpenReportBugModal(true); },
+            },
+          ].map(({ label, sublabel, icon, action }, index, arr) => (
+            <Box key={label}>
+              <ListItemButton
+                onClick={action}
+                sx={{
+                  borderRadius: "12px",
+                  py: 1.25,
+                  px: 1.5,
+                  gap: 1,
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36, color: theme.primary.main }}>
+                  {icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={label}
+                  secondary={sublabel}
+                  primaryTypographyProps={{ fontWeight: 600, fontSize: "0.9rem" }}
+                  secondaryTypographyProps={{ fontSize: "0.775rem", lineHeight: 1.4 }}
+                />
+                <ChevronRightIcon sx={{ color: "text.disabled", fontSize: 18, flexShrink: 0 }} />
+              </ListItemButton>
+              {index < arr.length - 1 && (
+                <Divider sx={{ mx: 1.5, borderColor: "rgba(0,0,0,0.05)" }} />
+              )}
+            </Box>
+          ))}
         </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setOpenMoreModal(false);
-              setActiveNav("home");
-            }}
-          >
-            Close
-          </Button>
-        </DialogActions>
       </Dialog>
 
       <Box
@@ -1485,6 +1534,7 @@ export default function Home() {
           background: `linear-gradient(135deg, ${theme.primary.main} 0%, ${theme.primary.light} 100%)`,
         }}
       >
+        <>
         <Button
           variant="text"
           onClick={() => setOpenHowToUseModal(true)}
@@ -1552,64 +1602,61 @@ export default function Home() {
         >
           Imprint
         </Button>
+        </>
       </Box>
       {/* Review Reminder Popup */}
       <Dialog
         open={showReviewReminderPopup}
         onClose={handleReminderClose}
-        maxWidth="sm"
+        maxWidth="xs"
         fullWidth
         sx={{
           "& .MuiDialog-paper": {
-            margin: { xs: 1, sm: 2 },
-            width: { xs: "95%", sm: "80%" },
-            borderRadius: { xs: 1, sm: 2 },
+            borderRadius: "20px",
+            margin: "16px",
+            width: "calc(100% - 32px)",
           },
         }}
       >
-        <DialogTitle
-          sx={{
-            fontSize: { xs: "1.1rem", sm: "1.3rem" },
-            pt: { xs: 2, sm: 3 },
-            pb: { xs: 1, sm: 2 },
-            textAlign: "center",
-            fontWeight: 700,
-            display: "flex",
+        <DialogTitle sx={{ textAlign: "center", pt: 3, pb: 0.5 }}>
+          <Box sx={{
+            width: 52,
+            height: 52,
+            borderRadius: "14px",
+            bgcolor: "rgba(0,27,63,0.08)",
+            display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: 1,
-          }}
-        >
-          <SchoolIcon sx={{ color: "primary.main", fontSize: "1.4rem" }} />
-          Share Your Experience
+            mb: 1.5,
+          }}>
+            <SchoolIcon sx={{ color: theme.primary.main, fontSize: "1.6rem" }} />
+          </Box>
+          <Typography sx={{ fontWeight: 700, fontSize: { xs: "1.05rem", sm: "1.15rem" }, display: "block" }}>
+            Share Your Experience
+          </Typography>
         </DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          <Typography variant="body1" sx={{ mb: 2, textAlign: "center" }}>
+        <DialogContent sx={{ pt: 1.5, textAlign: "center" }}>
+          <Typography variant="body2" sx={{ color: theme.text.secondary, lineHeight: 1.6 }}>
             Help other students by rating a professor you&apos;ve had. Your
-            insights are valuable to the community!
+            anonymous review makes a real difference.
           </Typography>
         </DialogContent>
-        <DialogActions
-          sx={{ p: 2, display: "flex", justifyContent: "space-between" }}
-        >
-          <Button onClick={handleReminderClose} color="primary">
-            Remind me later
-          </Button>
+        <DialogActions sx={{ p: "12px 20px 20px", flexDirection: "column", gap: 1 }}>
           <Button
             variant="contained"
             color="primary"
-            onClick={() => {
-              setShowReviewReminderPopup(false);
-              handleNavChange("rate");
-            }}
-            sx={{
-              borderRadius: 2,
-              px: 3,
-              py: 1,
-              textTransform: "none",
-            }}
+            fullWidth
+            onClick={() => { setShowReviewReminderPopup(false); handleNavChange("rate"); }}
+            sx={{ py: 1.25, borderRadius: "12px", fontWeight: 700 }}
           >
             Rate a Professor
+          </Button>
+          <Button
+            fullWidth
+            onClick={handleReminderClose}
+            sx={{ color: theme.text.secondary, py: 0.75, borderRadius: "12px" }}
+          >
+            Remind me later
           </Button>
         </DialogActions>
       </Dialog>

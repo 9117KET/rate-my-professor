@@ -38,10 +38,7 @@ async function syncEmbeddingsHandler(req) {
     );
   } catch (error) {
     // Log detailed error information for debugging
-    logError(error, "sync-embeddings-api", {
-      method: req.method,
-      useAltMethod: req.json?.useAltMethod,
-    });
+    logError(error, "sync-embeddings-api", { method: req.method });
 
     // Return a sanitized error response
     return createErrorResponse(

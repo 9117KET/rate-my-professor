@@ -591,26 +591,4 @@ export const embeddingService = {
     }
   },
 
-  async createTipEmbeddings(tips) {
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const processedTips = [];
-
-    for (const tip of tips) {
-      const response = await client.embeddings.create({
-        input: tip.content,
-        model: "text-embedding-3-small",
-      });
-      const embedding = response.data[0].embedding;
-      processedTips.push({
-        values: embedding,
-        id: tip.id,
-        metadata: {
-          content: tip.content,
-          createdAt: tip.createdAt,
-        },
-      });
-    }
-
-    // Store processedTips in your database or vector store
-  },
 };

@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Dialog,
   DialogTitle,
@@ -6,19 +8,34 @@ import {
   Button,
   Typography,
   Box,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
   Divider,
+  Link,
   useTheme,
   useMediaQuery,
-  Link,
 } from "@mui/material";
-import InfoIcon from "@mui/icons-material/Info";
-import SecurityIcon from "@mui/icons-material/Security";
-import GavelIcon from "@mui/icons-material/Gavel";
-import CodeIcon from "@mui/icons-material/Code";
+
+const Section = ({ title, children }) => (
+  <Box sx={{ mb: 2.5 }}>
+    <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.75, color: "text.primary" }}>
+      {title}
+    </Typography>
+    {children}
+  </Box>
+);
+
+const Body = ({ children, sx }) => (
+  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, ...sx }}>
+    {children}
+  </Typography>
+);
+
+const Bullet = ({ children }) => (
+  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, display: "block", pl: 1 }}>
+    · {children}
+  </Typography>
+);
+
+const CONTACT_EMAIL = "kinlotangiri1@gmail.com";
 
 export const ImprintModal = ({ open, onClose }) => {
   const theme = useTheme();
@@ -30,206 +47,147 @@ export const ImprintModal = ({ open, onClose }) => {
       onClose={onClose}
       maxWidth="sm"
       fullWidth
+      fullScreen={isMobile}
+      scroll="paper"
       sx={{
         "& .MuiDialog-paper": {
-          margin: { xs: 1, sm: 2 },
-          width: { xs: "95%", sm: "90%" },
-          maxHeight: { xs: "95vh", sm: "90vh" },
-          borderRadius: { xs: 1, sm: 2 },
+          borderRadius: { xs: "16px 16px 0 0", sm: "20px" },
+          margin: { xs: 0, sm: "32px" },
+          maxHeight: { xs: "92vh", sm: "88vh" },
+          alignSelf: { xs: "flex-end", sm: "center" },
         },
       }}
     >
-      <DialogTitle
-        sx={{
-          fontSize: { xs: "1.2rem", sm: "1.5rem" },
-          pt: { xs: 2, sm: 3 },
-          pb: { xs: 1, sm: 2 },
-          textAlign: "center",
-          fontWeight: 600,
-        }}
-      >
-        ⚖️ Guidelines
+      <DialogTitle sx={{ pt: 3, pb: 1, fontWeight: 700, fontSize: { xs: "1.1rem", sm: "1.2rem" } }}>
+        Legal Notice &amp; Guidelines
+        <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5, fontWeight: 400 }}>
+          Impressum · Last updated: 5 April 2026
+        </Typography>
       </DialogTitle>
 
-      <DialogContent>
-        <List>
-          {/* Project Disclosure Section */}
-          <ListItem sx={{ pt: 1 }}>
-            <ListItemIcon>
-              <CodeIcon color="primary" />
-            </ListItemIcon>
-            <ListItemText
-              primary={
-                <Typography
-                  variant="subtitle1"
-                  fontWeight={600}
-                  component="div"
-                >
-                  Student Fun Project
-                </Typography>
-              }
-              secondary={
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  component="div"
-                >
-                  This platform is a student fun project.
-                </Typography>
-              }
-            />
-          </ListItem>
+      <DialogContent dividers>
 
-          <Divider sx={{ my: 1 }} />
+        {/* ── Legal Notice (Impressum) ─────────────────────────────────────────── */}
+        <Section title="Legal Notice (Impressum)">
+          <Body>
+            According to § 5 TMG / DDG:
+          </Body>
+          <Body sx={{ mt: 1 }}>
+            <strong>Responsible for content:</strong><br />
+            Kinlo Ephriam Tangiri<br />
+            Student, Constructor University Bremen<br />
+            {/* TODO: Add your postal address here */}
+            [Address on request]<br />
+            Email:{" "}
+            <Link href={`mailto:${CONTACT_EMAIL}`} underline="hover">
+              {CONTACT_EMAIL}
+            </Link>
+          </Body>
+          <Body sx={{ mt: 1, fontStyle: "italic" }}>
+            This is a non-commercial student project. No commercial activity is conducted through this platform.
+          </Body>
+        </Section>
 
-          {/* About Section */}
-          <ListItem>
-            <ListItemIcon>
-              <InfoIcon color="primary" />
-            </ListItemIcon>
-            <ListItemText
-              primary={
-                <Typography
-                  variant="subtitle1"
-                  fontWeight={600}
-                  component="div"
-                >
-                  About This Platform
-                </Typography>
-              }
-              secondary={
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  component="div"
-                >
-                  A student-driven platform for Constructor University Bremen,
-                  created to help students make informed decisions about courses
-                  and professors.
-                </Typography>
-              }
-            />
-          </ListItem>
+        <Divider sx={{ mb: 2.5 }} />
 
-          <Divider sx={{ my: 1 }} />
+        {/* ── Disclaimer ───────────────────────────────────────────────────────── */}
+        <Section title="Disclaimer">
+          <Body sx={{ mb: 1 }}>
+            <strong>No affiliation with Constructor University Bremen.</strong> This platform is an independent
+            student initiative and is not officially affiliated with, endorsed by, or connected to
+            Constructor University Bremen in any way.
+          </Body>
+          <Body sx={{ mb: 1 }}>
+            <strong>Limitation of liability.</strong> All reviews are submitted anonymously by students and
+            reflect personal opinions only. The operator of this platform accepts no liability for the accuracy,
+            completeness, or timeliness of user-submitted content.
+          </Body>
+          <Body sx={{ mb: 1 }}>
+            <strong>External links.</strong> This platform contains links to external websites. We have no control
+            over the content of those sites and accept no liability for them. The operators of linked pages
+            are solely responsible for their content.
+          </Body>
+          <Body>
+            <strong>Right to removal.</strong> If you are a professor at Constructor University Bremen and
+            believe content about you is inaccurate or should be removed, please contact us at{" "}
+            <Link href={`mailto:${CONTACT_EMAIL}`} underline="hover">{CONTACT_EMAIL}</Link> and we will
+            respond promptly.
+          </Body>
+        </Section>
 
-          {/* Privacy Section */}
-          <ListItem>
-            <ListItemIcon>
-              <SecurityIcon color="primary" />
-            </ListItemIcon>
-            <ListItemText
-              primary={
-                <Typography
-                  variant="subtitle1"
-                  fontWeight={600}
-                  component="div"
-                >
-                  Privacy & Anonymity
-                </Typography>
-              }
-              secondary={
-                <Box component="div">
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    component="div"
-                    sx={{ display: "block" }}
-                  >
-                    • All reviews are anonymous
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    component="div"
-                    sx={{ display: "block" }}
-                  >
-                    • No personal data is collected
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    component="div"
-                    sx={{ display: "block" }}
-                  >
-                    • Reviews are stored securely
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    component="div"
-                    sx={{ display: "block" }}
-                  >
-                    • Everyone can view submitted reviews
-                  </Typography>
-                </Box>
-              }
-              secondaryTypographyProps={{ component: "div" }}
-            />
-          </ListItem>
+        <Divider sx={{ mb: 2.5 }} />
 
-          <Divider sx={{ my: 1 }} />
+        {/* ── Community Guidelines ─────────────────────────────────────────────── */}
+        <Section title="Community Guidelines">
+          <Body sx={{ mb: 1 }}>
+            By submitting a review, reaction, reply, or tip, you agree to the following standards:
+          </Body>
+          <Bullet>
+            <strong>Be respectful.</strong> Critique teaching quality, course structure, and workload —
+            not personal characteristics, appearance, nationality, or private life.
+          </Bullet>
+          <Bullet>
+            <strong>Be honest.</strong> Only submit reviews based on your own genuine experience
+            with a professor or course.
+          </Bullet>
+          <Bullet>
+            <strong>Stay constructive.</strong> Negative reviews are valid; targeted harassment is not.
+            Ask yourself: does this help a fellow student make a better decision?
+          </Bullet>
+          <Bullet>
+            <strong>No personal information.</strong> Do not include any personal data about professors
+            or other students beyond their publicly known professional role (name, subject).
+          </Bullet>
+          <Bullet>
+            <strong>No spam or duplicate reviews.</strong> Submit one honest review per professor per course.
+          </Bullet>
+          <Bullet>
+            <strong>No illegal content.</strong> Content that is defamatory, discriminatory, incites hatred,
+            or is otherwise unlawful will be removed and may be reported to authorities.
+          </Bullet>
+          <Body sx={{ mt: 1.25 }}>
+            Content that violates these guidelines will be removed without notice. Repeated violations
+            may result in your anonymous ID being blocked.
+          </Body>
+        </Section>
 
-          {/* Guidelines Section */}
-          <ListItem>
-            <ListItemIcon>
-              <GavelIcon color="primary" />
-            </ListItemIcon>
-            <ListItemText
-              primary={
-                <Typography
-                  variant="subtitle1"
-                  fontWeight={600}
-                  component="div"
-                >
-                  Guidelines & Community Standards
-                </Typography>
-              }
-              secondary={
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  component="div"
-                >
-                  Please be respectful and constructive in your reviews. Focus
-                  on academic aspects rather than personal characteristics.
-                  Abusive or inappropriate content will be removed.
-                </Typography>
-              }
-            />
-          </ListItem>
-        </List>
+        <Divider sx={{ mb: 2.5 }} />
+
+        {/* ── Copyright ────────────────────────────────────────────────────────── */}
+        <Section title="Intellectual Property">
+          <Body>
+            The platform design, code, and content structure are the work of Kinlo Ephriam Tangiri.
+            User-submitted reviews remain the intellectual property of the respective authors.
+            By submitting content, you grant the platform a non-exclusive, royalty-free licence to
+            display that content to other users of the platform.
+          </Body>
+        </Section>
 
         <Box
           sx={{
-            mt: 2,
+            mt: 1,
             p: 2,
-            bgcolor: "grey.100",
-            borderRadius: 1,
-            border: "1px solid",
-            borderColor: "grey.300",
+            bgcolor: "rgba(0,27,63,0.04)",
+            borderRadius: "12px",
+            border: "1px solid rgba(0,27,63,0.08)",
           }}
         >
           <Typography variant="caption" color="text.secondary" display="block">
-            This platform is an independent student initiative and is not
-            officially affiliated with Constructor University Bremen. All
-            reviews reflect personal student experiences and opinions.
+            For data protection inquiries, content removal requests, or to exercise your GDPR rights,
+            email{" "}
+            <Link href={`mailto:${CONTACT_EMAIL}`} variant="caption" underline="hover">
+              {CONTACT_EMAIL}
+            </Link>. We aim to respond within 30 days.
           </Typography>
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 3 }}>
+      <DialogActions sx={{ px: 3, pb: 3, pt: 1.5 }}>
         <Button
           variant="contained"
           onClick={onClose}
           fullWidth
-          size="large"
-          sx={{
-            borderRadius: 2,
-            py: 1.5,
-            fontSize: "1rem",
-            textTransform: "none",
-          }}
+          sx={{ borderRadius: "12px", py: 1.25, fontWeight: 700 }}
         >
           Got It
         </Button>

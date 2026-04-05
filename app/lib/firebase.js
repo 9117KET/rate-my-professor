@@ -1,23 +1,6 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth, signInAnonymously } from "firebase/auth";
-// Import getAnalytics dynamically on the client side only
-// import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Remove the debugging console log that was checking environment variables
-// console.log("ENV VARS CHECK:", {
-//   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? "Defined" : "Undefined",
-//   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-//     ? "Defined"
-//     : "Undefined",
-//   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-//     ? "Defined"
-//     : "Undefined",
-//   NODE_ENV: process.env.NODE_ENV,
-// });
 
 // Required environment variables for Firebase configuration
 // These should be defined in .env.local for local development

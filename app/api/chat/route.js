@@ -440,14 +440,14 @@ async function chatHandler(req) {
       }
     }
 
-    // Format context from similar reviews, prioritizing higher relevance scores
-    // Filter and sort by relevance (lower score = higher relevance in Pinecone)
+    // Format context from similar reviews, prioritizing higher relevance scores.
+    // Pinecone uses cosine similarity: score closer to 1.0 = more relevant.
     const context =
       matches && matches.length > 0
         ? matches
-            .filter((match) => match.metadata && match.score !== undefined) // Filter out invalid matches
-            .sort((a, b) => a.score - b.score) // Sort by relevance (lower score = better match)
-            .slice(0, 5) // Take top 5 most relevant matches (we query 10, but use best 5)
+            .filter((match) => match.metadata && match.score !== undefined)
+            .sort((a, b) => b.score - a.score) // descending: highest similarity first
+            .slice(0, 5) // top 5 most relevant chunks
             .map(
               (match) =>
                 `Professor: ${
@@ -465,7 +465,7 @@ async function chatHandler(req) {
 
     // Create chat completion
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: "gpt-4-turbo",
       messages: [
         {
           role: "system",

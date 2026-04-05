@@ -105,11 +105,6 @@ async function syncReviewHandler(req) {
       );
     }
 
-    const testPhrase = "blue pineapple suitcase";
-    const reviewHasTestPhrase = reviewText
-      .toLowerCase()
-      .includes(testPhrase);
-
     // Create enhanced embedding input prefix to help queries that mention professor/subject.
     const professorName = (review.professor || "").trim();
     const subject = (review.subject || "").trim();

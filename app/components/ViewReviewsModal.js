@@ -668,12 +668,22 @@ export const ViewReviewsModal = ({
               variant="h6"
               component="div"
               sx={{
-                mb: { xs: 2, sm: 3 },
                 fontSize: { xs: "1.2rem", sm: "1.35rem", md: "1.5rem" },
-                fontWeight: 600,
+                fontWeight: 700,
+                mb: 0.5,
               }}
             >
               Anonymous Reviews
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                mb: { xs: 2, sm: 3 },
+                fontSize: { xs: "0.825rem", sm: "0.875rem" },
+              }}
+            >
+              See what other students are saying about your professors.
             </Typography>
             <Grid
               container
