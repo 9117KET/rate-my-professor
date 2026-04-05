@@ -27,8 +27,10 @@ import {
   useTheme,
   Snackbar,
   Alert,
+  Tooltip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { db, ensureAuthenticated } from "../lib/firebase";
 import {
   collection,
@@ -41,6 +43,8 @@ import {
   arrayUnion,
 } from "firebase/firestore";
 import { formatTimestamp } from "../utils/formatters";
+import Link from "next/link";
+import { professorToSlug } from "../utils/slugUtils";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
@@ -89,8 +93,6 @@ export const ViewReviewsModal = ({
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
-  const [showReviewRequiredMessage, setShowReviewRequiredMessage] =
-    useState(false);
 
   // Load reviews from Firestore with real-time updates
   useEffect(() => {
@@ -217,27 +219,18 @@ export const ViewReviewsModal = ({
             userContent.reviews.length > 0
           ) {
             setHasSubmittedReview(true);
-            setShowReviewRequiredMessage(false);
             // Store this information to avoid repeated checks
             localStorage.setItem("has_submitted_review", "true");
-          } else {
-            setShowReviewRequiredMessage(true);
           }
         } else if (hasReviewed) {
           // Fallback to localStorage if userId is not available
           setHasSubmittedReview(true);
-          setShowReviewRequiredMessage(false);
-        } else {
-          setShowReviewRequiredMessage(true);
         }
       } catch (error) {
         console.error("Error checking user reviews:", error);
         // Fallback to localStorage in case of error
         if (hasReviewed) {
           setHasSubmittedReview(true);
-          setShowReviewRequiredMessage(false);
-        } else {
-          setShowReviewRequiredMessage(true);
         }
       } finally {
         setLoading(false);
@@ -429,6 +422,8 @@ export const ViewReviewsModal = ({
    * @param {string} reactionType - Type of reaction (thumbsUp or thumbsDown)
    */
   const handleReaction = async (reviewId, reactionType) => {
+    if (!hasSubmittedReview) return;
+
     try {
       const reviewRef = doc(db, "reviews", reviewId);
       const review = reviews.find((r) => r.id === reviewId);
@@ -579,16 +574,6 @@ export const ViewReviewsModal = ({
     return review.userId === userId;
   };
 
-  // Handle opening the submission form from the prompt
-  const handleSubmitReviewClick = () => {
-    // Close this modal
-    onClose();
-    // Trigger the submission modal (we'll need to pass this as a prop)
-    if (onOpenSubmitForm) {
-      onOpenSubmitForm();
-    }
-  };
-
   return (
     <Dialog
       open={open}
@@ -602,496 +587,540 @@ export const ViewReviewsModal = ({
         },
       }}
     >
-      {showReviewRequiredMessage ? (
-        <>
-          <DialogTitle
+      <>
+        <DialogTitle
+          sx={{
+            pb: { xs: 1, sm: 2 },
+            pt: { xs: 2, sm: 3 },
+          }}
+        >
+          <Typography
+            variant="h6"
+            component="div"
             sx={{
-              fontSize: { xs: "1.2rem", sm: "1.5rem" },
-              pt: { xs: 2, sm: 3 },
-              pb: { xs: 1, sm: 1 },
-              textAlign: "center",
-              fontWeight: 600,
+              fontSize: { xs: "1.2rem", sm: "1.35rem", md: "1.5rem" },
+              fontWeight: 700,
+              mb: 0.5,
             }}
           >
-            Share Your Experience First
-          </DialogTitle>
-          <DialogContent sx={{ pt: 2, textAlign: "center" }}>
-            <Typography variant="body1" sx={{ mb: 3 }}>
-              To view other students&apos; reviews, kindly submit a review
-              first! Your insights are valuable to our community.
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              By sharing your experience, you help other students make informed
-              decisions and contribute to building our supportive academic
-              community.
-            </Typography>
+            Anonymous Reviews
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mb: { xs: 2, sm: 3 },
+              fontSize: { xs: "0.825rem", sm: "0.875rem" },
+            }}
+          >
+            See what other students are saying about your professors.
+          </Typography>
+          <Grid
+            container
+            spacing={{ xs: 1, sm: 2 }}
+            sx={{
+              flexDirection: { xs: "column", md: "row" },
+              "& .MuiFormControl-root": { mb: { xs: 1, md: 0 } },
+            }}
+          >
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Search professors, subjects, or reviews..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  mb: { xs: 1, md: 0 },
+                  "& .MuiInputBase-root": {
+                    height: { xs: 40, sm: 44 },
+                  },
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl
+                fullWidth
+                size="small"
+                sx={{
+                  "& .MuiInputBase-root": {
+                    height: { xs: 40, sm: 44 },
+                  },
+                }}
+              >
+                <InputLabel>Professor</InputLabel>
+                <Select
+                  value={filterProfessor}
+                  label="Professor"
+                  onChange={(e) => setFilterProfessor(e.target.value)}
+                >
+                  {professors.map((professor) => (
+                    <MenuItem key={professor} value={professor}>
+                      {professor === "all" ? "All Professors" : professor}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl
+                fullWidth
+                size="small"
+                sx={{
+                  "& .MuiInputBase-root": {
+                    height: { xs: 40, sm: 44 },
+                  },
+                }}
+              >
+                <InputLabel>Subject</InputLabel>
+                <Select
+                  value={filterSubject}
+                  label="Subject"
+                  onChange={(e) => setFilterSubject(e.target.value)}
+                >
+                  {subjects.map((subject) => (
+                    <MenuItem key={subject} value={subject}>
+                      {subject === "all" ? "All Subjects" : subject}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl
+                fullWidth
+                size="small"
+                sx={{
+                  "& .MuiInputBase-root": {
+                    height: { xs: 40, sm: 44 },
+                  },
+                }}
+              >
+                <InputLabel>Rating</InputLabel>
+                <Select
+                  value={filterRating}
+                  label="Rating"
+                  onChange={(e) => setFilterRating(e.target.value)}
+                >
+                  <MenuItem value="all">All Ratings</MenuItem>
+                  {[5, 4, 3, 2, 1].map((rating) => (
+                    <MenuItem key={rating} value={rating}>
+                      {rating} Stars
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+        </DialogTitle>
+        <DialogContent sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
+          {!hasSubmittedReview && (
             <Box
-              sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 3 }}
+              sx={{
+                bgcolor: "rgba(0,27,63,0.05)",
+                border: "1px solid rgba(0,27,63,0.10)",
+                borderRadius: "12px",
+                p: 1.5,
+                mb: 2,
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 1,
+              }}
             >
+              <InfoOutlinedIcon
+                fontSize="small"
+                sx={{ color: "rgba(0,27,63,0.8)", flexShrink: 0 }}
+              />
+              <Typography variant="body2" sx={{ flex: 1 }}>
+                You&apos;re viewing as a guest.
+              </Typography>
               <Button
                 variant="contained"
                 color="primary"
-                onClick={handleSubmitReviewClick}
-                sx={{
-                  px: 3,
-                  borderRadius: 2,
-                  textTransform: "none",
-                  fontWeight: 600,
+                size="small"
+                onClick={() => {
+                  if (onOpenSubmitForm) onOpenSubmitForm();
+                  onClose();
                 }}
               >
-                Submit Review
-              </Button>
-              <Button
-                variant="outlined"
-                color="primary"
-                onClick={onClose}
-                sx={{
-                  px: 3,
-                  borderRadius: 2,
-                  textTransform: "none",
-                }}
-              >
-                Maybe Later
+                Rate a Professor
               </Button>
             </Box>
-          </DialogContent>
-        </>
-      ) : (
-        <>
-          <DialogTitle
-            sx={{
-              pb: { xs: 1, sm: 2 },
-              pt: { xs: 2, sm: 3 },
-            }}
-          >
-            <Typography
-              variant="h6"
-              component="div"
-              sx={{
-                fontSize: { xs: "1.2rem", sm: "1.35rem", md: "1.5rem" },
-                fontWeight: 700,
-                mb: 0.5,
-              }}
-            >
-              Anonymous Reviews
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                color: "text.secondary",
-                mb: { xs: 2, sm: 3 },
-                fontSize: { xs: "0.825rem", sm: "0.875rem" },
-              }}
-            >
-              See what other students are saying about your professors.
-            </Typography>
-            <Grid
-              container
-              spacing={{ xs: 1, sm: 2 }}
-              sx={{
-                flexDirection: { xs: "column", md: "row" },
-                "& .MuiFormControl-root": { mb: { xs: 1, md: 0 } },
-              }}
-            >
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Search professors, subjects, or reviews..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    mb: { xs: 1, md: 0 },
-                    "& .MuiInputBase-root": {
-                      height: { xs: 40, sm: 44 },
-                    },
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <FormControl
-                  fullWidth
-                  size="small"
-                  sx={{
-                    "& .MuiInputBase-root": {
-                      height: { xs: 40, sm: 44 },
-                    },
-                  }}
-                >
-                  <InputLabel>Professor</InputLabel>
-                  <Select
-                    value={filterProfessor}
-                    label="Professor"
-                    onChange={(e) => setFilterProfessor(e.target.value)}
-                  >
-                    {professors.map((professor) => (
-                      <MenuItem key={professor} value={professor}>
-                        {professor === "all" ? "All Professors" : professor}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <FormControl
-                  fullWidth
-                  size="small"
-                  sx={{
-                    "& .MuiInputBase-root": {
-                      height: { xs: 40, sm: 44 },
-                    },
-                  }}
-                >
-                  <InputLabel>Subject</InputLabel>
-                  <Select
-                    value={filterSubject}
-                    label="Subject"
-                    onChange={(e) => setFilterSubject(e.target.value)}
-                  >
-                    {subjects.map((subject) => (
-                      <MenuItem key={subject} value={subject}>
-                        {subject === "all" ? "All Subjects" : subject}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <FormControl
-                  fullWidth
-                  size="small"
-                  sx={{
-                    "& .MuiInputBase-root": {
-                      height: { xs: 40, sm: 44 },
-                    },
-                  }}
-                >
-                  <InputLabel>Rating</InputLabel>
-                  <Select
-                    value={filterRating}
-                    label="Rating"
-                    onChange={(e) => setFilterRating(e.target.value)}
-                  >
-                    <MenuItem value="all">All Ratings</MenuItem>
-                    {[5, 4, 3, 2, 1].map((rating) => (
-                      <MenuItem key={rating} value={rating}>
-                        {rating} Stars
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
-          </DialogTitle>
-          <DialogContent sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
-            <List sx={{ p: 0 }}>
-              {Object.entries(groupedReviews).length === 0 ? (
-                <Typography variant="body1" sx={{ p: 2, textAlign: "center" }}>
-                  No reviews match your search criteria.
-                </Typography>
-              ) : (
-                Object.entries(groupedReviews).map(
-                  ([professor, professorReviews]) => (
-                    <Box key={professor} sx={{ mb: { xs: 3, sm: 4 } }}>
+          )}
+          <List sx={{ p: 0 }}>
+            {Object.entries(groupedReviews).length === 0 ? (
+              <Typography variant="body1" sx={{ p: 2, textAlign: "center" }}>
+                No reviews match your search criteria.
+              </Typography>
+            ) : (
+              Object.entries(groupedReviews).map(
+                ([professor, professorReviews]) => (
+                  <Box key={professor} sx={{ mb: { xs: 3, sm: 4 } }}>
+                    <Box
+                      sx={{
+                        bgcolor: "primary.main",
+                        p: { xs: 1, sm: 1.5 },
+                        px: { xs: 1.5, sm: 2 },
+                        borderRadius: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 1,
+                      }}
+                    >
                       <Typography
                         variant="h6"
                         sx={{
-                          bgcolor: "primary.main",
                           color: "white",
-                          p: { xs: 1, sm: 1.5 },
-                          px: { xs: 1.5, sm: 2 },
-                          borderRadius: 1,
                           fontSize: { xs: "1rem", sm: "1.1rem", md: "1.25rem" },
                           fontWeight: 500,
                         }}
                       >
                         {professor}
                       </Typography>
-                      {professorReviews.map((review, index) => (
-                        <Box
-                          key={index}
+                      <Button
+                        component={Link}
+                        href={`/professors/${professorToSlug(professor)}`}
+                        onClick={onClose}
+                        size="small"
+                        sx={{
+                          color: "rgba(255,255,255,0.85)",
+                          fontSize: "0.75rem",
+                          textTransform: "none",
+                          fontWeight: 600,
+                          whiteSpace: "nowrap",
+                          minWidth: 0,
+                          px: 1,
+                          "&:hover": { color: "#FFFFFF", bgcolor: "rgba(255,255,255,0.12)" },
+                        }}
+                      >
+                        View Profile →
+                      </Button>
+                    </Box>
+                    {professorReviews.map((review, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          ml: { xs: 0, sm: 2 },
+                          mt: 1,
+                          p: { xs: 1, sm: 1.5 },
+                          borderRadius: 1,
+                          "&:hover": {
+                            bgcolor: "action.hover",
+                          },
+                        }}
+                      >
+                        <ListItem
                           sx={{
-                            ml: { xs: 0, sm: 2 },
-                            mt: 1,
-                            p: { xs: 1, sm: 1.5 },
-                            borderRadius: 1,
-                            "&:hover": {
-                              bgcolor: "action.hover",
-                            },
+                            px: { xs: 0, sm: 1 },
+                            py: { xs: 0.5, sm: 1 },
                           }}
                         >
-                          <ListItem
-                            sx={{
-                              px: { xs: 0, sm: 1 },
-                              py: { xs: 0.5, sm: 1 },
-                            }}
-                          >
-                            <Box sx={{ width: "100%" }}>
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  flexDirection: { xs: "column", sm: "row" },
-                                  justifyContent: "space-between",
-                                  alignItems: {
-                                    xs: "flex-start",
-                                    sm: "center",
-                                  },
-                                  gap: { xs: 0.5, sm: 1 },
-                                }}
-                              >
-                                <Typography
-                                  variant="subtitle1"
-                                  color="text.secondary"
-                                  sx={{
-                                    fontSize: { xs: "0.9rem", sm: "1rem" },
-                                  }}
-                                >
-                                  {review.subject}
-                                </Typography>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                  sx={{
-                                    fontSize: { xs: "0.7rem", sm: "0.8rem" },
-                                  }}
-                                  suppressHydrationWarning
-                                >
-                                  {formatTimestamp(new Date(review.createdAt))}
-                                </Typography>
-                              </Box>
-                              <Rating
-                                value={review.stars}
-                                readOnly
-                                size={isMobile ? "small" : "medium"}
-                              />
+                          <Box sx={{ width: "100%" }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                flexDirection: { xs: "column", sm: "row" },
+                                justifyContent: "space-between",
+                                alignItems: {
+                                  xs: "flex-start",
+                                  sm: "center",
+                                },
+                                gap: { xs: 0.5, sm: 1 },
+                              }}
+                            >
                               <Typography
-                                variant="body1"
+                                variant="subtitle1"
+                                color="text.secondary"
                                 sx={{
-                                  mt: 1,
-                                  lineHeight: 1.6,
                                   fontSize: { xs: "0.9rem", sm: "1rem" },
                                 }}
                               >
-                                {review.review}
+                                {review.subject}
                               </Typography>
-                              <Box sx={{ mt: 2 }}>
-                                {review.replies?.map((reply, replyIndex) => (
-                                  <ReviewReply
-                                    key={replyIndex}
-                                    review={review}
-                                    reply={reply}
-                                    index={replyIndex}
-                                    userId={userId}
-                                    onDelete={handleDeleteReply}
-                                    onEdit={handleEditReply}
-                                  />
-                                ))}
-                              </Box>
-                              <Box
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
                                 sx={{
-                                  display: "flex",
-                                  flexDirection: { xs: "column", sm: "row" },
-                                  gap: 1,
-                                  mt: 1,
+                                  fontSize: { xs: "0.7rem", sm: "0.8rem" },
                                 }}
+                                suppressHydrationWarning
                               >
-                                <TextField
-                                  size="small"
-                                  placeholder="Add a reply..."
-                                  value={replyContent[review.id] || ""}
-                                  onChange={(e) =>
-                                    setReplyContent((prev) => ({
-                                      ...prev,
-                                      [review.id]: e.target.value,
-                                    }))
-                                  }
-                                  sx={{
-                                    flex: 1,
-                                    "& .MuiInputBase-root": {
-                                      height: { xs: 38, sm: 40 },
-                                    },
-                                  }}
-                                />
-                                <Button
-                                  variant="contained"
-                                  size="small"
-                                  onClick={() => handleAddReply(review.id)}
-                                  sx={{
-                                    height: { xs: 38, sm: 40 },
-                                    minWidth: { xs: "100%", sm: "auto" },
-                                  }}
-                                >
-                                  Reply
-                                </Button>
-                              </Box>
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  alignItems: "center",
-                                  mt: 1,
-                                }}
-                              >
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    gap: { xs: 0.5, sm: 1 },
-                                  }}
-                                >
-                                  <IconButton
-                                    size={isMobile ? "small" : "medium"}
-                                    onClick={() =>
-                                      handleReaction(review.id, "thumbsUp")
-                                    }
-                                    color={
-                                      hasUserReacted(review.id, "thumbsUp")
-                                        ? "primary"
-                                        : "default"
-                                    }
-                                    sx={{ padding: { xs: 0.5, sm: 1 } }}
-                                  >
-                                    <Badge
-                                      badgeContent={
-                                        Array.isArray(
-                                          review.reactions?.thumbsUp
-                                        )
-                                          ? review.reactions.thumbsUp.length
-                                          : 0
-                                      }
-                                      color="primary"
-                                    >
-                                      <ThumbUpIcon
-                                        fontSize={isMobile ? "small" : "medium"}
-                                      />
-                                    </Badge>
-                                  </IconButton>
-                                  <IconButton
-                                    size={isMobile ? "small" : "medium"}
-                                    onClick={() =>
-                                      handleReaction(review.id, "thumbsDown")
-                                    }
-                                    color={
-                                      hasUserReacted(review.id, "thumbsDown")
-                                        ? "primary"
-                                        : "default"
-                                    }
-                                    sx={{ padding: { xs: 0.5, sm: 1 } }}
-                                  >
-                                    <Badge
-                                      badgeContent={
-                                        Array.isArray(
-                                          review.reactions?.thumbsDown
-                                        )
-                                          ? review.reactions.thumbsDown.length
-                                          : 0
-                                      }
-                                      color="primary"
-                                    >
-                                      <ThumbDownIcon
-                                        fontSize={isMobile ? "small" : "medium"}
-                                      />
-                                    </Badge>
-                                  </IconButton>
-                                </Box>
-                                {canModifyReview(review) && (
-                                  <IconButton
-                                    size={isMobile ? "small" : "medium"}
-                                    onClick={(e) => {
-                                      setAnchorEl(e.currentTarget);
-                                      setSelectedReview(review);
-                                    }}
-                                    sx={{ ml: "auto" }}
-                                  >
-                                    <MoreVertIcon
-                                      fontSize={isMobile ? "small" : "medium"}
-                                    />
-                                  </IconButton>
-                                )}
-                                {canDeleteReview(review) && (
-                                  <IconButton
-                                    onClick={() =>
-                                      handleDeleteReview(review.id)
-                                    }
-                                    size="small"
-                                    sx={{
-                                      ml: 1,
-                                      color: "error.main",
-                                    }}
-                                  >
-                                    <DeleteIcon />
-                                  </IconButton>
-                                )}
-                              </Box>
+                                {formatTimestamp(new Date(review.createdAt))}
+                              </Typography>
                             </Box>
-                          </ListItem>
-                          {index < professorReviews.length - 1 && (
-                            <Divider sx={{ my: { xs: 1, sm: 1.5 } }} />
-                          )}
-                        </Box>
-                      ))}
-                    </Box>
-                  )
+                            <Rating
+                              value={review.stars}
+                              readOnly
+                              size={isMobile ? "small" : "medium"}
+                            />
+                            <Typography
+                              variant="body1"
+                              sx={{
+                                mt: 1,
+                                lineHeight: 1.6,
+                                fontSize: { xs: "0.9rem", sm: "1rem" },
+                              }}
+                            >
+                              {review.review}
+                            </Typography>
+                            <Box sx={{ mt: 2 }}>
+                              {review.replies?.map((reply, replyIndex) => (
+                                <ReviewReply
+                                  key={replyIndex}
+                                  review={review}
+                                  reply={reply}
+                                  index={replyIndex}
+                                  userId={userId}
+                                  onDelete={handleDeleteReply}
+                                  onEdit={handleEditReply}
+                                />
+                              ))}
+                            </Box>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                flexDirection: { xs: "column", sm: "row" },
+                                gap: 1,
+                                mt: 1,
+                              }}
+                            >
+                              <TextField
+                                size="small"
+                                placeholder="Add a reply..."
+                                value={replyContent[review.id] || ""}
+                                disabled={!hasSubmittedReview}
+                                onChange={(e) =>
+                                  setReplyContent((prev) => ({
+                                    ...prev,
+                                    [review.id]: e.target.value,
+                                  }))
+                                }
+                                sx={{
+                                  flex: 1,
+                                  "& .MuiInputBase-root": {
+                                    height: { xs: 38, sm: 40 },
+                                  },
+                                }}
+                              />
+                              <Button
+                                variant="contained"
+                                size="small"
+                                disabled={!hasSubmittedReview}
+                                onClick={() => handleAddReply(review.id)}
+                                sx={{
+                                  height: { xs: 38, sm: 40 },
+                                  minWidth: { xs: "100%", sm: "auto" },
+                                }}
+                              >
+                                Reply
+                              </Button>
+                            </Box>
+                            {!hasSubmittedReview && (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ mt: 0.5 }}
+                              >
+                                Submit a review to reply.
+                              </Typography>
+                            )}
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                mt: 1,
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  gap: { xs: 0.5, sm: 1 },
+                                }}
+                              >
+                                <Tooltip
+                                  title={
+                                    !hasSubmittedReview
+                                      ? "Submit a review to react"
+                                      : ""
+                                  }
+                                  disableHoverListener={hasSubmittedReview}
+                                >
+                                  <span>
+                                    <IconButton
+                                      size={isMobile ? "small" : "medium"}
+                                      disabled={!hasSubmittedReview}
+                                      onClick={() =>
+                                        handleReaction(review.id, "thumbsUp")
+                                      }
+                                      color={
+                                        hasUserReacted(review.id, "thumbsUp")
+                                          ? "primary"
+                                          : "default"
+                                      }
+                                      sx={{ padding: { xs: 0.5, sm: 1 } }}
+                                    >
+                                      <Badge
+                                        badgeContent={
+                                          Array.isArray(
+                                            review.reactions?.thumbsUp
+                                          )
+                                            ? review.reactions.thumbsUp.length
+                                            : 0
+                                        }
+                                        color="primary"
+                                      >
+                                        <ThumbUpIcon
+                                          fontSize={
+                                            isMobile ? "small" : "medium"
+                                          }
+                                        />
+                                      </Badge>
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                                <Tooltip
+                                  title={
+                                    !hasSubmittedReview
+                                      ? "Submit a review to react"
+                                      : ""
+                                  }
+                                  disableHoverListener={hasSubmittedReview}
+                                >
+                                  <span>
+                                    <IconButton
+                                      size={isMobile ? "small" : "medium"}
+                                      disabled={!hasSubmittedReview}
+                                      onClick={() =>
+                                        handleReaction(review.id, "thumbsDown")
+                                      }
+                                      color={
+                                        hasUserReacted(review.id, "thumbsDown")
+                                          ? "primary"
+                                          : "default"
+                                      }
+                                      sx={{ padding: { xs: 0.5, sm: 1 } }}
+                                    >
+                                      <Badge
+                                        badgeContent={
+                                          Array.isArray(
+                                            review.reactions?.thumbsDown
+                                          )
+                                            ? review.reactions.thumbsDown.length
+                                            : 0
+                                        }
+                                        color="primary"
+                                      >
+                                        <ThumbDownIcon
+                                          fontSize={
+                                            isMobile ? "small" : "medium"
+                                          }
+                                        />
+                                      </Badge>
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                              </Box>
+                              {canModifyReview(review) && (
+                                <IconButton
+                                  size={isMobile ? "small" : "medium"}
+                                  onClick={(e) => {
+                                    setAnchorEl(e.currentTarget);
+                                    setSelectedReview(review);
+                                  }}
+                                  sx={{ ml: "auto" }}
+                                >
+                                  <MoreVertIcon
+                                    fontSize={isMobile ? "small" : "medium"}
+                                  />
+                                </IconButton>
+                              )}
+                              {canDeleteReview(review) && (
+                                <IconButton
+                                  onClick={() =>
+                                    handleDeleteReview(review.id)
+                                  }
+                                  size="small"
+                                  sx={{
+                                    ml: 1,
+                                    color: "error.main",
+                                  }}
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              )}
+                            </Box>
+                          </Box>
+                        </ListItem>
+                        {index < professorReviews.length - 1 && (
+                          <Divider sx={{ my: { xs: 1, sm: 1.5 } }} />
+                        )}
+                      </Box>
+                    ))}
+                  </Box>
                 )
-              )}
-            </List>
-          </DialogContent>
-          <DialogActions sx={{ px: { xs: 2, sm: 3 }, py: { xs: 1.5, sm: 2 } }}>
-            <Button
-              onClick={onClose}
-              variant="outlined"
-              sx={{
-                minWidth: { xs: 80, sm: 100 },
-                height: { xs: 36, sm: 40 },
-              }}
-            >
-              Close
-            </Button>
-          </DialogActions>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={() => setAnchorEl(null)}
-            PaperProps={{
-              sx: {
-                mt: 0.5,
-                boxShadow: 3,
-                minWidth: 120,
-              },
+              )
+            )}
+          </List>
+        </DialogContent>
+        <DialogActions sx={{ px: { xs: 2, sm: 3 }, py: { xs: 1.5, sm: 2 } }}>
+          <Button
+            onClick={onClose}
+            variant="outlined"
+            sx={{
+              minWidth: { xs: 80, sm: 100 },
+              height: { xs: 36, sm: 40 },
             }}
           >
-            <MenuItem
-              onClick={() => {
-                handleDeleteReview(selectedReview.id);
-                setAnchorEl(null);
-              }}
-              sx={{ py: { xs: 1, sm: 1.5 } }}
-            >
-              Delete
-            </MenuItem>
-          </Menu>
-          <Snackbar
-            open={snackbarOpen}
-            autoHideDuration={6000}
-            onClose={handleSnackbarClose}
-            anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+            Close
+          </Button>
+        </DialogActions>
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={() => setAnchorEl(null)}
+          PaperProps={{
+            sx: {
+              mt: 0.5,
+              boxShadow: 3,
+              minWidth: 120,
+            },
+          }}
+        >
+          <MenuItem
+            onClick={() => {
+              handleDeleteReview(selectedReview.id);
+              setAnchorEl(null);
+            }}
+            sx={{ py: { xs: 1, sm: 1.5 } }}
           >
-            <Alert
-              onClose={handleSnackbarClose}
-              severity="success"
-              sx={{ width: "100%" }}
-            >
-              {snackbarMessage}
-            </Alert>
-          </Snackbar>
-        </>
-      )}
+            Delete
+          </MenuItem>
+        </Menu>
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={6000}
+          onClose={handleSnackbarClose}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            onClose={handleSnackbarClose}
+            severity="success"
+            sx={{ width: "100%" }}
+          >
+            {snackbarMessage}
+          </Alert>
+        </Snackbar>
+      </>
     </Dialog>
   );
 };

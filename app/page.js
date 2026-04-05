@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Box,
   Button,
@@ -198,6 +199,7 @@ export default function Home() {
   const muiTheme = useTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
   const [userId, setUserId] = useState(null);
+  const searchParams = useSearchParams();
 
   const heroVerbsBest = ["Rate", "Review"];
   const heroVerbWorst = "Roast";
@@ -249,6 +251,19 @@ export default function Home() {
       clearInterval(timer);
     };
   }, [activeNav, heroVerbsBest.length, heroPolarities.length]);
+
+  // Handle ?q= and ?rate= query params (deep links from professor profile page)
+  useEffect(() => {
+    const q = searchParams.get("q");
+    const rate = searchParams.get("rate");
+    if (q) {
+      setActiveNav("chat");
+      setMessage(decodeURIComponent(q));
+    } else if (rate) {
+      setActiveNav("rate");
+      setOpenRateModal(true);
+    }
+  }, [searchParams]);
 
   // Function to setup the recurring reminder
   const setupRecurringReminder = () => {
