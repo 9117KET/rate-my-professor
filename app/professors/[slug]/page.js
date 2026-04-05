@@ -22,7 +22,7 @@ import { professorToSlug } from "../../utils/slugUtils";
 import { formatTimestamp } from "../../utils/formatters";
 
 export default function ProfessorProfilePage({ params }) {
-  const { slug } = params;
+  const { slug } = React.use(params);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
