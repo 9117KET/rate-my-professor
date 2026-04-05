@@ -49,6 +49,7 @@ import GavelOutlinedIcon from "@mui/icons-material/GavelOutlined";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import CloseIcon from "@mui/icons-material/Close";
 import ReactMarkdown from "react-markdown";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { SubmitReviewModal } from "./components/SubmitReviewModal";
 import { ViewReviewsModal } from "./components/ViewReviewsModal";
@@ -912,6 +913,16 @@ export default function Home() {
                     Chat with AI
                   </Button>
                 </Stack>
+                <Button
+                  component={Link}
+                  href="/professors"
+                  variant="outlined"
+                  color="primary"
+                  fullWidth
+                  sx={{ py: 1.25, borderRadius: "14px", fontWeight: 700 }}
+                >
+                  Browse all professors
+                </Button>
               </Stack>
             </Box>
           </Container>
@@ -1474,6 +1485,12 @@ export default function Home() {
         <DialogContent sx={{ px: 1.5, pb: 2 }}>
           {[
             {
+              label: "All Professors",
+              sublabel: "Browse ratings for every professor",
+              icon: <SchoolIcon />,
+              href: "/professors",
+            },
+            {
               label: "How to Use",
               sublabel: "Learn how the platform works",
               icon: <HelpOutlineIcon />,
@@ -1497,10 +1514,10 @@ export default function Home() {
               icon: <BugReportOutlinedIcon />,
               action: () => { setOpenMoreModal(false); setActiveNav("home"); setOpenReportBugModal(true); },
             },
-          ].map(({ label, sublabel, icon, action }, index, arr) => (
+          ].map(({ label, sublabel, icon, action, href }, index, arr) => (
             <Box key={label}>
               <ListItemButton
-                onClick={action}
+                {...(href ? { component: Link, href, onClick: () => setOpenMoreModal(false) } : { onClick: action })}
                 sx={{
                   borderRadius: "12px",
                   py: 1.25,

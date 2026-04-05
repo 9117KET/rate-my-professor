@@ -134,14 +134,18 @@ let theme = createTheme({
         },
         containedPrimary: {
           background: "linear-gradient(135deg, #0A3164 0%, #001B3F 100%)",
+          color: "#FFFFFF",
           "&:hover": {
             background: "linear-gradient(135deg, #1A4A7A 0%, #0A3164 100%)",
+            color: "#FFFFFF",
           },
         },
         containedSecondary: {
           background: "linear-gradient(135deg, #FF3C42 0%, #E31E24 100%)",
+          color: "#FFFFFF",
           "&:hover": {
             background: "linear-gradient(135deg, #FF5A5F 0%, #FF3C42 100%)",
+            color: "#FFFFFF",
           },
         },
         outlined: {
